@@ -3,6 +3,7 @@
 #include "OrbitCamera.h"
 #include "SpimPlane.h"
 #include "Shader.h"
+#include "Framebuffer.h"
 
 #include <GL/glew.h>
 #include <GL/freeglut.h>
@@ -26,19 +27,30 @@ glm::ivec2		mouse;
 
 Shader*			planeShader = 0;
 
+const unsigned int DEPTH_PEEL_LEVELS = 5;
+Framebuffer*	renderTarget[DEPTH_PEEL_LEVELS];
+
+Shader*			quadShader = 0;
+
 std::vector<SpimPlane*> planes;
 
 static void reloadShaders()
 {
 	delete planeShader;
 	planeShader = new Shader("shaders/plane.vert", "shaders/plane.frag");
+
+
+	delete quadShader;
+	quadShader = new Shader("shaders/drawQuad.vert", "shaders/drawQuad.frag");
 }
 
 static void display()
 {
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+	
 	camera.setup();
+
+	renderTarget[0]->bind();
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
 	glColor3f(0.3f, 0.3f, 0.3f);
@@ -56,6 +68,7 @@ static void display()
 
 	if (planeShader && !planes.empty())
 	{
+		
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -68,6 +81,7 @@ static void display()
 		
 		//TODO: implement depth peeling here
 
+
 		for (size_t i = 0; i < planes.size(); ++i)
 			planes[i]->draw(planeShader);
 
@@ -75,9 +89,27 @@ static void display()
 
 		glDisable(GL_BLEND);
 
+
 	}
 
+	renderTarget[0]->disable();
 
+
+	// display quad
+	glDisable(GL_DEPTH_TEST);
+
+	quadShader->bind();
+	quadShader->setTexture2D("colormap", renderTarget[0]->getColorbuffer(), 0);
+
+	glBegin(GL_QUADS);
+	glVertex2i(0, 1);
+	glVertex2i(0, 0);
+	glVertex2i(1, 0);
+	glVertex2i(1, 1);
+	glEnd();
+
+	quadShader->disable();
+	glEnable(GL_DEPTH_TEST);
 
 	glutSwapBuffers();
 
@@ -178,6 +210,12 @@ int main(int argc, const char** argv)
 
 			SpimPlane* s = new SpimPlane(filename, std::string(filename) + ".registration");
 			planes.push_back(s);
+		}
+
+
+		for (int i = 0; i < DEPTH_PEEL_LEVELS; ++i)
+		{
+			renderTarget[i] = new Framebuffer(1024, 1024, GL_RGBA, GL_UNSIGNED_INT, 1, GL_LINEAR, true);
 		}
 
 
