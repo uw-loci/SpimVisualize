@@ -24,10 +24,10 @@ SpimPlane::SpimPlane(const std::string& imageFile, const std::string& registrati
 	FIBITMAP* bitmap = FreeImage_Load(fif, imageFile.c_str());
 	assert(bitmap);
 
-	unsigned int w = FreeImage_GetWidth(bitmap);
-	unsigned int h = FreeImage_GetHeight(bitmap);
+	width = FreeImage_GetWidth(bitmap);
+	height = FreeImage_GetHeight(bitmap);
 	unsigned bpp = FreeImage_GetBPP(bitmap);
-	std::cout << "[SpimPlane] Loaded image: " << w << "x" << h << "x" << bpp << std::endl;
+	std::cout << "[SpimPlane] Loaded image: " << width << "x" << height << "x" << bpp << std::endl;
 	
 	// make sure it is a 16bit grayscale image (see documentation)
 	FREE_IMAGE_COLOR_TYPE fct = FreeImage_GetColorType(bitmap);
@@ -48,7 +48,7 @@ SpimPlane::SpimPlane(const std::string& imageFile, const std::string& registrati
 	
 	BYTE* data = FreeImage_GetBits(bitmap);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, w, h, 0, GL_LUMINANCE, GL_UNSIGNED_SHORT, data);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, width, height, 0, GL_LUMINANCE, GL_UNSIGNED_SHORT, data);
 
 	FreeImage_Unload(bitmap);
 
@@ -79,11 +79,13 @@ SpimPlane::~SpimPlane()
 void SpimPlane::draw(Shader* s) const
 {
 	s->setMatrix4("transform", transform);
-	
+	s->setUniform("width", (float)width);
+	s->setUniform("height", (float)height);
+
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture);
 	s->setUniform("image", 0);
-	
+
 	// draw two quads
 	int vertices[] = { -1, 1, -1, -1, 1, -1, 1, 1 };
 	unsigned char indices[] = { 0, 1, 2, 3, 3, 2, 1, 0 };

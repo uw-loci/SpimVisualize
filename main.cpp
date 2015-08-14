@@ -26,7 +26,7 @@ glm::ivec2		mouse;
 
 Shader*			planeShader = 0;
 
-SpimPlane*		singlePlane = 0;
+std::vector<SpimPlane*> planes;
 
 static void reloadShaders()
 {
@@ -38,31 +38,23 @@ static void display()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	gluPerspective(60.f, 1.3f, 1.f, 1000.f);
-
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-	gluLookAt(50, 50, 50, 0, 0, 0, 0, 1, 0);
-
 	camera.setup();
 
 
-	glColor3f(0.7f, 0.7f, 0.7f);
+	glColor3f(0.3f, 0.3f, 0.3f);
 	glBegin(GL_LINES);
-	for (int i = -100; i <= 100; i += 10)
+	for (int i = -1000; i <= 1000; i += 100)
 	{
-		glVertex3i(-100, 0, i);
-		glVertex3i(100, 0, i);
-		glVertex3i(i, 0, -100);
-		glVertex3i(i, 0, 100);
+		glVertex3i(-1000, 0, i);
+		glVertex3i(1000, 0, i);
+		glVertex3i(i, 0, -1000);
+		glVertex3i(i, 0, 1000);
 	}
 
 	glEnd();
 
 
-	if (planeShader && singlePlane)
+	if (planeShader && !planes.empty())
 	{
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -74,10 +66,10 @@ static void display()
 		planeShader->setMatrix4("mvpMatrix", mvp);
 
 		
+		//TODO: implement depth peeling here
 
-
-		singlePlane->draw(planeShader);
-
+		for (size_t i = 0; i < planes.size(); ++i)
+			planes[i]->draw(planeShader);
 
 		planeShader->disable();
 
@@ -178,10 +170,20 @@ int main(int argc, const char** argv)
 	
 	try
 	{
-		singlePlane = new SpimPlane("e:/spim/test/spim_TL00_Angle1.tif", "e:/spim/test/spim_TL00_Angle1.tif.registration");
+
+		for (int i = 0; i < 5; ++i)
+		{
+			char filename[256];
+			sprintf(filename, "e:/spim/test/spim_TL00_Angle%d.tif", i);
+
+			SpimPlane* s = new SpimPlane(filename, std::string(filename) + ".registration");
+			planes.push_back(s);
+		}
 
 
-		camera.setRadius(10.f); // frames[0]->getBBox().getSpanLength() * 1.2);
+
+
+		camera.setRadius(500.f); // frames[0]->getBBox().getSpanLength() * 1.2);
 		camera.target = glm::vec3(0.f);// frames[0]->getBBox().getCentroid();
 
 

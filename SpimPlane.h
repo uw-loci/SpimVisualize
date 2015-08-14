@@ -19,6 +19,8 @@ private:
 	glm::mat4		transform;
 	unsigned int	texture;
 
+	unsigned int	width, height;
+
 
 	SpimPlane(const SpimPlane&);
 
