@@ -4,13 +4,15 @@
 #include <string>
 #include <vector>
 
+class Shader;
+
 class SpimPlane
 {
 public:
-	SpimPlane(const std::string& filename);
+	SpimPlane(const std::string& imageFile, const std::string& registrationFile);
 	~SpimPlane();
 
-	void draw() const;
+	void draw(Shader* s) const;
 
 
 private:
