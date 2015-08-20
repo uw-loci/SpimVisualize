@@ -28,7 +28,11 @@ glm::ivec2		mouse;
 Shader*			planeShader = 0;
 
 const unsigned int DEPTH_PEEL_LEVELS = 5;
-Framebuffer*	renderTarget[DEPTH_PEEL_LEVELS];
+std::vector<Framebuffer*>	renderTargets;
+Framebuffer*				pingpong = 0;
+
+unsigned int	currentDisplay = 0;
+
 
 Shader*			quadShader = 0;
 
@@ -44,15 +48,8 @@ static void reloadShaders()
 	quadShader = new Shader("shaders/drawQuad.vert", "shaders/drawQuad.frag");
 }
 
-static void display()
+static void drawScene()
 {
-	
-	camera.setup();
-
-	renderTarget[0]->bind();
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-
 	glColor3f(0.3f, 0.3f, 0.3f);
 	glBegin(GL_LINES);
 	for (int i = -1000; i <= 1000; i += 100)
@@ -68,7 +65,7 @@ static void display()
 
 	if (planeShader && !planes.empty())
 	{
-		
+
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -78,7 +75,7 @@ static void display()
 		camera.getMVP(mvp);
 		planeShader->setMatrix4("mvpMatrix", mvp);
 
-		
+
 		//TODO: implement depth peeling here
 
 
@@ -92,14 +89,34 @@ static void display()
 
 	}
 
-	renderTarget[0]->disable();
+}
 
+static void display()
+{
+	
+	camera.setup();
+	
+	for (size_t i = 0; i < renderTargets.size(); ++i)
+	{		
+		renderTargets[i]->bind();
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		if (i == 0)
+		{
+		
+			drawScene();
+		}
+
+
+		renderTargets[i]->disable();
+
+	}
 
 	// display quad
 	glDisable(GL_DEPTH_TEST);
 
 	quadShader->bind();
-	quadShader->setTexture2D("colormap", renderTarget[0]->getColorbuffer(), 0);
+	quadShader->setTexture2D("colormap", renderTargets[currentDisplay]->getColorbuffer(), 0);
 
 	glBegin(GL_QUADS);
 	glVertex2i(0, 1);
@@ -153,6 +170,23 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == 'r')
 		rotate = !rotate;
 
+	if (key == '1')
+		currentDisplay = 0;
+	if (key == '2')
+		currentDisplay = 1;
+	if (key == '3')
+		currentDisplay = 2;
+	if (key == '4')
+		currentDisplay = 3;
+	if (key == '5')
+		currentDisplay = 4;
+	/*
+	if (key == '6')
+		currentDisplay = 5;
+	if (key == '7')
+		currentDisplay = 6;
+	*/
+
 }
 
 
@@ -203,22 +237,43 @@ int main(int argc, const char** argv)
 	try
 	{
 
-		for (int i = 0; i < 5; ++i)
+		for (int k = 0; k < 10; ++k)
 		{
-			char filename[256];
-			sprintf(filename, "e:/spim/test/spim_TL00_Angle%d.tif", i);
+			for (int i = 0; i < 5; ++i)
+			{
+				/*
+				char filename[256];
+				sprintf(filename, "e:/spim/OpenSPIM_tutorial/tiffs/spim_TL%02d_Angle%d.tif", k, i);
 
-			SpimPlane* s = new SpimPlane(filename, std::string(filename) + ".registration");
-			planes.push_back(s);
+				char filename2[256];
+				sprintf(filename2, "e:/spim/OpenSPIM_tutorial/tiffs/registration/spim_TL%02d_Angle%d.tif.registration", k, i);
+
+				SpimPlane* s = nullptr;
+
+				try
+				{
+					s = new SpimPlane(filename, filename2);
+					planes.push_back(s);
+				}
+				catch (std::runtime_error& e)
+				{
+					std::cout << "[Error] " << e.what() << std::endl;
+					delete s;
+				}
+				*/
+
+
+
+
+			}
 		}
-
 
 		for (int i = 0; i < DEPTH_PEEL_LEVELS; ++i)
 		{
-			renderTarget[i] = new Framebuffer(1024, 1024, GL_RGBA, GL_UNSIGNED_INT, 1, GL_LINEAR, true);
+			renderTargets.push_back(new Framebuffer(1024, 1024, GL_RGBA, GL_UNSIGNED_BYTE, 1, GL_LINEAR, true));
 		}
 
-
+		pingpong = new Framebuffer(1024, 1024, GL_RGBA, GL_UNSIGNED_BYTE, 1, GL_LINEAR, true);
 
 
 		camera.setRadius(500.f); // frames[0]->getBBox().getSpanLength() * 1.2);

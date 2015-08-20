@@ -55,7 +55,9 @@ SpimPlane::SpimPlane(const std::string& imageFile, const std::string& registrati
 
 	// read the registration matrix
 	std::ifstream file(registrationFile);
-	assert(file.is_open());
+	//assert(file.is_open());
+	if (!file.is_open())
+		throw std::runtime_error("Unable to open file \"" + registrationFile + "\"");
 
 	for (int i = 0; i < 16; ++i)
 	{

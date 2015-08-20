@@ -1,0 +1,44 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.31101.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SpimVisualize", "SpimVisualize.vcxproj", "{57E101A3-E7CB-4FE9-B7E8-1D4FD826E7BB}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OpenCVTest", "OpenCVTest\OpenCVTest.vcxproj", "{8FFE39DB-0BBB-4B84-9186-F8EC6BB4001D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Mixed Platforms = Debug|Mixed Platforms
+		Debug|Win32 = Debug|Win32
+		Debug|x64 = Debug|x64
+		Release|Mixed Platforms = Release|Mixed Platforms
+		Release|Win32 = Release|Win32
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{57E101A3-E7CB-4FE9-B7E8-1D4FD826E7BB}.Debug|Mixed Platforms.ActiveCfg = Debug|x64
+		{57E101A3-E7CB-4FE9-B7E8-1D4FD826E7BB}.Debug|Mixed Platforms.Build.0 = Debug|x64
+		{57E101A3-E7CB-4FE9-B7E8-1D4FD826E7BB}.Debug|Win32.ActiveCfg = Debug|x64
+		{57E101A3-E7CB-4FE9-B7E8-1D4FD826E7BB}.Debug|x64.ActiveCfg = Debug|x64
+		{57E101A3-E7CB-4FE9-B7E8-1D4FD826E7BB}.Debug|x64.Build.0 = Debug|x64
+		{57E101A3-E7CB-4FE9-B7E8-1D4FD826E7BB}.Release|Mixed Platforms.ActiveCfg = Release|x64
+		{57E101A3-E7CB-4FE9-B7E8-1D4FD826E7BB}.Release|Mixed Platforms.Build.0 = Release|x64
+		{57E101A3-E7CB-4FE9-B7E8-1D4FD826E7BB}.Release|Win32.ActiveCfg = Release|x64
+		{57E101A3-E7CB-4FE9-B7E8-1D4FD826E7BB}.Release|x64.ActiveCfg = Release|x64
+		{57E101A3-E7CB-4FE9-B7E8-1D4FD826E7BB}.Release|x64.Build.0 = Release|x64
+		{8FFE39DB-0BBB-4B84-9186-F8EC6BB4001D}.Debug|Mixed Platforms.ActiveCfg = Debug|x64
+		{8FFE39DB-0BBB-4B84-9186-F8EC6BB4001D}.Debug|Mixed Platforms.Build.0 = Debug|x64
+		{8FFE39DB-0BBB-4B84-9186-F8EC6BB4001D}.Debug|Win32.ActiveCfg = Debug|x64
+		{8FFE39DB-0BBB-4B84-9186-F8EC6BB4001D}.Debug|x64.ActiveCfg = Debug|x64
+		{8FFE39DB-0BBB-4B84-9186-F8EC6BB4001D}.Debug|x64.Build.0 = Debug|x64
+		{8FFE39DB-0BBB-4B84-9186-F8EC6BB4001D}.Release|Mixed Platforms.ActiveCfg = Release|x64
+		{8FFE39DB-0BBB-4B84-9186-F8EC6BB4001D}.Release|Mixed Platforms.Build.0 = Release|x64
+		{8FFE39DB-0BBB-4B84-9186-F8EC6BB4001D}.Release|Win32.ActiveCfg = Release|x64
+		{8FFE39DB-0BBB-4B84-9186-F8EC6BB4001D}.Release|x64.ActiveCfg = Release|x64
+		{8FFE39DB-0BBB-4B84-9186-F8EC6BB4001D}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

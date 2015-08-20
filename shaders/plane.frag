@@ -3,7 +3,7 @@
 uniform sampler2D image;
 
 // TODO: replace with transform function
-uniform float intensity = 50.0;
+uniform float intensity = 100.0;
 
 varying vec2 texcoord;
 
@@ -15,7 +15,8 @@ void main()
 	if (alpha < 0.1)
 		color = vec3(1.0, 0.0, 0.0);
 
-	alpha = max(0.1, alpha);
+	if (alpha < 0.1)
+		discard;
 
 	gl_FragColor = vec4(color, alpha);
 }

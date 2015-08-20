@@ -10,24 +10,9 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="Framebuffer.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="OrbitCamera.cpp" />
-    <ClCompile Include="Shader.cpp" />
-    <ClCompile Include="SpimPlane.cpp" />
-    <ClCompile Include="stb_image.c" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="Framebuffer.h" />
-    <ClInclude Include="OrbitCamera.h" />
-    <ClInclude Include="Shader.h" />
-    <ClInclude Include="SpimPlane.h" />
-    <ClInclude Include="stb_image.h" />
-  </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{57E101A3-E7CB-4FE9-B7E8-1D4FD826E7BB}</ProjectGuid>
-    <RootNamespace>GeometryImages</RootNamespace>
+    <ProjectGuid>{8FFE39DB-0BBB-4B84-9186-F8EC6BB4001D}</ProjectGuid>
+    <RootNamespace>OpenCVTest</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -54,24 +39,24 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\opencv\build\include;C:\Users\mbroecker\Documents\code\ffmpeg\include;C:\boost\include;C:\Users\mbroecker\Documents\code\opengl\include;C:\Users\mbroecker\Documents\code\transformDetection\VaryingPointClouds;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\inc;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\opencv\sources\build\lib\Release;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\lib;C:\Users\mbroecker\Documents\code\opengl\lib64;C:\Users\mbroecker\Documents\code\opengl\lib64\Release\x64;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\dev\opencv\build\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\dev\opencv\build\x64\vc12\staticlib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>C:\opencv\build\include;C:\Users\mbroecker\Documents\code\ffmpeg\include;C:\boost\include;C:\Users\mbroecker\Documents\code\opengl\include;C:\Users\mbroecker\Documents\code\transformDetection\VaryingPointClouds;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\inc;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\opencv\sources\build\lib\Release;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\lib;C:\Users\mbroecker\Documents\code\opengl\lib64;C:\Users\mbroecker\Documents\code\opengl\lib64\Release\x64;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\dev\opencv\build\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\dev\opencv\build\x64\vc12\staticlib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <OpenMPSupport>true</OpenMPSupport>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_ITERATOR_DEBUG_LEVEL=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>FreeImage.lib;glew32.lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opencv_calib3d300.lib;opencv_core300.lib;opencv_features2d300.lib;opencv_flann300.lib;opencv_hal300.lib;opencv_highgui300.lib;opencv_imgcodecs300.lib;opencv_imgproc300.lib;opencv_ml300.lib;opencv_objdetect300.lib;opencv_photo300.lib;opencv_shape300.lib;opencv_stitching300.lib;opencv_superres300.lib;opencv_ts300.lib;ippicvmt.lib;zlibd.lib;libpngd.lib;libjpegd.lib;libtiffd.lib;libwebpd.lib;libjasperd.lib;IlmImfd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -81,16 +66,18 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <OpenMPSupport>true</OpenMPSupport>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>FreeImage.lib;glew32.lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opencv_calib3d300.lib;opencv_core300.lib;opencv_features2d300.lib;opencv_flann300.lib;opencv_hal300.lib;opencv_highgui300.lib;opencv_imgcodecs300.lib;opencv_imgproc300.lib;opencv_ml300.lib;opencv_objdetect300.lib;opencv_photo300.lib;opencv_shape300.lib;opencv_stitching300.lib;opencv_superres300.lib;opencv_ts300.lib;ippicvmt.lib;zlib.lib;libpng.lib;libjpeg.lib;libtiff.lib;libwebp.lib;libjasper.lib;IlmImf.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
