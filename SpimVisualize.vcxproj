@@ -16,6 +16,7 @@
     <ClCompile Include="OrbitCamera.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="SpimPlane.cpp" />
+    <ClCompile Include="SpimStack.cpp" />
     <ClCompile Include="stb_image.c" />
   </ItemGroup>
   <ItemGroup>
@@ -23,6 +24,7 @@
     <ClInclude Include="OrbitCamera.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="SpimPlane.h" />
+    <ClInclude Include="SpimStack.h" />
     <ClInclude Include="stb_image.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

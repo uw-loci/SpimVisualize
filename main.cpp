@@ -4,6 +4,7 @@
 #include "SpimPlane.h"
 #include "Shader.h"
 #include "Framebuffer.h"
+#include "SpimStack.h"
 
 #include <GL/glew.h>
 #include <GL/freeglut.h>
@@ -37,6 +38,7 @@ unsigned int	currentDisplay = 0;
 Shader*			quadShader = 0;
 
 std::vector<SpimPlane*> planes;
+std::vector<glm::vec3>	points;
 
 static void reloadShaders()
 {
@@ -88,6 +90,19 @@ static void drawScene()
 
 
 	}
+
+
+	if (!points.empty())
+	{
+		glColor3f(1, 1, 1);
+		glEnableClientState(GL_VERTEX_ARRAY);
+		glVertexPointer(3, GL_FLOAT, 0, glm::value_ptr(points[0]));
+
+		glDrawArrays(GL_POINTS, 0, points.size());
+
+		glDisableClientState(GL_VERTEX_ARRAY);
+	}
+
 
 }
 
@@ -267,17 +282,28 @@ int main(int argc, const char** argv)
 
 			}
 		}
-
+		
 		for (int i = 0; i < DEPTH_PEEL_LEVELS; ++i)
 		{
 			renderTargets.push_back(new Framebuffer(1024, 1024, GL_RGBA, GL_UNSIGNED_BYTE, 1, GL_LINEAR, true));
 		}
 
 		pingpong = new Framebuffer(1024, 1024, GL_RGBA, GL_UNSIGNED_BYTE, 1, GL_LINEAR, true);
+		
+
+		SpimStack stack("e:/spim/zebra/spim_TL01_Angle0.ome.tiff");
+		points = stack.getPointcloud(150);
+	
+		glm::vec3 center(0.f);
+		for (size_t i = 0; i < points.size(); ++i)
+			center += points[i];
+
+		center /= points.size();
+
 
 
 		camera.setRadius(500.f); // frames[0]->getBBox().getSpanLength() * 1.2);
-		camera.target = glm::vec3(0.f);// frames[0]->getBBox().getCentroid();
+		camera.target = center;// frames[0]->getBBox().getCentroid();
 
 
 		reloadShaders();
