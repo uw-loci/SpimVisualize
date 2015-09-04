@@ -28,10 +28,6 @@ glm::ivec2		mouse;
 
 Shader*			planeShader = 0;
 
-const unsigned int DEPTH_PEEL_LEVELS = 5;
-std::vector<Framebuffer*>	renderTargets;
-Framebuffer*				pingpong = 0;
-
 unsigned int	currentDisplay = 0;
 
 
@@ -111,38 +107,9 @@ static void display()
 	
 	camera.setup();
 	
-	for (size_t i = 0; i < renderTargets.size(); ++i)
-	{		
-		renderTargets[i]->bind();
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		if (i == 0)
-		{
-		
-			drawScene();
-		}
-
-
-		renderTargets[i]->disable();
-
-	}
-
-	// display quad
-	glDisable(GL_DEPTH_TEST);
-
-	quadShader->bind();
-	quadShader->setTexture2D("colormap", renderTargets[currentDisplay]->getColorbuffer(), 0);
-
-	glBegin(GL_QUADS);
-	glVertex2i(0, 1);
-	glVertex2i(0, 0);
-	glVertex2i(1, 0);
-	glVertex2i(1, 1);
-	glEnd();
-
-	quadShader->disable();
-	glEnable(GL_DEPTH_TEST);
-
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	
+	drawScene();
+	
 	glutSwapBuffers();
 
 }
@@ -230,6 +197,13 @@ static void button(int button, int state, int x, int y)
 int main(int argc, const char** argv)
 {
 
+	if (argc < 2)
+	{
+		std::cerr << "[Error] No filename given!\n";
+		std::cerr << "[Usage] " << argv[0] << " <spimfile>\n";
+		return -1;
+	}
+
 	
 	glutInit(&argc, const_cast<char**>(argv));
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
@@ -252,46 +226,7 @@ int main(int argc, const char** argv)
 	try
 	{
 
-		for (int k = 0; k < 10; ++k)
-		{
-			for (int i = 0; i < 5; ++i)
-			{
-				/*
-				char filename[256];
-				sprintf(filename, "e:/spim/OpenSPIM_tutorial/tiffs/spim_TL%02d_Angle%d.tif", k, i);
-
-				char filename2[256];
-				sprintf(filename2, "e:/spim/OpenSPIM_tutorial/tiffs/registration/spim_TL%02d_Angle%d.tif.registration", k, i);
-
-				SpimPlane* s = nullptr;
-
-				try
-				{
-					s = new SpimPlane(filename, filename2);
-					planes.push_back(s);
-				}
-				catch (std::runtime_error& e)
-				{
-					std::cout << "[Error] " << e.what() << std::endl;
-					delete s;
-				}
-				*/
-
-
-
-
-			}
-		}
-		
-		for (int i = 0; i < DEPTH_PEEL_LEVELS; ++i)
-		{
-			renderTargets.push_back(new Framebuffer(1024, 1024, GL_RGBA, GL_UNSIGNED_BYTE, 1, GL_LINEAR, true));
-		}
-
-		pingpong = new Framebuffer(1024, 1024, GL_RGBA, GL_UNSIGNED_BYTE, 1, GL_LINEAR, true);
-		
-
-		SpimStack stack("e:/spim/zebra/spim_TL01_Angle0.ome.tiff");
+		SpimStack stack(argv[1]);
 		points = stack.getPointcloud(150);
 	
 		glm::vec3 center(0.f);
