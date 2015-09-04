@@ -22,5 +22,7 @@ SET (CMAKE_NM      "/usr/bin/llvm-nm")
 SET (CMAKE_OBJDUMP "/usr/bin/llvm-objdump")
 SET (CMAKE_RANLIB  "/usr/bin/llvm-ranlib")
 
-add_executable(SpimVisualize main.cpp Framebuffer.cpp OrbitCamera.cpp Shader.cpp SpimPlane.cpp stb_image.c GeometryImage.cpp)
+add_executable(SpimVisualize main.cpp Framebuffer.cpp OrbitCamera.cpp Shader.cpp SpimPlane.cpp SpimStack.cpp stb_image.c stb_image_write.c GeometryImage.cpp AABB.cpp GeometryImage.cpp)
 
+LINK_DIRECTORIES("/usr/lib")
+TARGET_LINK_LIBRARIES(SpimVisualize GL GLEW GLU glut freeimage)

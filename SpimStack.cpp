@@ -1,6 +1,7 @@
 #include "SpimStack.h"
 
 #include <iostream>
+#include <cstring>
 
 #include <FreeImage.h>
 
@@ -64,7 +65,7 @@ vector<vec3> SpimStack::getPointcloud(unsigned short threshold) const
 	// find the largest value for scaling
 	unsigned short maxVal = 0;
 	for (unsigned int i = 0; i < width*height*depth; ++i)
-		maxVal = max(maxVal, volume[i]);
+		maxVal = std::max(maxVal, volume[i]);
 
 
 	vector<vec3> points;
