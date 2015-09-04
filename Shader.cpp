@@ -41,6 +41,7 @@ const unsigned int BUFFER_SIZE = 2048;
 
 
 // maybe this is only needed on win32 as the include does not support all features of c++11... 
+
 /*
 namespace std
 {

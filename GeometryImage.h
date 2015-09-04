@@ -6,7 +6,7 @@
 
 #include <glm/glm.hpp>
 
-class Frame;
+typedef std::vector<glm::vec3> Pointcloud;
 
 
 class GeometryImage
@@ -16,8 +16,8 @@ public:
 	GeometryImage(unsigned int width, unsigned int height);
 	virtual ~GeometryImage();
 
-	virtual void calculate(const Frame& frame, bool POT=false);
-	virtual void calculate(const Frame& frame, const glm::vec3& bias, const glm::vec3& scale, bool POT = false);
+	virtual void calculate(const Pointcloud& frame, bool POT=false);
+	virtual void calculate(const Pointcloud& frame, const glm::vec3& bias, const glm::vec3& scale, bool POT = false);
 	virtual void calculateDiff(const GeometryImage& a, const GeometryImage& b);
 	
 	virtual std::vector<glm::vec3> reconstructPoints() const;

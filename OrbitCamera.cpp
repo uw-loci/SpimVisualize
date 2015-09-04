@@ -81,8 +81,8 @@ void OrbitCamera::zoom(float d)
 {
 	radius *= d;
 
-	radius = max(near, radius);
-	radius = min(far, radius);
+	radius = std::max(near, radius);
+	radius = std::min(far, radius);
 }
 
 void OrbitCamera::rotate(float deltaTheta, float deltaPhi)
@@ -90,8 +90,8 @@ void OrbitCamera::rotate(float deltaTheta, float deltaPhi)
 	theta += deltaTheta;
 	phi += deltaPhi;
 
-	theta = max(1.f, theta);
-	theta = min(179.f, theta);
+	theta = std::max(1.f, theta);
+	theta = std::min(179.f, theta);
 
 	//std::cout << "[Debug] theta " << theta << " phi " << phi << std::endl;
 }

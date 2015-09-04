@@ -1,8 +1,7 @@
 #include "GeometryImage.h"
 
-#include <stb_image.h>
-#include <Frame.h>
-#include <AABB.h>
+#include "stb_image.h"
+#include "AABB.h"
 
 #include <iostream>
 #include <cassert>
@@ -10,7 +9,8 @@
 #include <stdexcept>
 #include <cstring>
 
-#include <glm/gtx/io.hpp>
+//#include <glm/gtx/io.hpp>
+#include "glmIO.h"
 
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
@@ -70,18 +70,19 @@ GeometryImage::~GeometryImage()
 #endif
 }
 
-void GeometryImage::calculate(const Frame& f, bool pot)
+void GeometryImage::calculate(const Pointcloud& p, bool pot)
 {
 	// calculate the transform to normalize the point cloud
-	const AABB& bbox = f.getBBox();
-	this->calculate(f, bbox.min, glm::vec3(1.f) / bbox.getSpan(), pot);
+	AABB bbox;
+	bbox.calculate(p);
+	this->calculate(p, bbox.min, glm::vec3(1.f) / bbox.getSpan(), pot);
 }
 
-void GeometryImage::calculate(const Frame& f, const glm::vec3& bias, const glm::vec3& scale, bool pot)
+void GeometryImage::calculate(const Pointcloud& points, const glm::vec3& bias, const glm::vec3& scale, bool pot)
 {
 	this->bias = bias;
 	this->scale = scale;
-	this->pointCount = f.getPointCount();
+	this->pointCount = points.size();
 
 	calculateDimensions(pot);
 
@@ -89,7 +90,6 @@ void GeometryImage::calculate(const Frame& f, const glm::vec3& bias, const glm::
 	data.clear();
 	data.reserve(width*height);
 
-	const Pointcloud& points = f.getPoints();
 	for (size_t i = 0; i < points.size(); ++i)
 	{
 		const glm::vec3& pt = points[i];
@@ -174,7 +174,7 @@ void GeometryImage::loadPPM(const std::string& filename)
 
 	width = 0, height = 0;
 	//sscanf(header[1].c_str(), "%u %u", &width, &height);
-	sscanf_s(header[1].c_str(), "%u %u", &width, &height);
+	sscanf(header[1].c_str(), "%u %u", &width, &height);
 	unsigned int size = width*height * 3;
 
 	std::cout << "[GeoImg] Resolution: " << width << "x" << height << ", size: " << size << std::endl;

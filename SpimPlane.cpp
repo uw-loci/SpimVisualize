@@ -6,13 +6,15 @@
 #include <GL/freeglut.h>
 
 #include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/io.hpp>
+//#include <glm/gtx/io.hpp>
+#include "glmIO.h"
 
 #include <iostream>
 #include <fstream>
 #include <cassert>
 #include <cstdio>
 #include <string>
+#include <stdexcept>
 
 SpimPlane::SpimPlane(const std::string& imageFile, const std::string& registrationFile) : texture(0), transform(1.f)
 {
