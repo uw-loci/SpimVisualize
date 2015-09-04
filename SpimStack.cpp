@@ -1,4 +1,5 @@
 #include "SpimStack.h"
+#include "AABB.h"
 
 #include <iostream>
 #include <cstring>
@@ -8,6 +9,9 @@
 
 using namespace std;
 using namespace glm;
+
+// voxel dimensions in microns
+static const vec3 DIMENSIONS(0.625, 0.625, 3);
 
 SpimStack::SpimStack(const string& filename) : width(0), height(0), depth(0), volume(nullptr)
 {
@@ -56,20 +60,18 @@ SpimStack::~SpimStack()
 }
 
 
-vector<vec4> SpimStack::getPointcloud(unsigned short threshold) const
+void SpimStack::calculatePoints(unsigned short threshold)
 {
 	assert(volume);
-
-	// voxel dimensions in microns
-	const vec3 DIMENSIONS(0.625, 0.625, 3);
-
+		
 	// find the largest value for scaling
 	unsigned short maxVal = 0;
 	for (unsigned int i = 0; i < width*height*depth; ++i)
 		maxVal = std::max(maxVal, volume[i]);
 
+	points.clear();
 
-	vector<vec4> points;
+
 	for (unsigned int z = 0; z < depth; ++z)
 	{
 		for (unsigned int x = 0; x < width; ++x)
@@ -91,6 +93,14 @@ vector<vec4> SpimStack::getPointcloud(unsigned short threshold) const
 
 	float relSize = (float)points.size() / (width*height*depth);
 	std::cout << "[Stack] Reconstructed " << points.size() << "(" << relSize << ") points.\n";
+}
+
+AABB&& SpimStack::getBBox() const
+{
+	AABB bbox;
+	vec3 vol = DIMENSIONS * vec3(width, height, depth);
+	bbox.min = -vol * 0.5f;
+	bbox.max = vol * 0.5f ;
 	
-	return points;
+	return std::move(bbox);
 }

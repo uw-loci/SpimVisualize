@@ -5,6 +5,7 @@
 #include "Shader.h"
 #include "Framebuffer.h"
 #include "SpimStack.h"
+#include "AABB.h"
 
 #include <GL/glew.h>
 #include <GL/freeglut.h>
@@ -34,9 +35,11 @@ unsigned int	currentDisplay = 0;
 Shader*			quadShader = 0;
 
 std::vector<SpimPlane*> planes;
-std::vector<glm::vec4>	points;
 
 Shader*			pointShader = 0;
+
+std::vector<SpimStack*>	stacks;
+unsigned int currentStack = 0;
 
 static void reloadShaders()
 {
@@ -93,29 +96,10 @@ static void drawScene()
 	}
 
 
-	if (!points.empty())
+	if (stacks[currentStack])
 	{
-		/*
-		glColor3f(1, 1, 1);
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glVertexPointer(3, GL_FLOAT, sizeof(glm::vec4), glm::value_ptr(points[0]));
 
-		glDrawArrays(GL_POINTS, 0, points.size());
-
-		glDisableClientState(GL_VERTEX_ARRAY);
-		*/
-		/*
-		glEnableVertexAttribArray(0);
-		glEnableVertexAttribArray(1);
-
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec4), glm::value_ptr(points[0]));
-		glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, sizeof(glm::vec4), &points[0].a);
-	
-		glDrawArrays(GL_POINTS, 0, points.size());
-
-		glDisableVertexAttribArray(0);
-		glDisableVertexAttribArray(1);
-		*/
+		const std::vector<glm::vec4>& points = stacks[currentStack]->getPoints();
 
 		glm::mat4 mvp;
 		camera.getMVP(mvp);
@@ -186,6 +170,13 @@ static void keyboard(unsigned char key, int x, int y)
 
 	if (key == 'r')
 		rotate = !rotate;
+
+	if (key == 'n')
+	{
+		++currentStack;
+		if (currentStack == stacks.size())
+			currentStack = 0;
+	}
 
 	if (key == '1')
 		currentDisplay = 0;
@@ -260,20 +251,23 @@ int main(int argc, const char** argv)
 	
 	try
 	{
+		AABB globalBbox;
 
-		SpimStack stack(argv[1]);
-		points = stack.getPointcloud(150);
-	
-		glm::vec3 center(0.f);
-		for (size_t i = 0; i < points.size(); ++i)
-			center += glm::vec3(points[i]);
+		for (int i = 1; i < argc; ++i)
+		{
+			SpimStack* stack = new SpimStack(argv[i]);
+			stack->calculatePoints(150);
 
-		center /= points.size();
+			stacks.push_back(stack);
+		
+			AABB bbox = stack->getBBox();
+			globalBbox.extend(bbox);
+		}
 
 
 
-		camera.setRadius(500.f); // frames[0]->getBBox().getSpanLength() * 1.2);
-		camera.target = center;// frames[0]->getBBox().getCentroid();
+		camera.setRadius(globalBbox.getSpanLength() * 1.5); // frames[0]->getBBox().getSpanLength() * 1.2);
+		camera.target = globalBbox.getCentroid();// frames[0]->getBBox().getCentroid();
 
 
 		reloadShaders();
