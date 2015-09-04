@@ -34,7 +34,9 @@ unsigned int	currentDisplay = 0;
 Shader*			quadShader = 0;
 
 std::vector<SpimPlane*> planes;
-std::vector<glm::vec3>	points;
+std::vector<glm::vec4>	points;
+
+Shader*			pointShader = 0;
 
 static void reloadShaders()
 {
@@ -44,6 +46,9 @@ static void reloadShaders()
 
 	delete quadShader;
 	quadShader = new Shader("shaders/drawQuad.vert", "shaders/drawQuad.frag");
+
+	delete pointShader;
+	pointShader = new Shader("shaders/points.vert", "shaders/points.frag");
 }
 
 static void drawScene()
@@ -90,13 +95,43 @@ static void drawScene()
 
 	if (!points.empty())
 	{
+		/*
 		glColor3f(1, 1, 1);
 		glEnableClientState(GL_VERTEX_ARRAY);
-		glVertexPointer(3, GL_FLOAT, 0, glm::value_ptr(points[0]));
+		glVertexPointer(3, GL_FLOAT, sizeof(glm::vec4), glm::value_ptr(points[0]));
 
 		glDrawArrays(GL_POINTS, 0, points.size());
 
 		glDisableClientState(GL_VERTEX_ARRAY);
+		*/
+		/*
+		glEnableVertexAttribArray(0);
+		glEnableVertexAttribArray(1);
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec4), glm::value_ptr(points[0]));
+		glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, sizeof(glm::vec4), &points[0].a);
+	
+		glDrawArrays(GL_POINTS, 0, points.size());
+
+		glDisableVertexAttribArray(0);
+		glDisableVertexAttribArray(1);
+		*/
+
+		glm::mat4 mvp;
+		camera.getMVP(mvp);
+
+		pointShader->bind();
+		pointShader->setMatrix4("mvpMatrix", mvp);
+
+		glColor3f(1, 1, 1);
+		glEnableClientState(GL_VERTEX_ARRAY);
+		glVertexPointer(4, GL_FLOAT, 0, glm::value_ptr(points[0]));
+
+		glDrawArrays(GL_POINTS, 0, points.size());
+
+		glDisableClientState(GL_VERTEX_ARRAY);
+
+		pointShader->disable();
 	}
 
 
@@ -231,7 +266,7 @@ int main(int argc, const char** argv)
 	
 		glm::vec3 center(0.f);
 		for (size_t i = 0; i < points.size(); ++i)
-			center += points[i];
+			center += glm::vec3(points[i]);
 
 		center /= points.size();
 

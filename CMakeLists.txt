@@ -22,6 +22,13 @@ SET (CMAKE_NM      "/usr/bin/llvm-nm")
 SET (CMAKE_OBJDUMP "/usr/bin/llvm-objdump")
 SET (CMAKE_RANLIB  "/usr/bin/llvm-ranlib")
 
+# this seems to only work on linux ...
+find_package (PkgConfig REQUIRED)
+find_package (OpenGL REQUIRED)
+find_package (GLM REQUIRED)
+find_package (GLEW REQUIRED STATIC)
+find_package (FreeImage REQUIRED)
+
 add_executable(SpimVisualize main.cpp Framebuffer.cpp OrbitCamera.cpp Shader.cpp SpimPlane.cpp SpimStack.cpp stb_image.c stb_image_write.c GeometryImage.cpp AABB.cpp GeometryImage.cpp)
 
 LINK_DIRECTORIES("/usr/lib")

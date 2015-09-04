@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <cstring>
+#include <algorithm>
 
 #include <FreeImage.h>
 
@@ -55,7 +56,7 @@ SpimStack::~SpimStack()
 }
 
 
-vector<vec3> SpimStack::getPointcloud(unsigned short threshold) const
+vector<vec4> SpimStack::getPointcloud(unsigned short threshold) const
 {
 	assert(volume);
 
@@ -68,7 +69,7 @@ vector<vec3> SpimStack::getPointcloud(unsigned short threshold) const
 		maxVal = std::max(maxVal, volume[i]);
 
 
-	vector<vec3> points;
+	vector<vec4> points;
 	for (unsigned int z = 0; z < depth; ++z)
 	{
 		for (unsigned int x = 0; x < width; ++x)
@@ -80,7 +81,7 @@ vector<vec3> SpimStack::getPointcloud(unsigned short threshold) const
 				{
 					vec3 coord(x, y, z);
 					float intensity = (float)val / maxVal;
-					points.push_back(coord * DIMENSIONS);
+					points.push_back(vec4(coord * DIMENSIONS, intensity));
 				}
 
 			}

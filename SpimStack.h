@@ -15,9 +15,8 @@ public:
 	void draw() const;
 
 
-	std::vector<glm::vec3> getPointcloud(unsigned short threshold) const;
-	std::vector<glm::vec3> getColors() const;
-
+	std::vector<glm::vec4> getPointcloud(unsigned short threshold) const;
+	
 private:
 	unsigned int		width, height, depth;
 	unsigned int		textures;

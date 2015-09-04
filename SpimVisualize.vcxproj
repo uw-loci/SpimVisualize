@@ -56,12 +56,12 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\opencv\build\include;C:\Users\mbroecker\Documents\code\ffmpeg\include;C:\boost\include;C:\Users\mbroecker\Documents\code\opengl\include;C:\Users\mbroecker\Documents\code\transformDetection\VaryingPointClouds;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\inc;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\opencv\sources\build\lib\Release;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\lib;C:\Users\mbroecker\Documents\code\opengl\lib64;C:\Users\mbroecker\Documents\code\opengl\lib64\Release\x64;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\opencv\build\include;C:\Users\mbroecker\Documents\code\ffmpeg\include;C:\boost\include;c:\dev\opengl\include;C:\Users\mbroecker\Documents\code\transformDetection\VaryingPointClouds;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\inc;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\opencv\sources\build\lib\Release;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\lib;c:\dev\opengl\lib64;c:\dev\opengl\lib64\Release\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>C:\opencv\build\include;C:\Users\mbroecker\Documents\code\ffmpeg\include;C:\boost\include;C:\Users\mbroecker\Documents\code\opengl\include;C:\Users\mbroecker\Documents\code\transformDetection\VaryingPointClouds;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\inc;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\opencv\sources\build\lib\Release;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\lib;C:\Users\mbroecker\Documents\code\opengl\lib64;C:\Users\mbroecker\Documents\code\opengl\lib64\Release\x64;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\opencv\build\include;C:\Users\mbroecker\Documents\code\ffmpeg\include;C:\boost\include;c:\dev\opengl\include;C:\Users\mbroecker\Documents\code\transformDetection\VaryingPointClouds;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\inc;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\opencv\sources\build\lib\Release;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\lib;c:\dev\opengl\lib64;c:\dev\opengl\lib64\Release\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>

@@ -2,6 +2,7 @@
 
 #include <GL/glew.h>
 #include <iostream>
+#include <algorithm>
 
 #include <glm/gtx/transform.hpp>
 #include <glm/gtx/transform2.hpp>
