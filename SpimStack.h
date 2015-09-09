@@ -23,6 +23,8 @@ public:
 	void calculatePoints(unsigned short threshold);
 
 	AABB&& getBBox() const;
+
+	glm::mat4 getTransform() const { return glm::mat4(1.f); }
 	
 
 private:

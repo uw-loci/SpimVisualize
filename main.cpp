@@ -29,15 +29,17 @@ glm::ivec2		mouse;
 
 Shader*			planeShader = 0;
 
-unsigned int	currentDisplay = 0;
-
-
 Shader*			quadShader = 0;
 
 std::vector<SpimPlane*> planes;
 
 Shader*			pointShader = 0;
+
+
 Shader*			volumeShader = 0;
+float			minThreshold = 0.004;
+float			maxThreshold = 0.012;
+
 
 std::vector<SpimStack*>	stacks;
 unsigned int currentStack = 0;
@@ -101,40 +103,25 @@ static void drawScene()
 	}
 
 
-	if (stacks[currentStack])
+	// draw spim stack volumes here
+	glm::mat4 mvp;
+	camera.getMVP(mvp);
+
+	volumeShader->bind();
+	volumeShader->setMatrix4("mvpMatrix", mvp);
+	volumeShader->setUniform("minThreshold", minThreshold);
+
+
+	for (size_t i = 0; i < stacks.size(); ++i)
 	{
-
-		glm::mat4 mvp;
-		camera.getMVP(mvp);
+		volumeShader->setMatrix4("transform", stacks[i]->getTransform());
 
 
-		/*
-		const std::vector<glm::vec4>& points = stacks[currentStack]->getPoints();
-
-		
-		pointShader->bind();
-		pointShader->setMatrix4("mvpMatrix", mvp);
-
-		glColor3f(1, 1, 1);
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glVertexPointer(4, GL_FLOAT, 0, glm::value_ptr(points[0]));
-
-		glDrawArrays(GL_POINTS, 0, points.size());
-
-		glDisableClientState(GL_VERTEX_ARRAY);
-
-		pointShader->disable();
-	
-		*/
-		
-		volumeShader->bind();
-		volumeShader->setMatrix4("mvpMatrix", mvp);
-		
-		stacks[currentStack]->drawVolume(volumeShader);
+		stacks[i]->drawVolume(volumeShader);
 	
 	
-		volumeShader->disable();
 	}
+	volumeShader->disable();
 
 
 }
@@ -196,22 +183,16 @@ static void keyboard(unsigned char key, int x, int y)
 			currentStack = 0;
 	}
 
-	if (key == '1')
-		currentDisplay = 0;
-	if (key == '2')
-		currentDisplay = 1;
-	if (key == '3')
-		currentDisplay = 2;
-	if (key == '4')
-		currentDisplay = 3;
-	if (key == '5')
-		currentDisplay = 4;
-	/*
-	if (key == '6')
-		currentDisplay = 5;
-	if (key == '7')
-		currentDisplay = 6;
-	*/
+	if (key == ',')
+	{
+		minThreshold -= 0.001;
+		std::cout << "min thresh: " << minThreshold << std::endl;
+	}
+	if (key == '.')
+	{
+		minThreshold += 0.001;
+		std::cout << "min thresh: " << minThreshold << std::endl;
+	}
 
 }
 
@@ -272,7 +253,7 @@ int main(int argc, const char** argv)
 		AABB globalBbox;
 		globalBbox.reset();
 
-		for (int i = 0; i < 1; ++i)		
+		for (int i = 0; i < 2; ++i)		
 		{
 			char filename[256];
 			sprintf(filename, "e:/spim/test/spim_TL00_Angle%d.tif", i);
