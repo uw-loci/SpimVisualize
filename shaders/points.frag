@@ -11,6 +11,6 @@ void main()
 
 
 
-	fragColor = vec4(mix(blu, red, intensity), 1.0);
+	fragColor = vec4(mix(blu, red, intensity / 1000.0), 1.0);
 
 }

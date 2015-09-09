@@ -37,6 +37,7 @@ Shader*			quadShader = 0;
 std::vector<SpimPlane*> planes;
 
 Shader*			pointShader = 0;
+Shader*			volumeShader = 0;
 
 std::vector<SpimStack*>	stacks;
 unsigned int currentStack = 0;
@@ -52,6 +53,10 @@ static void reloadShaders()
 
 	delete pointShader;
 	pointShader = new Shader("shaders/points.vert", "shaders/points.frag");
+
+
+	delete volumeShader;
+	volumeShader = new Shader("shaders/volume.vert", "shaders/volume.frag");
 }
 
 static void drawScene()
@@ -99,11 +104,14 @@ static void drawScene()
 	if (stacks[currentStack])
 	{
 
-		const std::vector<glm::vec4>& points = stacks[currentStack]->getPoints();
-
 		glm::mat4 mvp;
 		camera.getMVP(mvp);
 
+
+		/*
+		const std::vector<glm::vec4>& points = stacks[currentStack]->getPoints();
+
+		
 		pointShader->bind();
 		pointShader->setMatrix4("mvpMatrix", mvp);
 
@@ -116,6 +124,16 @@ static void drawScene()
 		glDisableClientState(GL_VERTEX_ARRAY);
 
 		pointShader->disable();
+	
+		*/
+		
+		volumeShader->bind();
+		volumeShader->setMatrix4("mvpMatrix", mvp);
+		
+		stacks[currentStack]->drawVolume(volumeShader);
+	
+	
+		volumeShader->disable();
 	}
 
 
@@ -252,10 +270,14 @@ int main(int argc, const char** argv)
 	try
 	{
 		AABB globalBbox;
+		globalBbox.reset();
 
-		for (int i = 1; i < argc; ++i)
+		for (int i = 0; i < 1; ++i)		
 		{
-			SpimStack* stack = new SpimStack(argv[i]);
+			char filename[256];
+			sprintf(filename, "e:/spim/test/spim_TL00_Angle%d.tif", i);
+
+			SpimStack* stack = new SpimStack(filename);
 			stack->calculatePoints(150);
 
 			stacks.push_back(stack);
