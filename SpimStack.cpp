@@ -5,6 +5,11 @@
 #include <iostream>
 #include <cstring>
 #include <algorithm>
+#include <fstream>
+
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/io.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include <FreeImage.h>
 #include <GL/glew.h>
@@ -15,9 +20,10 @@ using namespace glm;
 // voxel dimensions in microns
 static const vec3 DIMENSIONS(0.625, 0.625, 3);
 
-SpimStack::SpimStack(const string& filename) : width(0), height(0), depth(0), volume(nullptr), volumeTextureId(0), volumeList(0)
+SpimStack::SpimStack(const string& filename) : width(0), height(0), depth(0), volume(nullptr), volumeTextureId(0), volumeList(0), transform(1.f)
 {
 	FIMULTIBITMAP* fmb = FreeImage_OpenMultiBitmap(FIF_TIFF, filename.c_str(), FALSE, TRUE);
+	assert(fmb);
 
 
 	// get the dimensions
@@ -56,6 +62,18 @@ SpimStack::SpimStack(const string& filename) : width(0), height(0), depth(0), vo
 	FreeImage_CloseMultiBitmap(fmb);
 
 
+	cout << "[Stack] Updating stats ... ";
+	maxVal = 0;
+	minVal = std::numeric_limits<unsigned short>::max();
+	for (size_t i = 0; i < width*height*depth; ++i)
+	{
+		unsigned short val = volume[i];
+		maxVal = std::max(maxVal, val);
+		minVal = std::min(minVal, val);
+	}
+	cout << "done; range: " << minVal << "-" << maxVal << endl;
+
+
 	cout << "[Stack] Creating 3D texture ... ";
 	glGenTextures(1, &volumeTextureId);
 	glBindTexture(GL_TEXTURE_3D, volumeTextureId);
@@ -81,7 +99,7 @@ SpimStack::~SpimStack()
 }
 
 
-void SpimStack::calculatePoints(unsigned short threshold)
+std::vector<glm::vec4> SpimStack::calculatePoints() const
 {
 	assert(volume);
 		
@@ -89,9 +107,9 @@ void SpimStack::calculatePoints(unsigned short threshold)
 	unsigned short maxVal = 0;
 	for (unsigned int i = 0; i < width*height*depth; ++i)
 		maxVal = std::max(maxVal, volume[i]);
-
-	points.clear();
-
+	
+	std::vector<glm::vec4> points;
+	points.reserve(width*height*depth);
 
 	for (unsigned int z = 0; z < depth; ++z)
 	{
@@ -100,7 +118,7 @@ void SpimStack::calculatePoints(unsigned short threshold)
 			for (unsigned int y = 0; y < height; ++y)
 			{
 				const unsigned short val = volume[x + y*width + z*width*height];
-				if (val >= threshold)
+				//if (val >= threshold)
 				{
 					vec3 coord(x, y, z);
 					//float intensity = (float)val / maxVal;
@@ -115,14 +133,54 @@ void SpimStack::calculatePoints(unsigned short threshold)
 
 	float relSize = (float)points.size() / (width*height*depth);
 	std::cout << "[Stack] Reconstructed " << points.size() << "(" << relSize << ") points.\n";
+
+	return std::move(points);
 }
+
+const std::vector<glm::vec3>& SpimStack::calculateRegistrationPoints(float t)
+{
+	assert(volume);
+
+	registrationPoints.clear();
+	registrationPoints.reserve(width*height);
+
+	// find the largest value for scaling
+	unsigned short maxVal = 0;
+	for (unsigned int i = 0; i < width*height*depth; ++i)
+		maxVal = std::max(maxVal, volume[i]);
+
+	
+	for (unsigned int z = 0; z < depth; ++z)
+	{
+		for (unsigned int x = 0; x < width; ++x)
+		{
+			for (unsigned int y = 0; y < height; ++y)
+			{
+				const unsigned short val = volume[x + y*width + z*width*height];
+				if (val >= t)
+				{
+					vec3 coord(x, y, z);
+					registrationPoints.push_back(coord * DIMENSIONS); 
+				}
+
+			}
+
+		}
+	}
+
+	float relSize = (float)registrationPoints.size() / (width*height*depth);
+	std::cout << "[Stack] Reconstructed " << registrationPoints.size() << "(" << relSize << ") points.\n";
+
+	return registrationPoints;
+}
+
 
 AABB&& SpimStack::getBBox() const
 {
 	AABB bbox;
 	vec3 vol = DIMENSIONS * vec3(width, height, depth);
-	bbox.min = -vol * 0.5f;
-	bbox.max = vol * 0.5f ;
+	bbox.min = vec3(0.f); // -vol * 0.5f;
+	bbox.max = vol;// *0.5f;
 	
 	return std::move(bbox);
 }
@@ -178,4 +236,32 @@ void SpimStack::drawVolume(Shader* s) const
 	}
 
 
+}
+
+void SpimStack::loadRegistration(const string& filename)
+{
+	ifstream file(filename);
+	assert(file.is_open());
+
+	if (!file.is_open())
+		throw std::runtime_error("Unable to open file \"" + filename + "\"");
+
+	for (int i = 0; i < 16; ++i)
+	{
+		std::string buffer;
+		std::getline(file, buffer);
+
+		int result = sscanf(buffer.c_str(), "m%*2s: %f", &glm::value_ptr(transform)[i]);
+	}
+
+	transform = glm::transpose(transform);
+	std::cout << "[SpimPlane] Read transform: " << transform << std::endl;
+}
+
+void SpimStack::setRotation(float angle)
+{
+	transform = translate(glm::mat4(1.f), getBBox().getCentroid());
+	transform = rotate(transform, angle, vec3(0, 1, 0));
+	transform = translate(transform, getBBox().getCentroid() * -1.f);
+	
 }

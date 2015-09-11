@@ -18,25 +18,35 @@ public:
 	void draw() const;
 	void drawVolume(Shader* s) const;
 
+	void loadRegistration(const std::string& filename);
 
-	inline const std::vector<glm::vec4>& getPoints() { return points; }
-	void calculatePoints(unsigned short threshold);
+	std::vector<glm::vec4> calculatePoints() const;
+	const std::vector<glm::vec3>& calculateRegistrationPoints(float threshold) ;
+
 
 	AABB&& getBBox() const;
 
-	glm::mat4 getTransform() const { return glm::mat4(1.f); }
-	
+	void setRotation(float angle);
+
+	inline const glm::mat4& getTransform() const { return transform; }
+	inline const std::vector<glm::vec3>& getRegistrationPoints() const { return registrationPoints;  }
 
 private:
 	unsigned int		width, height, depth;
 	unsigned int		textures;
 
 	// 3d volume texture
-	unsigned int		volumeTextureId;
+	unsigned int			volumeTextureId;
 	mutable unsigned int	volumeList;
 
-	unsigned short*		volume;
-	
-	std::vector<glm::vec4>	points;
+	unsigned short*			volume;
+	unsigned short			minVal, maxVal;
 
+
+	glm::mat4				transform;
+
+	std::vector<glm::vec3>	registrationPoints;
 };
+
+
+

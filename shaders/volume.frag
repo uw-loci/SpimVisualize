@@ -2,10 +2,11 @@
 
 uniform sampler3D volumeTexture;
 
-uniform float minThreshold = 0.01;
-uniform float maxThreshold = 0.2;
+uniform float minThreshold = 0.6;
 
 varying vec3 texcoord;
+
+uniform vec3 color;
 
 
 void main()
@@ -19,16 +20,14 @@ void main()
 
 
 
-	if (intensity < minThreshold || intensity > maxThreshold)
+
+
+	if (intensity < minThreshold)
 		discard;
 
 
-	vec4 color = vec4(mix(blu, red, (intensity - minThreshold) / (maxThreshold - minThreshold)), 1.0);
+	gl_FragColor = vec4(mix(red, blu, 1.0 - intensity), 1.0);
 
 
-	color = vec4(intensity * 20.0);
-
-
-	gl_FragColor = color;
-	
+	gl_FragColor = vec4(color, 0.5);
 }

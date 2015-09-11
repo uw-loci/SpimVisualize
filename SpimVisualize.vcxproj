@@ -15,6 +15,10 @@
     <ClCompile Include="Framebuffer.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="OrbitCamera.cpp" />
+    <ClCompile Include="sdk\libICP\src\icp.cpp" />
+    <ClCompile Include="sdk\libICP\src\icpPointToPoint.cpp" />
+    <ClCompile Include="sdk\libICP\src\kdtree.cpp" />
+    <ClCompile Include="sdk\libICP\src\matrix.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="SpimPlane.cpp" />
     <ClCompile Include="SpimStack.cpp" />
@@ -23,6 +27,10 @@
   <ItemGroup>
     <ClInclude Include="Framebuffer.h" />
     <ClInclude Include="OrbitCamera.h" />
+    <ClInclude Include="sdk\libICP\src\icp.h" />
+    <ClInclude Include="sdk\libICP\src\icpPointToPoint.h" />
+    <ClInclude Include="sdk\libICP\src\kdtree.h" />
+    <ClInclude Include="sdk\libICP\src\matrix.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="SpimPlane.h" />
     <ClInclude Include="SpimStack.h" />
