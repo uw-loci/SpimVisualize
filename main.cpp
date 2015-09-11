@@ -44,6 +44,7 @@ bool			drawBbox = true;
 
 std::vector<SpimStack*>	stacks;
 unsigned int currentStack = 0;
+float rotationAngle = 0.f;
 
 static const glm::vec3& getRandomColor(int n)
 {
@@ -156,8 +157,6 @@ static void drawScene()
 	// draw the points
 	if (!stacks[currentStack]->getRegistrationPoints().empty())
 	{
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_ONE, GL_ONE);
 
 		pointShader->bind();
 		pointShader->setMatrix4("mvpMatrix", mvp);
@@ -170,7 +169,6 @@ static void drawScene()
 
 
 		pointShader->disable();
-		glDisable(GL_BLEND);
 	}
 
 	if (drawBbox)
@@ -244,6 +242,8 @@ static void keyboard(unsigned char key, int x, int y)
 		++currentStack;
 		if (currentStack == stacks.size())
 			currentStack = 0;
+	
+		std::cout << "Current stack: " << currentStack << std::endl;
 	}
 
 	if (key == 'b')
@@ -258,6 +258,23 @@ static void keyboard(unsigned char key, int x, int y)
 	{
 		minThreshold += 0.001;
 		std::cout << "min thresh: " << minThreshold << std::endl;
+	}
+
+	if (key == '[')
+	{
+		--rotationAngle;
+		std::cout << "Current rot angle: " << rotationAngle << std::endl;
+	
+		stacks[currentStack]->setRotation(rotationAngle);
+	}
+
+	if (key == ']')
+	{
+		++rotationAngle;
+		std::cout << "Current rot angle: " << rotationAngle << std::endl;
+	
+
+		stacks[currentStack]->setRotation(rotationAngle);
 	}
 
 
@@ -326,11 +343,11 @@ int main(int argc, const char** argv)
 		AABB globalBbox;
 		globalBbox.reset();
 
-		for (int i = 0; i < 2; ++i)		
+		for (int i = 0; i < 3; ++i)		
 		{
 			char filename[256];
 			//sprintf(filename, "e:/spim/test/spim_TL00_Angle%d.tif", i);
-			sprintf(filename, "E:/spim/091015 SPIM various size beads/091015 45 micron beads/spim_TL01_Angle%d.ome.tiff", i);
+			sprintf(filename, "E:/spim/091015 SPIM various size beads/091015 20micron beads/spim_TL01_Angle%d.ome.tiff", i);
 
 			SpimStack* stack = new SpimStack(filename);
 

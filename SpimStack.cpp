@@ -84,7 +84,7 @@ SpimStack::SpimStack(const string& filename) : width(0), height(0), depth(0), vo
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
-	glTexImage3D(GL_TEXTURE_3D, 0, GL_R32F, width, height, depth, 0, GL_RED, GL_UNSIGNED_SHORT, volume);
+	glTexImage3D(GL_TEXTURE_3D, 0, GL_RED, width, height, depth, 0, GL_RED, GL_UNSIGNED_SHORT, volume);
 
 	cout << "done.\n";
 }
