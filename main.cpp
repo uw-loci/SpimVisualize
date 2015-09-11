@@ -87,7 +87,7 @@ static void reloadShaders()
 
 
 	delete volumeShader;
-	volumeShader = new Shader("shaders/volume.vert", "shaders/volume.frag");
+	volumeShader = new Shader("shaders/volume2.vert", "shaders/volume2.frag");
 }
 
 static void drawScene()
@@ -105,59 +105,105 @@ static void drawScene()
 	glEnd();
 
 
-	if (planeShader && !planes.empty())
-	{
-
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-
-		planeShader->bind();
-		glm::mat4 mvp(1.f);
-		camera.getMVP(mvp);
-		planeShader->setMatrix4("mvpMatrix", mvp);
-
-
-		//TODO: implement depth peeling here
-
-
-		for (size_t i = 0; i < planes.size(); ++i)
-			planes[i]->draw(planeShader);
-
-		planeShader->disable();
-
-		glDisable(GL_BLEND);
-
-
-	}
-
-
 	// draw spim stack volumes here
-	glm::mat4 mvp;
+	glm::mat4 proj, view;
+	camera.getMatrices(proj, view);
+
+
+	glm::mat4 mvp(1.f);
 	camera.getMVP(mvp);
 
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 	volumeShader->bind();
-	volumeShader->setMatrix4("mvpMatrix", mvp);
 	volumeShader->setUniform("minThreshold", minThreshold);
-
-
+	
+	const glm::vec3 camPos = camera.getPosition();
+	const glm::vec3 viewDir = glm::normalize(camera.target - camPos);
 	for (size_t i = 0; i < stacks.size(); ++i)
 	{
+
+		volumeShader->setMatrix4("inverseMVP", glm::inverse(mvp * stacks[i]->getTransform()));
 		volumeShader->setMatrix4("transform", stacks[i]->getTransform());
-		volumeShader->setUniform("stackId", (int)i);
-		volumeShader->setUniform("color", getRandomColor(i));
-	
-		stacks[i]->drawVolume(volumeShader);
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_3D, stacks[i]->getTexture());
+		volumeShader->setUniform("colormap", 0);
+
+		AABB bbox = stacks[i]->getBBox();
+		volumeShader->setUniform("bboxMax", bbox.max);
+		volumeShader->setUniform("bboxMin", bbox.min);
+
+
+		// draw screen filling quads
+		// find max/min distances of bbox cube from camera
+		std::vector<glm::vec3> boxVerts = bbox.getVertices();
+
+		// transform all vertices to world space
+		for (size_t k = 0; k < boxVerts.size(); ++k)
+			boxVerts[k] = glm::vec3(stacks[i]->getTransform() * glm::vec4(boxVerts[k], 1.f));
+		
+		// calculate max/min distance
+		float maxDist = 0.f, minDist = std::numeric_limits<float>::max();
+		for (size_t k = 0; k < boxVerts.size(); ++k)
+		{
+			float d = glm::length(boxVerts[k] - camPos);
+
+			if (glm::dot(viewDir, boxVerts[k] - camPos) > 0.f)
+			{
+				maxDist = std::max(maxDist, d);
+				minDist = std::min(minDist, d);
+
+			}
+		}
+			
+		//std::cout << "Dist: " << minDist << " - " << maxDist << std::endl;
+
+
+
+		static unsigned int sliceList = 0;
+		if (glIsList(sliceList))
+			glCallList(sliceList);
+		else
+		{
+			sliceList = glGenLists(1);
+			glNewList(sliceList, GL_COMPILE_AND_EXECUTE);
+
+
+			const int SLICES = 500;
+			glBegin(GL_QUADS);
+			for (int z = SLICES; z > 0; --z)
+			{
+				// render back-to-front
+				float zf = (float)z / SLICES;
+				
+				if (z == SLICES)
+					zf = 0.0001f;
+				
+				glVertex3f(-1, 1, zf);
+				glVertex3f(-1, -1, zf);
+				glVertex3f(1, -1, zf);
+				glVertex3f(1, 1, zf);
+
+			}
+			glEnd();
+
+
+			glEndList();
+		}
+
+		//stacks[i]->drawSlices(volumeShader);
 	
 	
 	}
 	volumeShader->disable();
+	glDisable(GL_BLEND);
 
 
 	// draw the points
 	if (!stacks[currentStack]->getRegistrationPoints().empty())
 	{
-
 		pointShader->bind();
 		pointShader->setMatrix4("mvpMatrix", mvp);
 		pointShader->setMatrix4("transform", stacks[currentStack]->getTransform());
@@ -343,18 +389,14 @@ int main(int argc, const char** argv)
 		AABB globalBbox;
 		globalBbox.reset();
 
-		for (int i = 0; i < 3; ++i)		
+		for (int i = 0; i < 1; ++i)		
 		{
 			char filename[256];
 			//sprintf(filename, "e:/spim/test/spim_TL00_Angle%d.tif", i);
 			sprintf(filename, "E:/spim/091015 SPIM various size beads/091015 20micron beads/spim_TL01_Angle%d.ome.tiff", i);
 
 			SpimStack* stack = new SpimStack(filename);
-
-			float angle = -30 + 30 * i;
-			stack->setRotation(angle);
-
-			
+									
 			/*
 			sprintf(filename, "e:/spim/test/spim_TL00_Angle%d.tif.registration", i);
 			stack->loadRegistration(filename);

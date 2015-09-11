@@ -30,6 +30,8 @@ struct AABB
 		this->extend(bbox.max);
 	}
 
+	std::vector<glm::vec3> getVertices() const;
+
 	void calculate(const std::vector<glm::vec3>& points);
 
 	/// checks if the ray, defined by the origin o and vector v intersects this box

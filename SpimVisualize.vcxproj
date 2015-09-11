@@ -25,6 +25,7 @@
     <ClCompile Include="stb_image.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AABB.h" />
     <ClInclude Include="Framebuffer.h" />
     <ClInclude Include="OrbitCamera.h" />
     <ClInclude Include="sdk\libICP\src\icp.h" />

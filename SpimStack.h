@@ -16,7 +16,7 @@ public:
 	~SpimStack();
 	
 	void draw() const;
-	void drawVolume(Shader* s) const;
+	void drawSlices(Shader* s) const;
 
 	void loadRegistration(const std::string& filename);
 
@@ -30,6 +30,8 @@ public:
 
 	inline const glm::mat4& getTransform() const { return transform; }
 	inline const std::vector<glm::vec3>& getRegistrationPoints() const { return registrationPoints;  }
+
+	inline const unsigned int getTexture() const { return volumeTextureId; }
 
 private:
 	unsigned int		width, height, depth;

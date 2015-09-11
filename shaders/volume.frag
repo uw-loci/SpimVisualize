@@ -1,3 +1,5 @@
+// renders volume slices
+
 #version 130
 
 uniform sampler3D volumeTexture;

@@ -30,19 +30,39 @@ bool AABB::isInside(const AABB& other) const
 	return isInside(other.min) && isInside(other.max);
 }
 
-AABB::ClipResult AABB::isVisible(const glm::mat4& mvp) const
+std::vector<glm::vec3> AABB::getVertices() const
 {
 	using namespace glm;
+	using namespace std;
 
 	// create the eight vertices of the bounding box
-	vec4 vertices[] = {	vec4(min.x, min.y, min.z, 1.f),
+	vec4 vertices[] = { vec4(min.x, min.y, min.z, 1.f),
 						vec4(min.x, min.y, max.z, 1.f),
 						vec4(max.x, min.y, max.z, 1.f),
 						vec4(max.x, min.y, min.z, 1.f),
 						vec4(min.x, max.y, min.z, 1.f),
 						vec4(min.x, max.y, max.z, 1.f),
 						vec4(max.x, max.y, max.z, 1.f),
-						vec4(max.x, max.y, min.z, 1.f)};
+						vec4(max.x, max.y, min.z, 1.f) };
+	
+	vector<vec3> result(&vertices[0], &vertices[8]);
+	return std::move(result);
+}
+
+AABB::ClipResult AABB::isVisible(const glm::mat4& mvp) const
+{
+	using namespace glm;
+
+
+	// create the eight vertices of the bounding box
+	vec4 vertices[] = { vec4(min.x, min.y, min.z, 1.f),
+						vec4(min.x, min.y, max.z, 1.f),
+						vec4(max.x, min.y, max.z, 1.f),
+						vec4(max.x, min.y, min.z, 1.f),
+						vec4(min.x, max.y, min.z, 1.f),
+						vec4(min.x, max.y, max.z, 1.f),
+						vec4(max.x, max.y, max.z, 1.f),
+						vec4(max.x, max.y, min.z, 1.f) };
 
 
 	/* simple solution -- does not work for close objects

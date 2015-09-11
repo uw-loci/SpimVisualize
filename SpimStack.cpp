@@ -185,7 +185,7 @@ AABB&& SpimStack::getBBox() const
 	return std::move(bbox);
 }
 
-void SpimStack::drawVolume(Shader* s) const
+void SpimStack::drawSlices(Shader* s) const
 {
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_3D, volumeTextureId);
