@@ -121,6 +121,11 @@ static void drawScene()
 	
 	const glm::vec3 camPos = camera.getPosition();
 	const glm::vec3 viewDir = glm::normalize(camera.target - camPos);
+	
+	// the smallest and largest projected bounding box vertices -- used to calculate the extend of planes
+	// to draw
+	glm::vec3 minPVal(std::numeric_limits<float>::max()), maxPVal(std::numeric_limits<float>::lowest());
+	
 	for (size_t i = 0; i < stacks.size(); ++i)
 	{
 
@@ -139,59 +144,40 @@ static void drawScene()
 		// draw screen filling quads
 		// find max/min distances of bbox cube from camera
 		std::vector<glm::vec3> boxVerts = bbox.getVertices();
-
-		// transform all vertices to world space
-		for (size_t k = 0; k < boxVerts.size(); ++k)
-			boxVerts[k] = glm::vec3(stacks[i]->getTransform() * glm::vec4(boxVerts[k], 1.f));
 		
 		// calculate max/min distance
 		float maxDist = 0.f, minDist = std::numeric_limits<float>::max();
 		for (size_t k = 0; k < boxVerts.size(); ++k)
 		{
-			float d = glm::length(boxVerts[k] - camPos);
+			glm::vec4 p = mvp * stacks[i]->getTransform() * glm::vec4(boxVerts[k], 1.f);
+			p /= p.w;
 
-			if (glm::dot(viewDir, boxVerts[k] - camPos) > 0.f)
-			{
-				maxDist = std::max(maxDist, d);
-				minDist = std::min(minDist, d);
+			minPVal = glm::min(minPVal, glm::vec3(p));
+			maxPVal = glm::max(maxPVal, glm::vec3(p));
 
-			}
 		}
 			
 		//std::cout << "Dist: " << minDist << " - " << maxDist << std::endl;
 
+		maxPVal = glm::min(maxPVal, glm::vec3(1.f));
+		minPVal = glm::max(minPVal, glm::vec3(-1.f));
 
+		std::cout << "Max: " << maxPVal << " min: " << minPVal << std::endl;
 
-		static unsigned int sliceList = 0;
-		if (glIsList(sliceList))
-			glCallList(sliceList);
-		else
+		const int SLICES = 100;
+		glBegin(GL_QUADS);
+		for (int z = 0; z < SLICES; ++z)
 		{
-			sliceList = glGenLists(1);
-			glNewList(sliceList, GL_COMPILE_AND_EXECUTE);
-
-
-			const int SLICES = 500;
-			glBegin(GL_QUADS);
-			for (int z = SLICES; z > 0; --z)
-			{
-				// render back-to-front
-				float zf = (float)z / SLICES;
+			// render back-to-front
+			float zf = glm::mix(maxPVal.z, minPVal.z, (float)z / SLICES);
 				
-				if (z == SLICES)
-					zf = 0.0001f;
-				
-				glVertex3f(-1, 1, zf);
-				glVertex3f(-1, -1, zf);
-				glVertex3f(1, -1, zf);
-				glVertex3f(1, 1, zf);
-
-			}
-			glEnd();
-
-
-			glEndList();
+			glVertex3f(minPVal.x, maxPVal.y, zf);
+			glVertex3f(minPVal.x, minPVal.y, zf);
+			glVertex3f(maxPVal.x, minPVal.y, zf);
+			glVertex3f(maxPVal.x, maxPVal.y, zf);
 		}
+		glEnd();
+
 
 		//stacks[i]->drawSlices(volumeShader);
 	
