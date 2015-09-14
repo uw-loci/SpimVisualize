@@ -2,18 +2,53 @@
 
 #version 120
 
-uniform sampler3D volumeTexture;
+struct Volume
+{
+	sampler3D		texture;
+	vec3			bboxMin, bboxMax;
+	mat4			inverseMVP;
+};
+
+uniform Volume volume[3];
 
 uniform float sliceCount = 100;
 uniform float minThreshold = 0.6;
 
-varying vec3 worldPosition;
-
-uniform vec3 bboxMax;
-uniform vec3 bboxMin;
+varying vec4 vertex;
 
 void main()
 {
+	vec3 color = vec3(0.0);
+	float intensity = 0.0;
+
+	for (int i = 0; i < 2; ++i)
+	{
+		vec4 v = volume[i].inverseMVP * vertex;
+		v /= v.w;
+
+		vec3 worldPosition = v.xyz;
+
+
+		vec3 texcoord = worldPosition - volume[i].bboxMin; // vec3(1344.0, 1024.0, 101.0);
+		texcoord /= (volume[i].bboxMax - volume[i].bboxMin);
+	
+		float t = texture3D(volume[i].texture, texcoord).r;
+
+		// check if the value is inside
+		if (worldPosition.x > volume[i].bboxMin.x && worldPosition.x < volume[i].bboxMax.x &&
+			worldPosition.y > volume[i].bboxMin.y && worldPosition.y < volume[i].bboxMax.y &&
+			worldPosition.z > volume[i].bboxMin.z && worldPosition.z < volume[i].bboxMax.z) 
+		{
+			intensity += t;
+			color += worldPosition;
+		
+		}
+	}
+
+	color = normalize(color);
+
+
+	/*
 	// normalize the texcoords based on the bbox
 	vec3 texcoord = worldPosition - bboxMin; // vec3(1344.0, 1024.0, 101.0);
 	texcoord /= (bboxMax - bboxMin);
@@ -31,8 +66,7 @@ void main()
 	
 	if (worldPosition.x > bboxMin.x && worldPosition.x < bboxMax.x &&
 		worldPosition.y > bboxMin.y && worldPosition.y < bboxMax.y &&
-		worldPosition.z > bboxMin.z && worldPosition.z < bboxMax.z &&
-		intensity > minThreshold)
+		worldPosition.z > bboxMin.z && worldPosition.z < bboxMax.z) 
 	{
 			//color = vec3(0.0, 1.0, 0.0);
 		
@@ -45,8 +79,7 @@ void main()
 	}
 	else
 		discard;
+	*/
 	
-
-
-	gl_FragColor = vec4(color, intensity / sliceCount);
+	gl_FragColor = vec4(color, intensity * 10.0);
 }

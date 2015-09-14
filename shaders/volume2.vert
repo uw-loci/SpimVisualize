@@ -1,22 +1,14 @@
 
 #version 120
 
-uniform mat4 inverseMVP = mat4(1.0);
-
-varying vec3 worldPosition;
-
 // far map offset
 const float EPSILON = 0.0001;
 
+varying vec4 vertex;
+
 void main()
 {
-	vec4 vertex = gl_Vertex - vec4(0.0, 0.0, EPSILON, 0.0);
-
-	vec4 v = inverseMVP * vertex;
-	v /= v.w;
-	worldPosition = v.xyz;
-
-
+	vertex = gl_Vertex - vec4(0.0, 0.0, EPSILON, 0.0);
 	gl_Position = vertex; //* vec4(0.8, 0.8, 1.0, 1.0);
 }
 

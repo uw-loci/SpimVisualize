@@ -141,7 +141,7 @@ static void drawScene()
 	{
 
 		glEnable(GL_BLEND);
-		glBlendFunc(GL_ONE, GL_ONE);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 		volumeShader2->bind();
 		volumeShader2->setUniform("minThreshold", minThreshold);
@@ -157,20 +157,9 @@ static void drawScene()
 		for (size_t i = 0; i < stacks.size(); ++i)
 		{
 
-			volumeShader2->setMatrix4("inverseMVP", glm::inverse(mvp * stacks[i]->getTransform()));
-			
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_3D, stacks[i]->getTexture());
-			volumeShader2->setUniform("colormap", 0);
-
-			AABB bbox = stacks[i]->getBBox();
-			volumeShader2->setUniform("bboxMax", bbox.max);
-			volumeShader2->setUniform("bboxMin", bbox.min);
-
-
 			// draw screen filling quads
 			// find max/min distances of bbox cube from camera
-			std::vector<glm::vec3> boxVerts = bbox.getVertices();
+			std::vector<glm::vec3> boxVerts = stacks[i]->getBBox().getVertices();
 
 			// calculate max/min distance
 			float maxDist = 0.f, minDist = std::numeric_limits<float>::max();
@@ -184,31 +173,49 @@ static void drawScene()
 
 			}
 
-			//std::cout << "Dist: " << minDist << " - " << maxDist << std::endl;
-
-			maxPVal = glm::min(maxPVal, glm::vec3(1.f));
-			minPVal = glm::max(minPVal, glm::vec3(-1.f));
-
-			//std::cout << "Max: " << maxPVal << " min: " << minPVal << std::endl;
-
-			glBegin(GL_QUADS);
-			for (int z = 0; z < slices; ++z)
-			{
-				// render back-to-front
-				float zf = glm::mix(maxPVal.z, minPVal.z, (float)z / slices);
-
-				glVertex3f(minPVal.x, maxPVal.y, zf);
-				glVertex3f(minPVal.x, minPVal.y, zf);
-				glVertex3f(maxPVal.x, minPVal.y, zf);
-				glVertex3f(maxPVal.x, maxPVal.y, zf);
-			}
-			glEnd();
-
-
-			//stacks[i]->drawSlices(volumeShader);
-
-
 		}
+
+		maxPVal = glm::min(maxPVal, glm::vec3(1.f));
+		minPVal = glm::max(minPVal, glm::vec3(-1.f));
+		
+
+		for (size_t i = 0; i < stacks.size(); ++i)
+		{
+			glActiveTexture(GL_TEXTURE0 + i);
+			glBindTexture(GL_TEXTURE_3D, stacks[i]->getTexture());
+
+			char uname[256];
+			sprintf(uname, "volume[%d].texture", i);
+			volumeShader2->setUniform(uname, (int)i);
+
+			AABB bbox = stacks[i]->getBBox();
+			sprintf(uname, "volume[%d].bboxMax", i);
+			volumeShader2->setUniform(uname, bbox.max);
+			sprintf(uname, "volume[%d].bboxMin", i);
+			volumeShader2->setUniform(uname, bbox.min);
+
+			sprintf(uname, "volume[%d].inverseMVP", i);
+			volumeShader2->setMatrix4(uname, glm::inverse(mvp * stacks[i]->getTransform()));
+		}
+
+
+		// draw all slices
+		glBegin(GL_QUADS);
+		for (int z = 0; z < slices; ++z)
+		{
+			// render back-to-front
+			float zf = glm::mix(maxPVal.z, minPVal.z, (float)z / slices);
+
+			glVertex3f(minPVal.x, maxPVal.y, zf);
+			glVertex3f(minPVal.x, minPVal.y, zf);
+			glVertex3f(maxPVal.x, minPVal.y, zf);
+			glVertex3f(maxPVal.x, maxPVal.y, zf);
+		}
+		glEnd();
+
+
+		glActiveTexture(GL_TEXTURE0);
+
 		volumeShader2->disable();
 		glDisable(GL_BLEND);
 
@@ -419,14 +426,16 @@ int main(int argc, const char** argv)
 		AABB globalBbox;
 		globalBbox.reset();
 
-		for (int i = 0; i < 1; ++i)		
+		for (int i = 0; i < 3; ++i)		
 		{
 			char filename[256];
 			//sprintf(filename, "e:/spim/test/spim_TL00_Angle%d.tif", i);
 			sprintf(filename, "E:/spim/091015 SPIM various size beads/091015 20micron beads/spim_TL01_Angle%d.ome.tiff", i);
 
 			SpimStack* stack = new SpimStack(filename);
-									
+							
+			stack->setRotation(-30 + i * 30);
+
 			/*
 			sprintf(filename, "e:/spim/test/spim_TL00_Angle%d.tif.registration", i);
 			stack->loadRegistration(filename);
