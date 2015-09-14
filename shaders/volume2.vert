@@ -1,13 +1,8 @@
 
 #version 120
 
-uniform mat4 viewMatrix = mat4(1.0);
-uniform mat4 projMatrix = mat4(1.0);
-uniform mat4 transform = mat4(1.0);
-
 uniform mat4 inverseMVP = mat4(1.0);
 
-varying vec3 texcoord;
 varying vec3 worldPosition;
 
 // far map offset
@@ -22,8 +17,6 @@ void main()
 	worldPosition = v.xyz;
 
 
-
-	gl_Position = vertex;// * vec4(0.8, 0.8, 1.0, 1.0);
-
+	gl_Position = vertex; //* vec4(0.8, 0.8, 1.0, 1.0);
 }
 

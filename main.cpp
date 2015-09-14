@@ -37,10 +37,16 @@ std::vector<SpimPlane*> planes;
 
 Shader*			pointShader = 0;
 
+
 Shader*			volumeShader = 0;
+Shader*			volumeShader2 = 0;
 float			minThreshold = 0.004;
 
+bool			drawSlices = false;
+
 bool			drawBbox = true;
+
+int				slices = 100;
 
 std::vector<SpimStack*>	stacks;
 unsigned int currentStack = 0;
@@ -85,9 +91,11 @@ static void reloadShaders()
 	delete pointShader;
 	pointShader = new Shader("shaders/points2.vert", "shaders/points2.frag");
 
-
 	delete volumeShader;
-	volumeShader = new Shader("shaders/volume2.vert", "shaders/volume2.frag");
+	volumeShader = new Shader("shaders/volume.vert", "shaders/volume.frag");
+
+	delete volumeShader2;
+	volumeShader2 = new Shader("shaders/volume2.vert", "shaders/volume2.frag");
 }
 
 static void drawScene()
@@ -112,80 +120,99 @@ static void drawScene()
 
 	glm::mat4 mvp(1.f);
 	camera.getMVP(mvp);
+	
+	if (drawSlices)
+	{
+		volumeShader->bind();
+		volumeShader->setUniform("minThreshold", minThreshold);
+		volumeShader->setUniform("mvpMatrix", mvp);
 
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	volumeShader->bind();
-	volumeShader->setUniform("minThreshold", minThreshold);
-	
-	const glm::vec3 camPos = camera.getPosition();
-	const glm::vec3 viewDir = glm::normalize(camera.target - camPos);
-	
-	// the smallest and largest projected bounding box vertices -- used to calculate the extend of planes
-	// to draw
-	glm::vec3 minPVal(std::numeric_limits<float>::max()), maxPVal(std::numeric_limits<float>::lowest());
-	
-	for (size_t i = 0; i < stacks.size(); ++i)
+		for (size_t i = 0; i < stacks.size(); ++i)
+		{
+			volumeShader->setUniform("color", getRandomColor(i));
+			volumeShader->setMatrix4("transform", stacks[i]->getTransform());
+			stacks[i]->drawSlices(volumeShader);
+		}
+
+		volumeShader->disable();
+	}
+	else
 	{
 
-		volumeShader->setMatrix4("inverseMVP", glm::inverse(mvp * stacks[i]->getTransform()));
-		volumeShader->setMatrix4("transform", stacks[i]->getTransform());
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_ONE, GL_ONE);
 
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_3D, stacks[i]->getTexture());
-		volumeShader->setUniform("colormap", 0);
+		volumeShader2->bind();
+		volumeShader2->setUniform("minThreshold", minThreshold);
+		volumeShader2->setUniform("sliceCount", slices);
 
-		AABB bbox = stacks[i]->getBBox();
-		volumeShader->setUniform("bboxMax", bbox.max);
-		volumeShader->setUniform("bboxMin", bbox.min);
+		const glm::vec3 camPos = camera.getPosition();
+		const glm::vec3 viewDir = glm::normalize(camera.target - camPos);
 
+		// the smallest and largest projected bounding box vertices -- used to calculate the extend of planes
+		// to draw
+		glm::vec3 minPVal(std::numeric_limits<float>::max()), maxPVal(std::numeric_limits<float>::lowest());
 
-		// draw screen filling quads
-		// find max/min distances of bbox cube from camera
-		std::vector<glm::vec3> boxVerts = bbox.getVertices();
-		
-		// calculate max/min distance
-		float maxDist = 0.f, minDist = std::numeric_limits<float>::max();
-		for (size_t k = 0; k < boxVerts.size(); ++k)
+		for (size_t i = 0; i < stacks.size(); ++i)
 		{
-			glm::vec4 p = mvp * stacks[i]->getTransform() * glm::vec4(boxVerts[k], 1.f);
-			p /= p.w;
 
-			minPVal = glm::min(minPVal, glm::vec3(p));
-			maxPVal = glm::max(maxPVal, glm::vec3(p));
-
-		}
+			volumeShader2->setMatrix4("inverseMVP", glm::inverse(mvp * stacks[i]->getTransform()));
 			
-		//std::cout << "Dist: " << minDist << " - " << maxDist << std::endl;
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_3D, stacks[i]->getTexture());
+			volumeShader2->setUniform("colormap", 0);
 
-		maxPVal = glm::min(maxPVal, glm::vec3(1.f));
-		minPVal = glm::max(minPVal, glm::vec3(-1.f));
+			AABB bbox = stacks[i]->getBBox();
+			volumeShader2->setUniform("bboxMax", bbox.max);
+			volumeShader2->setUniform("bboxMin", bbox.min);
 
-		std::cout << "Max: " << maxPVal << " min: " << minPVal << std::endl;
 
-		const int SLICES = 100;
-		glBegin(GL_QUADS);
-		for (int z = 0; z < SLICES; ++z)
-		{
-			// render back-to-front
-			float zf = glm::mix(maxPVal.z, minPVal.z, (float)z / SLICES);
-				
-			glVertex3f(minPVal.x, maxPVal.y, zf);
-			glVertex3f(minPVal.x, minPVal.y, zf);
-			glVertex3f(maxPVal.x, minPVal.y, zf);
-			glVertex3f(maxPVal.x, maxPVal.y, zf);
+			// draw screen filling quads
+			// find max/min distances of bbox cube from camera
+			std::vector<glm::vec3> boxVerts = bbox.getVertices();
+
+			// calculate max/min distance
+			float maxDist = 0.f, minDist = std::numeric_limits<float>::max();
+			for (size_t k = 0; k < boxVerts.size(); ++k)
+			{
+				glm::vec4 p = mvp * stacks[i]->getTransform() * glm::vec4(boxVerts[k], 1.f);
+				p /= p.w;
+
+				minPVal = glm::min(minPVal, glm::vec3(p));
+				maxPVal = glm::max(maxPVal, glm::vec3(p));
+
+			}
+
+			//std::cout << "Dist: " << minDist << " - " << maxDist << std::endl;
+
+			maxPVal = glm::min(maxPVal, glm::vec3(1.f));
+			minPVal = glm::max(minPVal, glm::vec3(-1.f));
+
+			//std::cout << "Max: " << maxPVal << " min: " << minPVal << std::endl;
+
+			glBegin(GL_QUADS);
+			for (int z = 0; z < slices; ++z)
+			{
+				// render back-to-front
+				float zf = glm::mix(maxPVal.z, minPVal.z, (float)z / slices);
+
+				glVertex3f(minPVal.x, maxPVal.y, zf);
+				glVertex3f(minPVal.x, minPVal.y, zf);
+				glVertex3f(maxPVal.x, minPVal.y, zf);
+				glVertex3f(maxPVal.x, maxPVal.y, zf);
+			}
+			glEnd();
+
+
+			//stacks[i]->drawSlices(volumeShader);
+
+
 		}
-		glEnd();
+		volumeShader2->disable();
+		glDisable(GL_BLEND);
 
-
-		//stacks[i]->drawSlices(volumeShader);
-	
-	
 	}
-	volumeShader->disable();
-	glDisable(GL_BLEND);
-
 
 	// draw the points
 	if (!stacks[currentStack]->getRegistrationPoints().empty())
@@ -266,6 +293,10 @@ static void keyboard(unsigned char key, int x, int y)
 		//camera.pan(0, -1);
 		reloadShaders();
 
+
+	if (key == '/')
+		drawSlices = !drawSlices;
+
 	if (key == 'r')
 		rotate = !rotate;
 
@@ -274,7 +305,7 @@ static void keyboard(unsigned char key, int x, int y)
 		++currentStack;
 		if (currentStack == stacks.size())
 			currentStack = 0;
-	
+
 		std::cout << "Current stack: " << currentStack << std::endl;
 	}
 
@@ -296,7 +327,7 @@ static void keyboard(unsigned char key, int x, int y)
 	{
 		--rotationAngle;
 		std::cout << "Current rot angle: " << rotationAngle << std::endl;
-	
+
 		stacks[currentStack]->setRotation(rotationAngle);
 	}
 
@@ -304,7 +335,7 @@ static void keyboard(unsigned char key, int x, int y)
 	{
 		++rotationAngle;
 		std::cout << "Current rot angle: " << rotationAngle << std::endl;
-	
+
 
 		stacks[currentStack]->setRotation(rotationAngle);
 	}
@@ -316,6 +347,19 @@ static void keyboard(unsigned char key, int x, int y)
 		stacks[currentStack]->calculateRegistrationPoints(minThreshold*std::numeric_limits<unsigned short>::max());
 	}
 
+	if (key == '<' && slices > 1)
+	{
+		slices /= 2;;
+		if (slices == 0)
+			slices = 1;
+		std::cout << "slices: " << slices << std::endl;
+	}
+
+	if (key == '>')
+	{
+		slices *= 2;
+		std::cout << "slices: " << slices << std::endl;
+	}
 }
 
 
