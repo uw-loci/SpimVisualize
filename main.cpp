@@ -52,6 +52,56 @@ std::vector<SpimStack*>	stacks;
 unsigned int currentStack = 0;
 float rotationAngle = 0.f;
 
+AABB			globalBBox;
+
+struct Viewport
+{
+	// window coordinates
+	glm::ivec2		position, size;
+
+	// projection and view matrices
+	glm::mat4		proj, view;
+
+	glm::vec3		color;
+	
+	enum ViewportName { ORTHO_X=0, ORTHO_Y, ORTHO_Z, PERSPECTIVE=3} name;
+
+	void setup() const
+	{
+		glViewport(position.x, position.y, size.x, size.y);
+
+		// reset any transform
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+
+	
+		// draw a border
+		glColor3f(color.r, color.g, color.b);
+		glBegin(GL_LINE_LOOP);
+		glVertex2i(-1, -1);
+		glVertex2i(1, -1);
+		glVertex2i(1, 1);
+		glVertex2i(-1, 1);
+		glEnd();
+
+
+		// set correct matrices
+
+
+		glMatrixMode(GL_PROJECTION);
+		glLoadMatrixf(glm::value_ptr(proj));
+		glMatrixMode(GL_MODELVIEW);
+		glLoadMatrixf(glm::value_ptr(view));
+	}
+};
+
+
+Viewport		view[4];
+
+
 static const glm::vec3& getRandomColor(int n)
 {
 	static std::vector<glm::vec3> pool;
@@ -98,30 +148,58 @@ static void reloadShaders()
 	volumeShader2 = new Shader("shaders/volume2.vert", "shaders/volume2.frag");
 }
 
-static void drawScene()
+static void drawScene(const Viewport& vp)
 {
-	glColor3f(0.3f, 0.3f, 0.3f);
-	glBegin(GL_LINES);
-	for (int i = -1000; i <= 1000; i += 100)
+	const glm::mat4 mvp = vp.proj * vp.view;
+
+	// draw a groud grid only in perspective mode
+	if (vp.name == Viewport::PERSPECTIVE || vp.name == Viewport::ORTHO_Y)
 	{
-		glVertex3i(-1000, 0, i);
-		glVertex3i(1000, 0, i);
-		glVertex3i(i, 0, -1000);
-		glVertex3i(i, 0, 1000);
+		glColor3f(0.3f, 0.3f, 0.3f);
+		glBegin(GL_LINES);
+		for (int i = -1000; i <= 1000; i += 100)
+		{
+			glVertex3i(-1000, 0, i);
+			glVertex3i(1000, 0, i);
+			glVertex3i(i, 0, -1000);
+			glVertex3i(i, 0, 1000);
+		}
+
+		glEnd();
 	}
 
-	glEnd();
+	if (vp.name == Viewport::ORTHO_X)
+	{
+		glColor3f(0.3f, 0.3f, 0.3f);
+		glBegin(GL_LINES);
+		for (int i = -1000; i <= 1000; i += 100)
+		{
+			glVertex3i(0, -1000, i);
+			glVertex3i(0, 1000, i);
+			glVertex3i(0, i, -1000);
+			glVertex3i(0, i, 1000);
+		}
+
+		glEnd();
+	}
+
+	if (vp.name == Viewport::ORTHO_Z)
+	{
+		glColor3f(0.3f, 0.3f, 0.3f);
+		glBegin(GL_LINES);
+		for (int i = -1000; i <= 1000; i += 100)
+		{
+			glVertex3i(-1000, i, 0);
+			glVertex3i(1000, i,0);
+			glVertex3i(i, -1000, 0);
+			glVertex3i(i, 1000, 0);
+		}
+
+		glEnd();
+	}
 
 
-	// draw spim stack volumes here
-	glm::mat4 proj, view;
-	camera.getMatrices(proj, view);
-
-
-	glm::mat4 mvp(1.f);
-	camera.getMVP(mvp);
-	
-	if (drawSlices)
+	if (drawSlices || vp.name != Viewport::PERSPECTIVE)
 	{
 		volumeShader->bind();
 		volumeShader->setUniform("minThreshold", minThreshold);
@@ -255,11 +333,25 @@ static void drawScene()
 
 static void display()
 {
-	
-	camera.setup();
-	
+		
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	
-	drawScene();
+	
+	for (int i = 0; i < 4; ++i)
+	{
+		// setup the correct viewport
+		view[i].setup();
+				
+
+		// if this is the perspective window set the camera transform
+		if (i == 3)
+		{
+			camera.setup();
+			camera.getMatrices(view[3].proj, view[3].view);
+		}
+
+		drawScene(view[i]);
+	}
+	
 	
 	glutSwapBuffers();
 
@@ -286,7 +378,10 @@ static void keyboard(unsigned char key, int x, int y)
 		exit(0);
 
 	if (key == '-')
+	{
 		camera.zoom(0.7f);
+
+	}
 	if (key == '=')
 		camera.zoom(1.4f);
 
@@ -392,6 +487,48 @@ static void button(int button, int state, int x, int y)
 	mouse.y = y;
 }
 
+static void reshape(int w, int h)
+{
+	using namespace glm;
+
+	const float ASPECT = (float)w / h;
+	const ivec2 VIEWPORT_SIZE = ivec2(w, h) / 2;
+	const float DIST = globalBBox.getSpanLength()*1.5;
+	const mat4 ORTHO = ortho(-DIST *ASPECT, DIST*ASPECT, -camera.radius, camera.radius, -camera.radius, camera.radius);
+
+	// setup the 4 views
+	view[0].name = Viewport::ORTHO_X;
+	view[0].position = ivec2(0, 0);
+	view[0].proj = ORTHO; 
+	view[0].view = lookAt(vec3(DIST-1.f, 0, 0), vec3(0.f), vec3(0, 1, 0));
+	
+	view[1].name = Viewport::ORTHO_Y;
+	view[1].position = ivec2(w / 2, 0);
+	view[1].proj = ORTHO;
+	view[1].view = lookAt(vec3(0, DIST-1.f, 0), vec3(0.f), vec3(0, 0, 1));
+	
+	view[2].name = Viewport::ORTHO_Z;
+	view[2].position = ivec2(0, h / 2);
+	view[2].proj = ORTHO;
+	view[2].view = lookAt(vec3(0, 0, DIST-1.f), vec3(0.f), vec3(0, 1, 0));
+	
+	view[3].name = Viewport::PERSPECTIVE;
+	view[3].position = ivec2(w / 2, h / 2);
+	
+	camera.getMatrices(view[3].proj, view[3].view);
+
+
+	// adjust the camera's perspective
+	camera.aspect = ASPECT;
+
+
+	for (int i = 0; i < 4; ++i)
+	{
+		view[i].color = getRandomColor(i);
+		view[i].size = VIEWPORT_SIZE;
+	}
+}
+
 int main(int argc, const char** argv)
 {
 
@@ -414,7 +551,8 @@ int main(int argc, const char** argv)
 	glutMouseFunc(button);
 	glutKeyboardFunc(keyboard);
 	glutMotionFunc(motion);
-	
+	glutReshapeFunc(reshape);
+
 	glEnable(GL_DEPTH_TEST);
 	glPointSize(2.f);
 	glEnable(GL_CULL_FACE);
@@ -423,18 +561,20 @@ int main(int argc, const char** argv)
 	
 	try
 	{
-		AABB globalBbox;
-		globalBbox.reset();
+		globalBBox.reset();
 
-		for (int i = 0; i < 3; ++i)		
+		for (int i = 0; i < 1; ++i)		
 		{
 			char filename[256];
 			//sprintf(filename, "e:/spim/test/spim_TL00_Angle%d.tif", i);
-			sprintf(filename, "E:/spim/091015 SPIM various size beads/091015 20micron beads/spim_TL01_Angle%d.ome.tiff", i);
+			//sprintf(filename, "E:/spim/091015 SPIM various size beads/091015 20micron beads/spim_TL01_Angle%d.ome.tiff", i);
+			//sprintf(filename, "e:/spim/zebra/spim_TL01_Angle%d.ome.tiff", i);
+
+			sprintf(filename, "e:/spim/test_beads/spim_TL01_Angle%d.ome.tiff",i);
 
 			SpimStack* stack = new SpimStack(filename);
 							
-			stack->setRotation(-30 + i * 30);
+			//stack->setRotation(-30 + i * 30);
 
 			/*
 			sprintf(filename, "e:/spim/test/spim_TL00_Angle%d.tif.registration", i);
@@ -444,13 +584,13 @@ int main(int argc, const char** argv)
 			stacks.push_back(stack);
 		
 			AABB bbox = stack->getBBox();
-			globalBbox.extend(bbox);
+			globalBBox.extend(bbox);
 		}
 
 
 
-		camera.setRadius(globalBbox.getSpanLength() * 1.5); // frames[0]->getBBox().getSpanLength() * 1.2);
-		camera.target = globalBbox.getCentroid();// frames[0]->getBBox().getCentroid();
+		camera.radius = (globalBBox.getSpanLength() * 1.5); // frames[0]->getBBox().getSpanLength() * 1.2);
+		camera.target = globalBBox.getCentroid();// frames[0]->getBBox().getCentroid();
 
 
 		reloadShaders();

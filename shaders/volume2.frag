@@ -45,7 +45,10 @@ void main()
 		}
 	}
 
+
+
 	color = normalize(color);
+	intensity = 0.03;
 
 
 	/*
@@ -81,5 +84,5 @@ void main()
 		discard;
 	*/
 	
-	gl_FragColor = vec4(color, intensity * 10.0);
+	gl_FragColor = vec4(color, intensity);
 }

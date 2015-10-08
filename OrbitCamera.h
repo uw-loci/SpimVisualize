@@ -26,12 +26,13 @@ public:
 	float		fovy, aspect, near, far;
 	glm::vec3	target, up;
 
+	float		radius;
+
 	inline glm::vec3 getPosition() const { return target + getOffset(); }
 	
-	inline void setRadius(float r) { radius = r; }
 
 private:
-	float	theta, phi, radius;
+	float	theta, phi;
 
 	glm::vec3 getOffset() const;
 
