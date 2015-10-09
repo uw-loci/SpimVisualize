@@ -16,7 +16,7 @@ public:
 	~SpimStack();
 	
 	void draw() const;
-	void drawSlices(Shader* s, const glm::mat4& mvp) const;
+	void drawSlices(Shader* s, const glm::mat4& view) const;
 
 	void loadRegistration(const std::string& filename);
 
@@ -41,7 +41,9 @@ private:
 
 	// 3d volume texture
 	unsigned int			volumeTextureId;
-	mutable unsigned int	volumeList;
+
+	// 2 display lists: 0->width and width->0 for quick front-to-back rendering
+	mutable unsigned int	volumeList[2];
 
 	unsigned short*			volume;
 	unsigned short			minVal, maxVal;

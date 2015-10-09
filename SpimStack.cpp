@@ -20,8 +20,11 @@ using namespace glm;
 // voxel dimensions in microns
 static const vec3 DIMENSIONS(0.625, 0.625, 3);
 
-SpimStack::SpimStack(const string& filename) : width(0), height(0), depth(0), volume(nullptr), volumeTextureId(0), volumeList(0), transform(1.f)
+SpimStack::SpimStack(const string& filename) : width(0), height(0), depth(0), volume(nullptr), volumeTextureId(0), transform(1.f)
 {
+	volumeList[0] = 0;
+	volumeList[1] = 0;
+
 	FIMULTIBITMAP* fmb = FreeImage_OpenMultiBitmap(FIF_TIFF, filename.c_str(), FALSE, TRUE);
 	assert(fmb);
 
@@ -94,8 +97,9 @@ SpimStack::~SpimStack()
 	delete volume;
 
 	glDeleteTextures(1, &volumeTextureId);
-	if (glIsList(volumeList))
-		glDeleteLists(volumeList, 1);
+	glDeleteLists(volumeList[0], 1);
+	glDeleteLists(volumeList[1], 1);
+
 }
 
 
@@ -185,7 +189,7 @@ AABB&& SpimStack::getBBox() const
 	return std::move(bbox);
 }
 
-void SpimStack::drawSlices(Shader* s, const glm::mat4& mvp) const
+void SpimStack::drawSlices(Shader* s, const glm::mat4& view) const
 {
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_3D, volumeTextureId);
@@ -194,51 +198,118 @@ void SpimStack::drawSlices(Shader* s, const glm::mat4& mvp) const
 
 
 	// todo: sort slices by distance to camera -- render front-to-back or back-to-front
+	glm::vec4 nearPt(width / 2, height / 2, 0.f, 1.f);
+	glm::vec4 farPt(width / 2, height / 2, depth, 1.f);
 
+	glm::mat4 M = view; // glm::inverse(view);
 
+	nearPt = M * nearPt; 
+	farPt = M * farPt;
+	
 
-	if (glIsList(volumeList))
-		glCallList(volumeList);
+	glPushAttrib(GL_ENABLE_BIT);
+	glDisable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+
+	glBegin(GL_QUADS);
+	
+	if (glm::length(glm::vec3(nearPt)) > glm::length(glm::vec3(farPt)))
+	{
+		if (glIsList(volumeList[0]))
+			glCallList(volumeList[0]);
+		else
+		{
+			volumeList[0] = glGenLists(1);
+			glNewList(volumeList[0], GL_COMPILE_AND_EXECUTE);
+
+			glPushAttrib(GL_ENABLE_BIT);
+			glDisable(GL_CULL_FACE);
+			glCullFace(GL_BACK);
+
+			glBegin(GL_QUADS);
+
+			for (unsigned int z = 0; z < depth; ++z)
+			{
+				float zf = (float)z * DIMENSIONS.z;
+				float zn = (float)z / depth;
+
+				const float w = width * DIMENSIONS.x;
+				const float h = height * DIMENSIONS.y;
+
+				glTexCoord3f(0.f, 0.f, zn);
+				glVertex3f(0.f, 0.f, zf);
+
+				glTexCoord3f(1.f, 0.f, zn);
+				glVertex3f(w, 0.f, zf);
+
+				glTexCoord3f(1.f, 1.f, zn);
+				glVertex3f(w, h, zf);
+
+				glTexCoord3f(0.f, 1.f, zn);
+				glVertex3f(0.f, h, zf);
+
+			}
+
+			glEnd();
+
+			glPopAttrib();
+
+			glBindTexture(GL_TEXTURE_3D, 0);
+			glEndList();
+		}
+	}
 	else
 	{
-		volumeList = glGenLists(1);
-		glNewList(volumeList, GL_COMPILE_AND_EXECUTE);
-			
-		glPushAttrib(GL_ENABLE_BIT);
-		glDisable(GL_CULL_FACE);
-		glCullFace(GL_BACK);
-
-		glBegin(GL_QUADS);
-
-		for (unsigned int z = 0; z < depth; ++z)
+		if (glIsList(volumeList[0]))
+			glCallList(volumeList[0]);
+		else
 		{
-			float zf = (float)z * DIMENSIONS.z;
-			float zn = (float)z / depth;
+			volumeList[0] = glGenLists(1);
+			glNewList(volumeList[0], GL_COMPILE_AND_EXECUTE);
 
-			const float w = width * DIMENSIONS.x;
-			const float h = height * DIMENSIONS.y;
+			glPushAttrib(GL_ENABLE_BIT);
+			glDisable(GL_CULL_FACE);
+			glCullFace(GL_BACK);
 
-			glTexCoord3f(0.f, 0.f, zn);
-			glVertex3f(0.f, 0.f, zf);
+			glBegin(GL_QUADS);
 
-			glTexCoord3f(1.f, 0.f, zn);
-			glVertex3f(w, 0.f, zf);
+			for (unsigned int z = depth; z > 0; --z)
+			{
+				float zf = (float)z * DIMENSIONS.z;
+				float zn = (float)z / depth;
 
-			glTexCoord3f(1.f, 1.f, zn);
-			glVertex3f(w, h, zf);
+				const float w = width * DIMENSIONS.x;
+				const float h = height * DIMENSIONS.y;
 
-			glTexCoord3f(0.f, 1.f, zn);
-			glVertex3f(0.f, h, zf);
+				glTexCoord3f(0.f, 0.f, zn);
+				glVertex3f(0.f, 0.f, zf);
 
+				glTexCoord3f(1.f, 0.f, zn);
+				glVertex3f(w, 0.f, zf);
+
+				glTexCoord3f(1.f, 1.f, zn);
+				glVertex3f(w, h, zf);
+
+				glTexCoord3f(0.f, 1.f, zn);
+				glVertex3f(0.f, h, zf);
+
+			}
+
+			glEnd();
+
+			glPopAttrib();
+
+			glBindTexture(GL_TEXTURE_3D, 0);
+			glEndList();
 		}
-
-		glEnd();
-
-		glPopAttrib();
-
-		glBindTexture(GL_TEXTURE_3D, 0);
-		glEndList();
 	}
+
+	glEnd();
+
+	glPopAttrib();
+
+	glBindTexture(GL_TEXTURE_3D, 0);
+
 
 
 }

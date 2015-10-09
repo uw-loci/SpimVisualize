@@ -252,7 +252,7 @@ static void drawScene(const Viewport& vp)
 			volumeShader->setUniform("color", getRandomColor(i));
 			volumeShader->setMatrix4("transform", stacks[i]->getTransform());
 			volumeShader->setUniform("sliceWeight", stacks[i]->getSliceWeight());
-			stacks[i]->drawSlices(volumeShader, mvp);
+			stacks[i]->drawSlices(volumeShader, vp.view);
 		}
 
 		volumeShader->disable();
