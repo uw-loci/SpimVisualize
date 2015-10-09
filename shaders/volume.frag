@@ -2,7 +2,7 @@
 
 #version 130
 
-uniform sampler3D volumeTexture;
+uniform isampler3D volumeTexture;
 
 uniform int minThreshold = 200;
 
@@ -12,9 +12,20 @@ uniform vec3 color;
 uniform float sliceWeight = 1.0;
 
 
+uniform int minVal = 90;
+uniform int maxVal = 150;
+
 void main()
 {
-	float intensity = texture(volumeTexture, texcoord).r;
+
+
+	int intensity = texture(volumeTexture, texcoord).r;
+
+
+	// this is the contrast operation -- bring the value into a valid range
+	float value = float(intensity - minVal) / float(maxVal - minVal);
+
+
 
 
 
@@ -26,11 +37,14 @@ void main()
 /*
 	if (intensity < float(minThreshold) / 65535)
 		discard;
-*/
-	
+
 	gl_FragColor = vec4(mix(red, blu, 1.0 - intensity), 1.0);
 
 	float alpha = intensity/sliceWeight;
+*/
+
+
+	float alpha = value * sliceWeight;
 
 	gl_FragColor = vec4(color, alpha);
 }

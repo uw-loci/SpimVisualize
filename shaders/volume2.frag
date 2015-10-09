@@ -1,10 +1,10 @@
 // renders volume slices
 
-#version 120
+#version 130
 
 struct Volume
 {
-	sampler3D		texture;
+	isampler3D		texture;
 	vec3			bboxMin, bboxMax;
 	mat4			inverseMVP;
 };
@@ -14,6 +14,8 @@ uniform Volume volume[3];
 uniform float sliceCount = 100;
 uniform float minThreshold = 0.6;
 
+uniform float sliceWeight;
+
 varying vec4 vertex;
 
 void main()
@@ -21,7 +23,7 @@ void main()
 	vec3 color = vec3(0.0);
 	float intensity = 0.0;
 
-	for (int i = 0; i < 2; ++i)
+	for (int i = 0; i < 1; ++i)
 	{
 		vec4 v = volume[i].inverseMVP * vertex;
 		v /= v.w;
@@ -32,26 +34,21 @@ void main()
 		vec3 texcoord = worldPosition - volume[i].bboxMin; // vec3(1344.0, 1024.0, 101.0);
 		texcoord /= (volume[i].bboxMax - volume[i].bboxMin);
 	
-		float t = texture3D(volume[i].texture, texcoord).r;
-
-		t *= 50500.0;
+		int t = texture(volume[i].texture, texcoord).r;
 
 		// check if the value is inside
 		if (worldPosition.x > volume[i].bboxMin.x && worldPosition.x < volume[i].bboxMax.x &&
 			worldPosition.y > volume[i].bboxMin.y && worldPosition.y < volume[i].bboxMax.y &&
 			worldPosition.z > volume[i].bboxMin.z && worldPosition.z < volume[i].bboxMax.z) 
 		{
-			intensity += t;
+			intensity += float(t) / 65535.0;
 			color += worldPosition;
 		
 		}
 	}
 
 
-
 	color = normalize(color);
-	//intensity = 0.03;
-
 
 	/*
 	// normalize the texcoords based on the bbox

@@ -84,7 +84,7 @@ SpimStack::SpimStack(const string& filename) : width(0), height(0), depth(0), vo
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
-	glTexImage3D(GL_TEXTURE_3D, 0, GL_RED, width, height, depth, 0, GL_RED, GL_UNSIGNED_SHORT, volume);
+	glTexImage3D(GL_TEXTURE_3D, 0, GL_R16I, width, height, depth, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, volume);
 
 	cout << "done.\n";
 }
@@ -185,12 +185,17 @@ AABB&& SpimStack::getBBox() const
 	return std::move(bbox);
 }
 
-void SpimStack::drawSlices(Shader* s) const
+void SpimStack::drawSlices(Shader* s, const glm::mat4& mvp) const
 {
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_3D, volumeTextureId);
 	
 	s->setUniform("volumeTexture", 0);
+
+
+	// todo: sort slices by distance to camera -- render front-to-back or back-to-front
+
+
 
 	if (glIsList(volumeList))
 		glCallList(volumeList);

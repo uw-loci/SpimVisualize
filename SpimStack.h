@@ -16,7 +16,7 @@ public:
 	~SpimStack();
 	
 	void draw() const;
-	void drawSlices(Shader* s) const;
+	void drawSlices(Shader* s, const glm::mat4& mvp) const;
 
 	void loadRegistration(const std::string& filename);
 
