@@ -6,7 +6,23 @@
 #undef near
 #undef far
 
-class OrbitCamera
+class ICamera
+{
+public:
+	virtual ~ICamera() {};
+
+	virtual void setup() const = 0;
+
+	virtual void getMVP(glm::mat4& mvp) const = 0;
+	virtual void getMatrices(glm::mat4& proj, glm::mat4& view) const = 0;
+
+	virtual void zoom(float d) = 0;
+	virtual void rotate(float dt, float dp) = 0;
+	virtual void pan(float dx, float dy) = 0;
+};
+
+
+class OrbitCamera : public ICamera
 {
 public:
 	OrbitCamera();

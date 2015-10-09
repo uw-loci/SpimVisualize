@@ -33,6 +33,8 @@ public:
 
 	inline const unsigned int getTexture() const { return volumeTextureId; }
 
+	inline float getSliceWeight() const { return 1.f / depth; }
+
 private:
 	unsigned int		width, height, depth;
 	unsigned int		textures;

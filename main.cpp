@@ -40,7 +40,7 @@ Shader*			pointShader = 0;
 
 Shader*			volumeShader = 0;
 Shader*			volumeShader2 = 0;
-float			minThreshold = 0.004;
+unsigned short	minThreshold = 100;
 
 bool			drawSlices = false;
 
@@ -67,12 +67,26 @@ struct Viewport
 	enum ViewportName { ORTHO_X=0, ORTHO_Y, ORTHO_Z, PERSPECTIVE=3} name;
 	
 	bool			highlighted;
-	
+	float			orthoZoomLevel;
+	glm::vec2		orthoZenter;
+
 	inline bool isInside(const glm::ivec2& cursor) const
 	{
 		using namespace glm;
 		const ivec2 rc = cursor - position;
 		return all(greaterThanEqual(rc, ivec2(0))) && all(lessThanEqual(rc, size));
+	}
+
+
+	void orthoZoom(float z)
+	{
+		orthoZoomLevel *= z;
+		
+		const float DIST = globalBBox.getSpanLength()*1.5;
+		const float ASPECT = (float)size.x / size.y;
+
+		float D = DIST * orthoZoomLevel;
+		proj = glm::ortho(-D*ASPECT, D*ASPECT, -D, D, -DIST, DIST);
 	}
 
 	void setup() const
@@ -224,8 +238,12 @@ static void drawScene(const Viewport& vp)
 
 	if (drawSlices)
 	{
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+
 		volumeShader->bind();
-		volumeShader->setUniform("minThreshold", minThreshold);
+		volumeShader->setUniform("minThreshold", (int)minThreshold);
 		volumeShader->setUniform("mvpMatrix", mvp);
 
 
@@ -233,10 +251,13 @@ static void drawScene(const Viewport& vp)
 		{
 			volumeShader->setUniform("color", getRandomColor(i));
 			volumeShader->setMatrix4("transform", stacks[i]->getTransform());
+			volumeShader->setUniform("sliceWeight", stacks[i]->getSliceWeight());
 			stacks[i]->drawSlices(volumeShader);
 		}
 
 		volumeShader->disable();
+
+		glDisable(GL_BLEND);
 	}
 	else
 	{
@@ -396,41 +417,43 @@ static void idle()
 }
 
 
-static void keyboard(unsigned char key, int x, int y)
+static void orthoKeyboard(unsigned char key, int x, int y, int vp)
 {
-	if (key == 27)
-		exit(0);
-
 	if (key == '-')
-	{
-		int i = getActiveViewport();
-		if (i == -1 || i == 3)
-			camera.zoom(0.7f);
+		view[vp].orthoZoom(0.7f);
 
-	}
+
 	if (key == '=')
-	{
-		int i = getActiveViewport();
-		if (i == -1 || i == 3)
-			camera.zoom(1.4f);
-	}
-	
+		view[vp].orthoZoom(1.4f);
+
+}
+
+static void projKeyboard(unsigned char key, int x, int y, int vp)
+{
+	if (key == '-')
+		camera.zoom(0.7f);
+	if (key == '=')
+		camera.zoom(1.4f);
+
+
 	if (key == 'a')
 		camera.pan(-1, 0);
 	if (key == 'd')
 		camera.pan(1, 0);
 	if (key == 'w')
 		camera.pan(0, 1);
-	if (key == 's')
-		//camera.pan(0, -1);
-		reloadShaders();
 
+
+}
+
+
+static void keyboard(unsigned char key, int x, int y)
+{
+	if (key == 27)
+		exit(0);
 
 	if (key == '/')
 		drawSlices = !drawSlices;
-
-	if (key == 'r')
-		rotate = !rotate;
 
 	if (key == 'n')
 	{
@@ -446,12 +469,12 @@ static void keyboard(unsigned char key, int x, int y)
 
 	if (key == ',')
 	{
-		minThreshold -= 0.001;
+		minThreshold -= 10;
 		std::cout << "min thresh: " << minThreshold << std::endl;
 	}
 	if (key == '.')
 	{
-		minThreshold += 0.001;
+		minThreshold += 10;
 		std::cout << "min thresh: " << minThreshold << std::endl;
 	}
 
@@ -472,7 +495,6 @@ static void keyboard(unsigned char key, int x, int y)
 		stacks[currentStack]->setRotation(rotationAngle);
 	}
 
-
 	if (key == ' ')
 	{
 		std::cout << "Creating point cloud from stack " << currentStack << std::endl;
@@ -492,6 +514,16 @@ static void keyboard(unsigned char key, int x, int y)
 		slices *= 2;
 		std::cout << "slices: " << slices << std::endl;
 	}
+
+	if (key == 's')
+		reloadShaders();
+
+
+	int vp = getActiveViewport();
+	if (vp >= 0 && vp < 3)
+		orthoKeyboard(key, x, y, vp);
+	else
+		projKeyboard(key, x, y, 3);
 }
 
 
@@ -540,22 +572,18 @@ static void reshape(int w, int h)
 	const float ASPECT = (float)w / h;
 	const ivec2 VIEWPORT_SIZE = ivec2(w, h) / 2;
 	const float DIST = globalBBox.getSpanLength()*1.5;
-	const mat4 ORTHO = ortho(-DIST *ASPECT, DIST*ASPECT, -camera.radius, camera.radius, -camera.radius, camera.radius);
-
+	
 	// setup the 4 views
 	view[0].name = Viewport::ORTHO_X;
 	view[0].position = ivec2(0, 0);
-	view[0].proj = ORTHO; 
 	view[0].view = lookAt(vec3(DIST-1.f, 0, 0), vec3(0.f), vec3(0, 1, 0));
 	
 	view[1].name = Viewport::ORTHO_Y;
 	view[1].position = ivec2(w / 2, 0);
-	view[1].proj = ORTHO;
 	view[1].view = lookAt(vec3(0, DIST-1.f, 0), vec3(0.f), vec3(0, 0, 1));
 	
 	view[2].name = Viewport::ORTHO_Z;
 	view[2].position = ivec2(0, h / 2);
-	view[2].proj = ORTHO;
 	view[2].view = lookAt(vec3(0, 0, DIST-1.f), vec3(0.f), vec3(0, 1, 0));
 	
 	view[3].name = Viewport::PERSPECTIVE;
@@ -572,6 +600,7 @@ static void reshape(int w, int h)
 	{
 		view[i].color = getRandomColor(i);
 		view[i].size = VIEWPORT_SIZE;
+		view[i].orthoZoom(1.f);
 	}
 }
 
@@ -605,13 +634,16 @@ int main(int argc, const char** argv)
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 
+	for (int i = 0; i < 4; ++i)
+		view[i].orthoZoomLevel = 1.f;
+
 	
 	try
 	{
 		globalBBox.reset();
 
 
-		for (int i = 0; i < 2; ++i)		
+		for (int i = 0; i < 1; ++i)		
 		{
 			char filename[256];
 			//sprintf(filename, "e:/spim/test/spim_TL00_Angle%d.tif", i);

@@ -34,6 +34,8 @@ void main()
 	
 		float t = texture3D(volume[i].texture, texcoord).r;
 
+		t *= 50500.0;
+
 		// check if the value is inside
 		if (worldPosition.x > volume[i].bboxMin.x && worldPosition.x < volume[i].bboxMax.x &&
 			worldPosition.y > volume[i].bboxMin.y && worldPosition.y < volume[i].bboxMax.y &&
@@ -48,7 +50,7 @@ void main()
 
 
 	color = normalize(color);
-	intensity = 0.03;
+	//intensity = 0.03;
 
 
 	/*
