@@ -63,8 +63,17 @@ struct Viewport
 	glm::mat4		proj, view;
 
 	glm::vec3		color;
-	
+		
 	enum ViewportName { ORTHO_X=0, ORTHO_Y, ORTHO_Z, PERSPECTIVE=3} name;
+	
+	bool			highlighted;
+	
+	inline bool isInside(const glm::ivec2& cursor) const
+	{
+		using namespace glm;
+		const ivec2 rc = cursor - position;
+		return all(greaterThanEqual(rc, ivec2(0))) && all(lessThanEqual(rc, size));
+	}
 
 	void setup() const
 	{
@@ -73,20 +82,24 @@ struct Viewport
 		// reset any transform
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
-
+		glOrtho(0, size.x, 0, size.y, 0, 1);
+		
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
 
-	
-		// draw a border
-		glColor3f(color.r, color.g, color.b);
-		glBegin(GL_LINE_LOOP);
-		glVertex2i(-1, -1);
-		glVertex2i(1, -1);
-		glVertex2i(1, 1);
-		glVertex2i(-1, 1);
-		glEnd();
 
+		// draw a border
+		if (highlighted)
+		{
+			glColor3f(color.r, color.g, color.b);
+			glBegin(GL_LINE_LOOP);
+			glVertex2i(1, 1);
+			glVertex2i(size.x, 1);
+			glVertex2i(size.x, size.y);
+			glVertex2i(1, size.y);
+			glEnd();
+		}
+		
 
 		// set correct matrices
 
@@ -101,6 +114,16 @@ struct Viewport
 
 Viewport		view[4];
 
+static int getActiveViewport()
+{
+	for (int i = 0; i < 4; ++i)
+	{
+		if (view[i].highlighted)
+			return i;
+	}
+
+	return -1;
+}
 
 static const glm::vec3& getRandomColor(int n)
 {
@@ -199,7 +222,7 @@ static void drawScene(const Viewport& vp)
 	}
 
 
-	if (drawSlices || vp.name != Viewport::PERSPECTIVE)
+	if (drawSlices)
 	{
 		volumeShader->bind();
 		volumeShader->setUniform("minThreshold", minThreshold);
@@ -372,6 +395,7 @@ static void idle()
 	glutPostRedisplay();
 }
 
+
 static void keyboard(unsigned char key, int x, int y)
 {
 	if (key == 27)
@@ -379,12 +403,18 @@ static void keyboard(unsigned char key, int x, int y)
 
 	if (key == '-')
 	{
-		camera.zoom(0.7f);
+		int i = getActiveViewport();
+		if (i == -1 || i == 3)
+			camera.zoom(0.7f);
 
 	}
 	if (key == '=')
-		camera.zoom(1.4f);
-
+	{
+		int i = getActiveViewport();
+		if (i == -1 || i == 3)
+			camera.zoom(1.4f);
+	}
+	
 	if (key == 'a')
 		camera.pan(-1, 0);
 	if (key == 'd')
@@ -477,6 +507,22 @@ static void motion(int x, int y)
 	mouse.x = x;
 	mouse.y = y;
 
+	int h = glutGet(GLUT_WINDOW_HEIGHT);
+
+	// reset viewpoint highlights
+	for (int i = 0; i < 4; ++i)
+		view[i].highlighted = view[i].isInside(glm::ivec2(x, h -y));
+}
+
+static void passiveMotion(int x, int y)
+{
+
+	int h = glutGet(GLUT_WINDOW_HEIGHT);
+
+	// reset viewpoint highlights
+	for (int i = 0; i < 4; ++i)
+		view[i].highlighted = view[i].isInside(glm::ivec2(x, h-y));
+
 }
 
 static void button(int button, int state, int x, int y)
@@ -552,6 +598,7 @@ int main(int argc, const char** argv)
 	glutKeyboardFunc(keyboard);
 	glutMotionFunc(motion);
 	glutReshapeFunc(reshape);
+	glutPassiveMotionFunc(passiveMotion);
 
 	glEnable(GL_DEPTH_TEST);
 	glPointSize(2.f);
@@ -563,23 +610,23 @@ int main(int argc, const char** argv)
 	{
 		globalBBox.reset();
 
-		for (int i = 0; i < 1; ++i)		
+
+		for (int i = 0; i < 2; ++i)		
 		{
 			char filename[256];
 			//sprintf(filename, "e:/spim/test/spim_TL00_Angle%d.tif", i);
 			//sprintf(filename, "E:/spim/091015 SPIM various size beads/091015 20micron beads/spim_TL01_Angle%d.ome.tiff", i);
 			//sprintf(filename, "e:/spim/zebra/spim_TL01_Angle%d.ome.tiff", i);
 
-			sprintf(filename, "e:/spim/test_beads/spim_TL01_Angle%d.ome.tiff",i);
+			sprintf(filename, "e:/spim/zebra_beads/spim_TL01_Angle%d.ome.tiff",i);
 
 			SpimStack* stack = new SpimStack(filename);
 							
 			//stack->setRotation(-30 + i * 30);
 
-			/*
-			sprintf(filename, "e:/spim/test/spim_TL00_Angle%d.tif.registration", i);
+			sprintf(filename, "e:/spim/zebra_beads/registration/spim_TL01_Angle%d.ome.tiff.registration", i);
 			stack->loadRegistration(filename);
-			*/
+			
 
 			stacks.push_back(stack);
 		

@@ -254,7 +254,14 @@ void SpimStack::loadRegistration(const string& filename)
 		int result = sscanf(buffer.c_str(), "m%*2s: %f", &glm::value_ptr(transform)[i]);
 	}
 
-	transform = glm::transpose(transform);
+
+	glm::mat4 T(1.f);
+	glm::translate(T, glm::vec3(-(float)width / 2, -(float)height / 2, -(float)depth / 2));
+
+	transform = glm::transpose(glm::inverse(transform)) * T;
+
+
+
 	std::cout << "[SpimPlane] Read transform: " << transform << std::endl;
 }
 
