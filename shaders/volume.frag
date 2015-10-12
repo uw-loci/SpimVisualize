@@ -9,11 +9,13 @@ uniform int minThreshold = 200;
 varying vec3 texcoord;
 
 uniform vec3 color;
-uniform float sliceWeight = 1.0;
+uniform float sliceWeight = 1.0; 
 
+
+uniform vec3 viewDir;
 
 uniform int minVal = 90;
-uniform int maxVal = 150;
+uniform int maxVal = 110;
 
 void main()
 {
@@ -44,7 +46,10 @@ void main()
 */
 
 
-	float alpha = value * sliceWeight;
+	float alpha = value * 0.01;// * sliceWeight;
 
-	gl_FragColor = vec4(color, alpha);
+
+
+	gl_FragColor = vec4(vec3(value) * viewDir, alpha);
+
 }

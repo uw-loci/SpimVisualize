@@ -80,8 +80,8 @@ SpimStack::SpimStack(const string& filename) : width(0), height(0), depth(0), vo
 	cout << "[Stack] Creating 3D texture ... ";
 	glGenTextures(1, &volumeTextureId);
 	glBindTexture(GL_TEXTURE_3D, volumeTextureId);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP);
@@ -189,122 +189,62 @@ AABB&& SpimStack::getBBox() const
 	return std::move(bbox);
 }
 
-void SpimStack::drawSlices(Shader* s, const glm::mat4& view) const
+glm::vec3 SpimStack::getCentroid() const
+{
+	glm::vec3 center = DIMENSIONS * vec3(width, height, depth) * 0.5f;
+	glm::vec4 c = transform * glm::vec4(center, 1.f);
+	
+	return glm::vec3(c);
+}
+
+void SpimStack::drawSlices(Shader* s, const glm::vec3& camPos) const
 {
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_3D, volumeTextureId);
 	
 	s->setUniform("volumeTexture", 0);
 
+	// calculate view vector
+	glm::vec3 c = getCentroid();
+	const glm::vec3 view = glm::normalize(camPos - c);
+	const glm::vec3 aview = glm::abs(view);
 
-	// todo: sort slices by distance to camera -- render front-to-back or back-to-front
-	glm::vec4 nearPt(width / 2, height / 2, 0.f, 1.f);
-	glm::vec4 farPt(width / 2, height / 2, depth, 1.f);
-
-	glm::mat4 M = view; // glm::inverse(view);
-
-	nearPt = M * nearPt; 
-	farPt = M * farPt;
 	
-
+	s->setUniform("viewDir", aview);
+	
 	glPushAttrib(GL_ENABLE_BIT);
 	glDisable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 
-	glBegin(GL_QUADS);
-	
-	if (glm::length(glm::vec3(nearPt)) > glm::length(glm::vec3(farPt)))
+	// pick the best slicing based on the current view vector
+	if (aview.x > aview.y)
 	{
-		if (glIsList(volumeList[0]))
-			glCallList(volumeList[0]);
+		if (aview.x > aview.z)
+		{
+			s->setUniform("sliceWeight", 1.f / width);
+			drawXPlanes(view);
+		}
 		else
 		{
-			volumeList[0] = glGenLists(1);
-			glNewList(volumeList[0], GL_COMPILE_AND_EXECUTE);
-
-			glPushAttrib(GL_ENABLE_BIT);
-			glDisable(GL_CULL_FACE);
-			glCullFace(GL_BACK);
-
-			glBegin(GL_QUADS);
-
-			for (unsigned int z = 0; z < depth; ++z)
-			{
-				float zf = (float)z * DIMENSIONS.z;
-				float zn = (float)z / depth;
-
-				const float w = width * DIMENSIONS.x;
-				const float h = height * DIMENSIONS.y;
-
-				glTexCoord3f(0.f, 0.f, zn);
-				glVertex3f(0.f, 0.f, zf);
-
-				glTexCoord3f(1.f, 0.f, zn);
-				glVertex3f(w, 0.f, zf);
-
-				glTexCoord3f(1.f, 1.f, zn);
-				glVertex3f(w, h, zf);
-
-				glTexCoord3f(0.f, 1.f, zn);
-				glVertex3f(0.f, h, zf);
-
-			}
-
-			glEnd();
-
-			glPopAttrib();
-
-			glBindTexture(GL_TEXTURE_3D, 0);
-			glEndList();
+			s->setUniform("sliceWeight", 1.f / depth);
+			drawZPlanes(view);
 		}
 	}
 	else
 	{
-		if (glIsList(volumeList[0]))
-			glCallList(volumeList[0]);
+		if (aview.y > aview.z)
+		{
+			s->setUniform("sliceWeight", 1.f / height);
+			drawYPlanes(view);
+		}
 		else
 		{
-			volumeList[0] = glGenLists(1);
-			glNewList(volumeList[0], GL_COMPILE_AND_EXECUTE);
 
-			glPushAttrib(GL_ENABLE_BIT);
-			glDisable(GL_CULL_FACE);
-			glCullFace(GL_BACK);
-
-			glBegin(GL_QUADS);
-
-			for (unsigned int z = depth; z > 0; --z)
-			{
-				float zf = (float)z * DIMENSIONS.z;
-				float zn = (float)z / depth;
-
-				const float w = width * DIMENSIONS.x;
-				const float h = height * DIMENSIONS.y;
-
-				glTexCoord3f(0.f, 0.f, zn);
-				glVertex3f(0.f, 0.f, zf);
-
-				glTexCoord3f(1.f, 0.f, zn);
-				glVertex3f(w, 0.f, zf);
-
-				glTexCoord3f(1.f, 1.f, zn);
-				glVertex3f(w, h, zf);
-
-				glTexCoord3f(0.f, 1.f, zn);
-				glVertex3f(0.f, h, zf);
-
-			}
-
-			glEnd();
-
-			glPopAttrib();
-
-			glBindTexture(GL_TEXTURE_3D, 0);
-			glEndList();
+			s->setUniform("sliceWeight", 1.f / depth);
+			drawZPlanes(view);
 		}
 	}
-
-	glEnd();
+	
 
 	glPopAttrib();
 
@@ -347,4 +287,181 @@ void SpimStack::setRotation(float angle)
 	transform = rotate(transform, angle, vec3(0, 1, 0));
 	transform = translate(transform, getBBox().getCentroid() * -1.f);
 	
+}
+
+void SpimStack::drawZPlanes(const glm::vec3& view) const
+{
+	glBegin(GL_QUADS);
+
+
+
+	if (view.z > 0.f)
+	{
+		for (unsigned int z = 0; z < depth; ++z)
+		{
+			float zf = (float)z * DIMENSIONS.z;
+			float zn = (float)z / depth;
+
+			const float w = width * DIMENSIONS.x;
+			const float h = height * DIMENSIONS.y;
+
+			glTexCoord3f(0.f, 0.f, zn);
+			glVertex3f(0.f, 0.f, zf);
+
+			glTexCoord3f(1.f, 0.f, zn);
+			glVertex3f(w, 0.f, zf);
+
+			glTexCoord3f(1.f, 1.f, zn);
+			glVertex3f(w, h, zf);
+
+			glTexCoord3f(0.f, 1.f, zn);
+			glVertex3f(0.f, h, zf);
+
+		}
+	}
+	else
+	{
+
+		for (unsigned int z = depth; z > 0; --z)
+		{
+			float zf = (float)z * DIMENSIONS.z;
+			float zn = (float)z / depth;
+
+			const float w = width * DIMENSIONS.x;
+			const float h = height * DIMENSIONS.y;
+
+			glTexCoord3f(0.f, 0.f, zn);
+			glVertex3f(0.f, 0.f, zf);
+
+			glTexCoord3f(1.f, 0.f, zn);
+			glVertex3f(w, 0.f, zf);
+
+			glTexCoord3f(1.f, 1.f, zn);
+			glVertex3f(w, h, zf);
+
+			glTexCoord3f(0.f, 1.f, zn);
+			glVertex3f(0.f, h, zf);
+
+		}
+	}
+	glEnd();
+}
+
+void SpimStack::drawYPlanes(const glm::vec3& view) const
+{
+	glBegin(GL_QUADS);
+
+	if (view.y > 0.f)
+	{
+		for (unsigned int y = 0; y < height; ++y)
+		{
+			float yf = (float)y  * DIMENSIONS.y;
+			float yn = (float)y / height;
+
+			const float w = width * DIMENSIONS.x;
+			const float d = depth * DIMENSIONS.z;
+
+
+			glTexCoord3f(0, yn, 0);
+			glVertex3f(0, yf, 0);
+
+			glTexCoord3f(1, yn, 0);
+			glVertex3f(w, yf, 0);
+
+			glTexCoord3f(1, yn, 1);
+			glVertex3f(w, yf, d);
+
+			glTexCoord3f(0, yn, 1);
+			glVertex3f(0, yf, d);
+
+		}
+	}
+	else
+	{
+		for (unsigned int y = height; y > 0; --y)
+		{
+			float yf = (float)y  * DIMENSIONS.y;
+			float yn = (float)y / height;
+
+			const float w = width * DIMENSIONS.x;
+			const float d = depth * DIMENSIONS.z;
+
+
+			glTexCoord3f(0, yn, 0);
+			glVertex3f(0, yf, 0);
+
+			glTexCoord3f(1, yn, 0);
+			glVertex3f(w, yf, 0);
+
+			glTexCoord3f(1, yn, 1);
+			glVertex3f(w, yf, d);
+
+			glTexCoord3f(0, yn, 1);
+			glVertex3f(0, yf, d);
+
+		}
+
+	}
+
+
+
+	glEnd();
+
+}
+
+void SpimStack::drawXPlanes(const glm::vec3& view) const
+{
+	glBegin(GL_QUADS);
+
+	if (view.x > 0.f)
+	{
+		for (unsigned x = 0; x < width; ++x)
+		{
+			float xf = (float)x * DIMENSIONS.x;
+			float xn = (float)x / width;
+
+			const float h = height * DIMENSIONS.y;
+			const float d = depth* DIMENSIONS.z;
+
+
+			glTexCoord3f(xn, 0, 0);
+			glVertex3f(xf, 0.f, 0.f);
+
+			glTexCoord3f(xn, 0, 1);
+			glVertex3f(xf, 0.f, d);
+
+			glTexCoord3f(xn, 1, 1);
+			glVertex3f(xf, h, d);
+
+			glTexCoord3f(xn, 1, 0);
+			glVertex3f(xf, h, 0.f);
+		}
+	}
+	else
+	{
+		for (unsigned x = width; x > 0; --x)
+		{
+			float xf = (float)x * DIMENSIONS.x;
+			float xn = (float)x / width;
+
+			const float h = height * DIMENSIONS.y;
+			const float d = depth* DIMENSIONS.z;
+
+
+			glTexCoord3f(xn, 0, 0);
+			glVertex3f(xf, 0.f, 0.f);
+
+			glTexCoord3f(xn, 0, 1);
+			glVertex3f(xf, 0.f, d);
+
+			glTexCoord3f(xn, 1, 1);
+			glVertex3f(xf, h, d);
+
+			glTexCoord3f(xn, 1, 0);
+			glVertex3f(xf, h, 0.f);
+		}
+	}
+
+
+	glEnd();
 }

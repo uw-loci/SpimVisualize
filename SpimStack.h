@@ -16,7 +16,7 @@ public:
 	~SpimStack();
 	
 	void draw() const;
-	void drawSlices(Shader* s, const glm::mat4& view) const;
+	void drawSlices(Shader* s, const glm::vec3& camPos) const;
 
 	void loadRegistration(const std::string& filename);
 
@@ -31,9 +31,9 @@ public:
 	inline const glm::mat4& getTransform() const { return transform; }
 	inline const std::vector<glm::vec3>& getRegistrationPoints() const { return registrationPoints;  }
 
-	inline const unsigned int getTexture() const { return volumeTextureId; }
+	glm::vec3 getCentroid() const;
 
-	inline float getSliceWeight() const { return 1.f / depth; }
+	inline const unsigned int getTexture() const { return volumeTextureId; }
 
 private:
 	unsigned int		width, height, depth;
@@ -52,6 +52,17 @@ private:
 	glm::mat4				transform;
 
 	std::vector<glm::vec3>	registrationPoints;
+
+
+
+	void createPlaneLists();
+
+
+	void drawZPlanes(const glm::vec3& view) const;
+	void drawXPlanes(const glm::vec3& view) const;
+	void drawYPlanes(const glm::vec3& view) const;
+
+
 };
 
 

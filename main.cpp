@@ -123,6 +123,11 @@ struct Viewport
 		glMatrixMode(GL_MODELVIEW);
 		glLoadMatrixf(glm::value_ptr(view));
 	}
+
+	glm::vec3 getCameraPosition() const
+	{
+		return glm::vec3(glm::inverse(view) * glm::vec4(0.f, 0.f, 0.f, 1.f));
+	}
 };
 
 
@@ -247,12 +252,12 @@ static void drawScene(const Viewport& vp)
 		volumeShader->setUniform("mvpMatrix", mvp);
 
 
+
 		for (size_t i = 0; i < stacks.size(); ++i)
 		{
 			volumeShader->setUniform("color", getRandomColor(i));
 			volumeShader->setMatrix4("transform", stacks[i]->getTransform());
-			volumeShader->setUniform("sliceWeight", stacks[i]->getSliceWeight());
-			stacks[i]->drawSlices(volumeShader, vp.view);
+			stacks[i]->drawSlices(volumeShader, vp.getCameraPosition());
 		}
 
 		volumeShader->disable();

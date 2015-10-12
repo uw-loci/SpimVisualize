@@ -83,5 +83,5 @@ void main()
 		discard;
 	*/
 	
-	gl_FragColor = vec4(color, intensity);
+	gl_FragColor = vec4(intensity);
 }
