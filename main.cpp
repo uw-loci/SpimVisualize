@@ -49,7 +49,8 @@ bool			drawBbox = true;
 int				slices = 100;
 
 std::vector<SpimStack*>	stacks;
-unsigned int currentStack = 0;
+int currentStack = -1;
+
 float rotationAngle = 0.f;
 
 AABB			globalBBox;
@@ -363,7 +364,7 @@ static void drawScene(const Viewport& vp)
 	}
 
 	// draw the points
-	if (!stacks[currentStack]->getRegistrationPoints().empty())
+	if (currentStack > -1 && !stacks[currentStack]->getRegistrationPoints().empty())
 	{
 		pointShader->bind();
 		pointShader->setMatrix4("mvpMatrix", mvp);
@@ -395,6 +396,11 @@ static void drawScene(const Viewport& vp)
 			}
 		}
 	}
+}
+
+static void special()
+{
+
 }
 
 static void display()
@@ -544,32 +550,47 @@ static void keyboard(unsigned char key, int x, int y)
 	
 	if (key == '1')
 	{
-		stacks[0]->toggle();
-		std::cout << "Stack 1 " << (stacks[0]->isEnabled() ? "en" : "dis") << "abled.\n";
+		if (currentStack == 0)
+			currentStack = -1;
+		else
+			currentStack = 0;
 	}
 
 	if (key == '2' && stacks.size() >= 2)
 	{
-		stacks[1]->toggle();
-		std::cout << "Stack 2 " << (stacks[1]->isEnabled() ? "en" : "dis") << "abled.\n";
+		if (currentStack == 1)
+			currentStack = -1;
+		else
+			currentStack = 1;
 	}
+
 	if (key == '3' && stacks.size() >= 3)
 	{
-		stacks[2]->toggle();
-		std::cout << "Stack 3 " << (stacks[2]->isEnabled() ? "en" : "dis") << "abled.\n";
+		if (currentStack == 2)
+			currentStack = -1;
+		else
+			currentStack = 2;
 	}
+
 	if (key == '4' && stacks.size() >= 4)
 	{
-		stacks[3]->toggle();
-		std::cout << "Stack 4 " << (stacks[3]->isEnabled() ? "en" : "dis") << "abled.\n";
+		if (currentStack == 3)
+			currentStack = -1;
+		else
+			currentStack = 3;
 	}
+
 	if (key == '5' && stacks.size() >= 5)
 	{
-		stacks[4]->toggle();
-		std::cout << "Stack 5 " << (stacks[4]->isEnabled() ? "en" : "dis") << "abled.\n";
+		if (currentStack == 4)
+			currentStack = -1;
+		else
+			currentStack = 4;
 	}
-	
 
+	if (key == 'v' && currentStack > -1)
+		stacks[currentStack]->toggle();
+	
 	int vp = getActiveViewport();
 	if (vp >= 0 && vp < 3)
 		orthoKeyboard(key, x, y, vp);
@@ -605,6 +626,32 @@ static void passiveMotion(int x, int y)
 	// reset viewpoint highlights
 	for (int i = 0; i < 4; ++i)
 		view[i].highlighted = view[i].isInside(glm::ivec2(x, h-y));
+
+}
+
+static void special(int key, int x, int y)
+{
+	if (key == GLUT_KEY_UP)
+	{
+
+	}
+
+	if (key == GLUT_KEY_DOWN)
+	{
+
+	}
+
+	if (key == GLUT_KEY_LEFT)
+	{
+
+
+	}
+
+
+	if (key == GLUT_KEY_RIGHT)
+	{
+
+	}
 
 }
 
@@ -679,7 +726,8 @@ int main(int argc, const char** argv)
 	glutMotionFunc(motion);
 	glutReshapeFunc(reshape);
 	glutPassiveMotionFunc(passiveMotion);
-
+	glutSpecialFunc(special);
+	
 	glEnable(GL_DEPTH_TEST);
 	glPointSize(2.f);
 	glEnable(GL_CULL_FACE);

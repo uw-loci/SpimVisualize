@@ -15,9 +15,13 @@ static inline double deg2rad(double a)
 	return a * .017453292519943295; // (angle / 180) * Math.PI;
 }
 
-OrbitCamera::OrbitCamera() : fovy(60.f), aspect(1.3), near(50.f), far(5000.f), target(0, 0, 0), up(0, 1, 0), theta(22), phi(10), radius(100)
+OrbitCamera::OrbitCamera() : fovy(60.f), theta(22), phi(10), radius(100)
 {
-
+	aspect = 1.3f;
+	near = 50.f;
+	far = 5000.f;
+	target = vec3(0.f);
+	up = vec3(0, 1, 0);
 }
 
 void OrbitCamera::setup() const
