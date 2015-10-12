@@ -247,6 +247,9 @@ static void drawScene(const Viewport& vp)
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 
+		glDisable(GL_DEPTH_TEST);
+		glDepthMask(GL_FALSE);
+
 		volumeShader->bind();
 		volumeShader->setUniform("minThreshold", (int)minThreshold);
 		volumeShader->setUniform("mvpMatrix", mvp);
@@ -255,14 +258,22 @@ static void drawScene(const Viewport& vp)
 
 		for (size_t i = 0; i < stacks.size(); ++i)
 		{
-			volumeShader->setUniform("color", getRandomColor(i));
-			volumeShader->setMatrix4("transform", stacks[i]->getTransform());
-			stacks[i]->drawSlices(volumeShader, vp.getCameraPosition());
+			if (stacks[i]->isEnabled())
+			{
+				volumeShader->setUniform("color", getRandomColor(i));
+				volumeShader->setMatrix4("transform", stacks[i]->getTransform());
+				stacks[i]->drawSlices(volumeShader, vp.getCameraPosition());
+
+			}
+
+
 		}
 
 		volumeShader->disable();
 
 		glDisable(GL_BLEND);
+		glEnable(GL_DEPTH_TEST);
+		glDepthMask(GL_TRUE);
 	}
 	else
 	{
@@ -283,6 +294,9 @@ static void drawScene(const Viewport& vp)
 
 		for (size_t i = 0; i < stacks.size(); ++i)
 		{
+			if (!stacks[i]->isEnabled())
+				continue;
+
 
 			// draw screen filling quads
 			// find max/min distances of bbox cube from camera
@@ -368,14 +382,17 @@ static void drawScene(const Viewport& vp)
 	{
 		for (size_t i = 0; i < stacks.size(); ++i)
 		{
+			if (stacks[i]->isEnabled())
+			{
 
-			glPushMatrix();
-			glMultMatrixf(glm::value_ptr(stacks[i]->getTransform()));
+				glPushMatrix();
+				glMultMatrixf(glm::value_ptr(stacks[i]->getTransform()));
 
-			glColor3f(1, 1, 0);
-			stacks[i]->getBBox().draw();
+				glColor3f(1, 1, 0);
+				stacks[i]->getBBox().draw();
 
-			glPopMatrix();
+				glPopMatrix();
+			}
 		}
 	}
 }
@@ -524,6 +541,35 @@ static void keyboard(unsigned char key, int x, int y)
 		reloadShaders();
 
 
+	
+	if (key == '1')
+	{
+		stacks[0]->toggle();
+		std::cout << "Stack 1 " << (stacks[0]->isEnabled() ? "en" : "dis") << "abled.\n";
+	}
+
+	if (key == '2' && stacks.size() >= 2)
+	{
+		stacks[1]->toggle();
+		std::cout << "Stack 2 " << (stacks[1]->isEnabled() ? "en" : "dis") << "abled.\n";
+	}
+	if (key == '3' && stacks.size() >= 3)
+	{
+		stacks[2]->toggle();
+		std::cout << "Stack 3 " << (stacks[2]->isEnabled() ? "en" : "dis") << "abled.\n";
+	}
+	if (key == '4' && stacks.size() >= 4)
+	{
+		stacks[3]->toggle();
+		std::cout << "Stack 4 " << (stacks[3]->isEnabled() ? "en" : "dis") << "abled.\n";
+	}
+	if (key == '5' && stacks.size() >= 5)
+	{
+		stacks[4]->toggle();
+		std::cout << "Stack 5 " << (stacks[4]->isEnabled() ? "en" : "dis") << "abled.\n";
+	}
+	
+
 	int vp = getActiveViewport();
 	if (vp >= 0 && vp < 3)
 		orthoKeyboard(key, x, y, vp);
@@ -648,7 +694,7 @@ int main(int argc, const char** argv)
 		globalBBox.reset();
 
 
-		for (int i = 0; i < 1; ++i)		
+		for (int i = 0; i < 2; ++i)		
 		{
 			char filename[256];
 			//sprintf(filename, "e:/spim/test/spim_TL00_Angle%d.tif", i);

@@ -35,9 +35,14 @@ public:
 
 	inline const unsigned int getTexture() const { return volumeTextureId; }
 
+	inline bool isEnabled() const { return enabled; }
+	inline void toggle() { enabled = !enabled;  }
+
 private:
 	unsigned int		width, height, depth;
 	unsigned int		textures;
+
+	bool				enabled;
 
 	// 3d volume texture
 	unsigned int			volumeTextureId;

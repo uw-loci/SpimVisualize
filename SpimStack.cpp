@@ -20,7 +20,7 @@ using namespace glm;
 // voxel dimensions in microns
 static const vec3 DIMENSIONS(0.625, 0.625, 3);
 
-SpimStack::SpimStack(const string& filename) : width(0), height(0), depth(0), volume(nullptr), volumeTextureId(0), transform(1.f)
+SpimStack::SpimStack(const string& filename) : width(0), height(0), depth(0), volume(nullptr), volumeTextureId(0), transform(1.f), enabled(true)
 {
 	volumeList[0] = 0;
 	volumeList[1] = 0;
