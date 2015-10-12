@@ -60,16 +60,12 @@ struct Viewport
 	// window coordinates
 	glm::ivec2		position, size;
 
-	// projection and view matrices
-	glm::mat4		proj, view;
-
 	glm::vec3		color;
 		
 	enum ViewportName { ORTHO_X=0, ORTHO_Y, ORTHO_Z, PERSPECTIVE=3} name;
 	
+	ICamera*		camera;
 	bool			highlighted;
-	float			orthoZoomLevel;
-	glm::vec2		orthoZenter;
 
 	inline bool isInside(const glm::ivec2& cursor) const
 	{
@@ -79,19 +75,9 @@ struct Viewport
 	}
 
 
-	void orthoZoom(float z)
-	{
-		orthoZoomLevel *= z;
-		
-		const float DIST = globalBBox.getSpanLength()*1.5;
-		const float ASPECT = (float)size.x / size.y;
-
-		float D = DIST * orthoZoomLevel;
-		proj = glm::ortho(-D*ASPECT, D*ASPECT, -D, D, -DIST, DIST);
-	}
-
 	void setup() const
 	{
+
 		glViewport(position.x, position.y, size.x, size.y);
 
 		// reset any transform
@@ -101,8 +87,7 @@ struct Viewport
 		
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
-
-
+		
 		// draw a border
 		if (highlighted)
 		{
@@ -115,19 +100,9 @@ struct Viewport
 			glEnd();
 		}
 		
-
 		// set correct matrices
-
-
-		glMatrixMode(GL_PROJECTION);
-		glLoadMatrixf(glm::value_ptr(proj));
-		glMatrixMode(GL_MODELVIEW);
-		glLoadMatrixf(glm::value_ptr(view));
-	}
-
-	glm::vec3 getCameraPosition() const
-	{
-		return glm::vec3(glm::inverse(view) * glm::vec4(0.f, 0.f, 0.f, 1.f));
+		assert(camera);
+		camera->setup();
 	}
 };
 
@@ -193,7 +168,8 @@ static void reloadShaders()
 
 static void drawScene(const Viewport& vp)
 {
-	const glm::mat4 mvp = vp.proj * vp.view;
+	glm::mat4 mvp;// = vp.proj * vp.view;
+	vp.camera->getMVP(mvp);
 
 	// draw a groud grid only in perspective mode
 	if (vp.name == Viewport::PERSPECTIVE || vp.name == Viewport::ORTHO_Y)
@@ -254,16 +230,18 @@ static void drawScene(const Viewport& vp)
 		volumeShader->bind();
 		volumeShader->setUniform("minThreshold", (int)minThreshold);
 		volumeShader->setUniform("mvpMatrix", mvp);
-
-
-
+		
 		for (size_t i = 0; i < stacks.size(); ++i)
 		{
 			if (stacks[i]->isEnabled())
 			{
 				volumeShader->setUniform("color", getRandomColor(i));
 				volumeShader->setMatrix4("transform", stacks[i]->getTransform());
-				stacks[i]->drawSlices(volumeShader, vp.getCameraPosition());
+
+
+				// calculate view vector
+				glm::vec3 view = vp.camera->getViewDirection();
+				stacks[i]->drawSlices(volumeShader, view);
 
 			}
 
@@ -385,11 +363,14 @@ static void drawScene(const Viewport& vp)
 		{
 			if (stacks[i]->isEnabled())
 			{
-
 				glPushMatrix();
 				glMultMatrixf(glm::value_ptr(stacks[i]->getTransform()));
 
-				glColor3f(1, 1, 0);
+
+				if (i == currentStack)
+					glColor3f(1, 1, 0);
+				else
+					glColor3f(0.6, 0.6, 0.6);
 				stacks[i]->getBBox().draw();
 
 				glPopMatrix();
@@ -412,15 +393,6 @@ static void display()
 	{
 		// setup the correct viewport
 		view[i].setup();
-				
-
-		// if this is the perspective window set the camera transform
-		if (i == 3)
-		{
-			camera.setup();
-			camera.getMatrices(view[3].proj, view[3].view);
-		}
-
 		drawScene(view[i]);
 	}
 	
@@ -443,37 +415,6 @@ static void idle()
 
 	glutPostRedisplay();
 }
-
-
-static void orthoKeyboard(unsigned char key, int x, int y, int vp)
-{
-	if (key == '-')
-		view[vp].orthoZoom(0.7f);
-
-
-	if (key == '=')
-		view[vp].orthoZoom(1.4f);
-
-}
-
-static void projKeyboard(unsigned char key, int x, int y, int vp)
-{
-	if (key == '-')
-		camera.zoom(0.7f);
-	if (key == '=')
-		camera.zoom(1.4f);
-
-
-	if (key == 'a')
-		camera.pan(-1, 0);
-	if (key == 'd')
-		camera.pan(1, 0);
-	if (key == 'w')
-		camera.pan(0, 1);
-
-
-}
-
 
 static void keyboard(unsigned char key, int x, int y)
 {
@@ -506,6 +447,7 @@ static void keyboard(unsigned char key, int x, int y)
 		std::cout << "min thresh: " << minThreshold << std::endl;
 	}
 
+	/*
 	if (key == '[')
 	{
 		--rotationAngle;
@@ -519,9 +461,9 @@ static void keyboard(unsigned char key, int x, int y)
 		++rotationAngle;
 		std::cout << "Current rot angle: " << rotationAngle << std::endl;
 
-
 		stacks[currentStack]->setRotation(rotationAngle);
 	}
+	*/
 
 	if (key == ' ')
 	{
@@ -543,11 +485,11 @@ static void keyboard(unsigned char key, int x, int y)
 		std::cout << "slices: " << slices << std::endl;
 	}
 
-	if (key == 's')
+	if (key == 'S')
 		reloadShaders();
 
 
-	
+
 	if (key == '1')
 	{
 		if (currentStack == 0)
@@ -591,11 +533,38 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == 'v' && currentStack > -1)
 		stacks[currentStack]->toggle();
 	
+
+	// camera controls
 	int vp = getActiveViewport();
-	if (vp >= 0 && vp < 3)
-		orthoKeyboard(key, x, y, vp);
-	else
-		projKeyboard(key, x, y, 3);
+
+	if (key == '-')
+		view[vp].camera->zoom(0.7f);
+	if (key == '=')
+		view[vp].camera->zoom(1.4f);
+
+	if (key == 'w')
+		view[vp].camera->pan(0.f, 10.f);
+	if (key == 's')
+		view[vp].camera->pan(0.f, -10.f);
+	if (key == 'a')
+		view[vp].camera->pan(-10.f, 0.f); 
+	if (key == 'd')
+		view[vp].camera->pan(10.f, 0.f);
+
+
+	if (key == 'c')
+	{
+		//if (view[vp].name == Viewport::PERSPECTIVE)
+		{
+			if (currentStack == -1)
+				view[vp].camera->target = globalBBox.getCentroid();
+			else
+				view[vp].camera->target = stacks[currentStack]->getBBox().getCentroid();
+		}
+
+
+	}
+
 }
 
 
@@ -605,11 +574,17 @@ static void motion(int x, int y)
 	float dt = (mouse.y - y) * 0.1f;
 	float dp = (mouse.x - x) * 0.1f;
 
-
-	camera.rotate(dt, dp);
+	//camera.rotate(dt, dp);
 
 	mouse.x = x;
 	mouse.y = y;
+
+
+	int vp = getActiveViewport();
+	if (vp > -1 && vp < 4)
+		view[vp].camera->rotate(dt, dp);
+
+
 
 	int h = glutGet(GLUT_WINDOW_HEIGHT);
 
@@ -674,20 +649,20 @@ static void reshape(int w, int h)
 	// setup the 4 views
 	view[0].name = Viewport::ORTHO_X;
 	view[0].position = ivec2(0, 0);
-	view[0].view = lookAt(vec3(DIST-1.f, 0, 0), vec3(0.f), vec3(0, 1, 0));
-	
+	//view[0].view = lookAt(vec3(DIST-1.f, 0, 0), vec3(0.f), vec3(0, 1, 0));
+		
 	view[1].name = Viewport::ORTHO_Y;
 	view[1].position = ivec2(w / 2, 0);
-	view[1].view = lookAt(vec3(0, DIST-1.f, 0), vec3(0.f), vec3(0, 0, 1));
+	//view[1].view = lookAt(vec3(0, DIST-1.f, 0), vec3(0.f), vec3(0, 0, 1));
 	
 	view[2].name = Viewport::ORTHO_Z;
 	view[2].position = ivec2(0, h / 2);
-	view[2].view = lookAt(vec3(0, 0, DIST-1.f), vec3(0.f), vec3(0, 1, 0));
+	//view[2].view = lookAt(vec3(0, 0, DIST-1.f), vec3(0.f), vec3(0, 1, 0));
 	
 	view[3].name = Viewport::PERSPECTIVE;
 	view[3].position = ivec2(w / 2, h / 2);
 	
-	camera.getMatrices(view[3].proj, view[3].view);
+	//camera.getMatrices(view[3].proj, view[3].view);
 
 
 	// adjust the camera's perspective
@@ -698,7 +673,7 @@ static void reshape(int w, int h)
 	{
 		view[i].color = getRandomColor(i);
 		view[i].size = VIEWPORT_SIZE;
-		view[i].orthoZoom(1.f);
+		view[i].camera->aspect = ASPECT;
 	}
 }
 
@@ -733,8 +708,21 @@ int main(int argc, const char** argv)
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 
-	for (int i = 0; i < 4; ++i)
-		view[i].orthoZoomLevel = 1.f;
+
+	// setup viewports
+	view[0].name = Viewport::ORTHO_X;
+	view[0].camera = new OrthoCamera(glm::vec3(-1, 0, 0), glm::vec3(0.f, 1.f, 0.f));
+	
+	view[1].name = Viewport::ORTHO_Y;
+	view[1].camera = new OrthoCamera(glm::vec3(0.f, -1, 0), glm::vec3(1.f, 0.f, 0.f));
+	
+	view[2].name = Viewport::ORTHO_Z;
+	view[2].camera = new OrthoCamera(glm::vec3(0,  0.f, -1), glm::vec3(0.f, 1.f, 0.f));
+	
+	view[3].name = Viewport::PERSPECTIVE;
+	view[3].camera = &camera;
+
+
 
 	
 	try
@@ -742,7 +730,7 @@ int main(int argc, const char** argv)
 		globalBBox.reset();
 
 
-		for (int i = 0; i < 2; ++i)		
+		for (int i = 0; i < 1; ++i)		
 		{
 			char filename[256];
 			//sprintf(filename, "e:/spim/test/spim_TL00_Angle%d.tif", i);

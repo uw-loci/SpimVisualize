@@ -16,7 +16,7 @@ public:
 	~SpimStack();
 	
 	void draw() const;
-	void drawSlices(Shader* s, const glm::vec3& camPos) const;
+	void drawSlices(Shader* s, const glm::vec3& viewDir) const;
 
 	void loadRegistration(const std::string& filename);
 

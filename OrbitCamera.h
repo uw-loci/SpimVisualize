@@ -21,7 +21,7 @@ public:
 	virtual void pan(float dx, float dy) = 0;
 
 	virtual glm::vec3 getPosition() const = 0;
-
+	virtual glm::vec3 getViewDirection() const = 0;
 
 	float		aspect, near, far;
 	glm::vec3	target, up;
@@ -52,6 +52,9 @@ public:
 	float		radius;
 
 	inline glm::vec3 getPosition() const { return target + getOffset(); }
+	inline void setTarget(const glm::vec3& t) { target = t; }
+
+	inline glm::vec3 getViewDirection() const { return -getOffset(); }
 	
 
 private:
@@ -64,19 +67,22 @@ private:
 class OrthoCamera: public ICamera
 {
 public:
+	OrthoCamera(const glm::vec3& viewDir, const glm::vec3& up);
 	virtual void setup() const;
 
 	virtual void getMVP(glm::mat4& mvp) const;
 	virtual void getMatrices(glm::mat4& proj, glm::mat4& view) const;
 
 	virtual void zoom(float d);
-	virtual void rotate(float dt, float dp);
+	virtual void rotate(float dt, float dp) {};
 	virtual void pan(float dx, float dy);
 
-	virtual glm::vec3 getPosition() const;
-
+	inline glm::vec3 getPosition() const { return target - viewDirection; } ;
+	inline glm::vec3 getViewDirection() const {	return viewDirection;}
 
 private:
-	float zoomFactor;
+	glm::vec3		viewDirection;
+	float			zoomFactor;
+	
 
 };

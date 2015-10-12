@@ -118,3 +118,54 @@ void OrbitCamera::jitter(float v)
 	theta += v;
 	phi += v;
 }
+
+
+OrthoCamera::OrthoCamera(const glm::vec3& viewDir, const glm::vec3& up) : viewDirection(normalize(viewDir)), zoomFactor(1000.f)
+{
+	this->up = up;
+	this->target = vec3(0.f);
+	this->aspect = 1.3f;
+	this->near = -1000.f;
+	this->far = 5000.f;
+
+}
+
+void OrthoCamera::setup() const
+{
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(-aspect*zoomFactor, aspect*zoomFactor, -zoomFactor, zoomFactor, near, far);
+
+	vec3 pos = this->getPosition();
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	gluLookAt(pos.x, pos.y, pos.z, target.x, target.y, target.z, up.x, up.y, up.z);
+}
+
+void OrthoCamera::getMatrices(glm::mat4& proj, glm::mat4& view) const
+{
+	proj = ortho(-aspect*zoomFactor, aspect*zoomFactor, -zoomFactor, zoomFactor, near, far);
+	view = lookAt(getPosition(), target, up);
+}
+
+void OrthoCamera::getMVP(glm::mat4& mvp) const
+{
+	mat4 proj = ortho(-aspect*zoomFactor, aspect*zoomFactor, -zoomFactor, zoomFactor, near, far);
+	mat4 view = lookAt(getPosition(), target, up);
+
+	mvp = proj * view;
+}
+
+void OrthoCamera::pan(float dx, float dy)
+{
+	vec3 fwd = viewDirection;
+	vec3 right = normalize(cross(fwd, up));
+	vec3 delta = up * dy + right * dx;
+
+	target += delta;
+}
+
+void OrthoCamera::zoom(float z)
+{
+	zoomFactor *= z;
+}

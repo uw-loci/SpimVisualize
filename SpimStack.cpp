@@ -197,16 +197,13 @@ glm::vec3 SpimStack::getCentroid() const
 	return glm::vec3(c);
 }
 
-void SpimStack::drawSlices(Shader* s, const glm::vec3& camPos) const
+void SpimStack::drawSlices(Shader* s, const glm::vec3& view) const
 {
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_3D, volumeTextureId);
 	
 	s->setUniform("volumeTexture", 0);
 
-	// calculate view vector
-	glm::vec3 c = getCentroid();
-	const glm::vec3 view = glm::normalize(camPos - c);
 	const glm::vec3 aview = glm::abs(view);
 
 	
