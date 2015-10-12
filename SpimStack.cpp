@@ -197,6 +197,16 @@ glm::vec3 SpimStack::getCentroid() const
 	return glm::vec3(c);
 }
 
+void SpimStack::move(const glm::vec3& delta)
+{
+	transform = glm::translate(transform, delta);
+}
+
+void SpimStack::rotate(float d)
+{
+	transform = glm::rotate(transform, d, glm::vec3(0, 1, 0));
+}
+
 void SpimStack::drawSlices(Shader* s, const glm::vec3& view) const
 {
 	glActiveTexture(GL_TEXTURE0);
@@ -281,7 +291,7 @@ void SpimStack::loadRegistration(const string& filename)
 void SpimStack::setRotation(float angle)
 {
 	transform = translate(glm::mat4(1.f), getBBox().getCentroid());
-	transform = rotate(transform, angle, vec3(0, 1, 0));
+	transform = glm::rotate(transform, angle, vec3(0, 1, 0));
 	transform = translate(transform, getBBox().getCentroid() * -1.f);
 	
 }

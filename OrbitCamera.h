@@ -23,6 +23,9 @@ public:
 	virtual glm::vec3 getPosition() const = 0;
 	virtual glm::vec3 getViewDirection() const = 0;
 
+	// calculates the planar movement from the given 2D vector which is assumed to be on the near plane of the camera
+	virtual glm::vec3 calculatePlanarMovement(const glm::vec2& delta) const = 0;
+
 	float		aspect, near, far;
 	glm::vec3	target, up;
 
@@ -55,6 +58,8 @@ public:
 	inline void setTarget(const glm::vec3& t) { target = t; }
 
 	inline glm::vec3 getViewDirection() const { return -getOffset(); }
+
+	virtual glm::vec3 calculatePlanarMovement(const glm::vec2& delta) const;
 	
 
 private:
@@ -76,6 +81,8 @@ public:
 	virtual void zoom(float d);
 	virtual void rotate(float dt, float dp) {};
 	virtual void pan(float dx, float dy);
+
+	virtual glm::vec3 calculatePlanarMovement(const glm::vec2& delta) const;
 
 	inline glm::vec3 getPosition() const { return target - viewDirection; } ;
 	inline glm::vec3 getViewDirection() const {	return viewDirection;}

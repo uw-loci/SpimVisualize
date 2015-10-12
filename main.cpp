@@ -27,10 +27,16 @@ OrbitCamera		camera;
 bool drawLines = false;
 bool rotate = false;
 
-glm::ivec2		mouse;
+
+struct Mouse
+{
+	glm::ivec2		coordinates;
+	int				button[3];
+}				mouse;
+
+
 
 Shader*			planeShader = 0;
-
 Shader*			quadShader = 0;
 
 std::vector<SpimPlane*> planes;
@@ -51,8 +57,6 @@ int				slices = 100;
 std::vector<SpimStack*>	stacks;
 int currentStack = -1;
 
-float rotationAngle = 0.f;
-
 AABB			globalBBox;
 
 struct Viewport
@@ -72,6 +76,11 @@ struct Viewport
 		using namespace glm;
 		const ivec2 rc = cursor - position;
 		return all(greaterThanEqual(rc, ivec2(0))) && all(lessThanEqual(rc, size));
+	}
+
+	inline float getAspect() const
+	{
+		return (float)size.x / size.y;
 	}
 
 
@@ -447,23 +456,17 @@ static void keyboard(unsigned char key, int x, int y)
 		std::cout << "min thresh: " << minThreshold << std::endl;
 	}
 
-	/*
-	if (key == '[')
+	
+	if (key == '[' && currentStack > -1)
 	{
-		--rotationAngle;
-		std::cout << "Current rot angle: " << rotationAngle << std::endl;
-
-		stacks[currentStack]->setRotation(rotationAngle);
+		stacks[currentStack]->rotate(-1);
 	}
 
-	if (key == ']')
+	if (key == ']' && currentStack > -1)
 	{
-		++rotationAngle;
-		std::cout << "Current rot angle: " << rotationAngle << std::endl;
-
-		stacks[currentStack]->setRotation(rotationAngle);
+		stacks[currentStack]->rotate(1.f);
 	}
-	*/
+	
 
 	if (key == ' ')
 	{
@@ -570,20 +573,41 @@ static void keyboard(unsigned char key, int x, int y)
 
 static void motion(int x, int y)
 {
-	
-	float dt = (mouse.y - y) * 0.1f;
-	float dp = (mouse.x - x) * 0.1f;
+	glm::ivec2 d = mouse.coordinates - glm::ivec2(x, y);
+
+	float dt = (mouse.coordinates.y - y) * 0.1f;
+	float dp = (mouse.coordinates.x - x) * 0.1f;
 
 	//camera.rotate(dt, dp);
 
-	mouse.x = x;
-	mouse.y = y;
+	float dx = (x - mouse.coordinates.x) * 2.f;
+	float dy = (y - mouse.coordinates.y) * -2.f;
 
+	mouse.coordinates.x = x;
+	mouse.coordinates.y = y;
 
 	int vp = getActiveViewport();
 	if (vp > -1 && vp < 4)
-		view[vp].camera->rotate(dt, dp);
+	{
 
+		// drag perspective camera
+		if (mouse.button[0] && view[vp].name == Viewport::PERSPECTIVE)
+			view[vp].camera->rotate(dt, dp);
+
+		// drag single stack
+		if (mouse.button[0] && currentStack > -1 && view[vp].name != Viewport::PERSPECTIVE)
+		{
+			stacks[currentStack]->move(view[vp].camera->calculatePlanarMovement(glm::vec2(dx, dy)));
+		}
+
+
+		if (mouse.button[1])
+			view[vp].camera->pan(dx * view[vp].getAspect() / 2, dy); 
+
+
+
+
+	}
 
 
 	int h = glutGet(GLUT_WINDOW_HEIGHT);
@@ -634,8 +658,10 @@ static void button(int button, int state, int x, int y)
 {
 	//std::cout << "Button: " << button << " state: " << state << " x " << x << " y " << y << std::endl;
 
-	mouse.x = x;
-	mouse.y = y;
+	mouse.coordinates.x = x;
+	mouse.coordinates.y = y;
+
+	mouse.button[button] = (state == GLUT_DOWN);
 }
 
 static void reshape(int w, int h)
@@ -644,31 +670,13 @@ static void reshape(int w, int h)
 
 	const float ASPECT = (float)w / h;
 	const ivec2 VIEWPORT_SIZE = ivec2(w, h) / 2;
-	const float DIST = globalBBox.getSpanLength()*1.5;
 	
 	// setup the 4 views
-	view[0].name = Viewport::ORTHO_X;
 	view[0].position = ivec2(0, 0);
-	//view[0].view = lookAt(vec3(DIST-1.f, 0, 0), vec3(0.f), vec3(0, 1, 0));
-		
-	view[1].name = Viewport::ORTHO_Y;
 	view[1].position = ivec2(w / 2, 0);
-	//view[1].view = lookAt(vec3(0, DIST-1.f, 0), vec3(0.f), vec3(0, 0, 1));
-	
-	view[2].name = Viewport::ORTHO_Z;
 	view[2].position = ivec2(0, h / 2);
-	//view[2].view = lookAt(vec3(0, 0, DIST-1.f), vec3(0.f), vec3(0, 1, 0));
-	
-	view[3].name = Viewport::PERSPECTIVE;
 	view[3].position = ivec2(w / 2, h / 2);
 	
-	//camera.getMatrices(view[3].proj, view[3].view);
-
-
-	// adjust the camera's perspective
-	camera.aspect = ASPECT;
-
-
 	for (int i = 0; i < 4; ++i)
 	{
 		view[i].color = getRandomColor(i);
@@ -730,7 +738,7 @@ int main(int argc, const char** argv)
 		globalBBox.reset();
 
 
-		for (int i = 0; i < 1; ++i)		
+		for (int i = 0; i < 2; ++i)		
 		{
 			char filename[256];
 			//sprintf(filename, "e:/spim/test/spim_TL00_Angle%d.tif", i);
@@ -740,12 +748,12 @@ int main(int argc, const char** argv)
 			sprintf(filename, "e:/spim/zebra_beads/spim_TL01_Angle%d.ome.tiff",i);
 
 			SpimStack* stack = new SpimStack(filename);
-							
-			//stack->setRotation(-30 + i * 30);
-
-			sprintf(filename, "e:/spim/zebra_beads/registration/spim_TL01_Angle%d.ome.tiff.registration", i);
-			stack->loadRegistration(filename);
 			
+			/*
+			stack->setRotation(-30 + i * 30);
+						sprintf(filename, "e:/spim/zebra_beads/registration/spim_TL01_Angle%d.ome.tiff.registration", i);
+			stack->loadRegistration(filename);
+			*/
 
 			stacks.push_back(stack);
 		

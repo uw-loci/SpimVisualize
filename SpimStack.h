@@ -28,6 +28,9 @@ public:
 
 	void setRotation(float angle);
 
+	void move(const glm::vec3& delta);
+	void rotate(float d);
+
 	inline const glm::mat4& getTransform() const { return transform; }
 	inline const std::vector<glm::vec3>& getRegistrationPoints() const { return registrationPoints;  }
 
@@ -37,6 +40,9 @@ public:
 
 	inline bool isEnabled() const { return enabled; }
 	inline void toggle() { enabled = !enabled;  }
+
+
+
 
 private:
 	unsigned int		width, height, depth;

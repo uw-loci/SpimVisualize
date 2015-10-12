@@ -113,6 +113,16 @@ void OrbitCamera::pan(float deltaX, float deltaY)
 	target = target + up2 + right;	
 }
 
+
+glm::vec3 OrbitCamera::calculatePlanarMovement(const glm::vec2& delta) const
+{
+	vec3 fwd = normalize(-getOffset());
+	vec3 right = normalize(cross(fwd, up));
+
+	return right * delta.x + up * delta.y;
+}
+
+
 void OrbitCamera::jitter(float v)
 {
 	theta += v;
@@ -168,4 +178,13 @@ void OrthoCamera::pan(float dx, float dy)
 void OrthoCamera::zoom(float z)
 {
 	zoomFactor *= z;
+}
+
+
+glm::vec3 OrthoCamera::calculatePlanarMovement(const glm::vec2& delta) const
+{
+	vec3 fwd = viewDirection;
+	vec3 right = normalize(cross(fwd, up));
+
+	return right * delta.x + up * delta.y;
 }
