@@ -48,5 +48,18 @@ struct AABB
 
 
 
+// oriented bounding box
+struct OBB
+{
+	AABB		bbox;
+	glm::mat4	transform;
+
+
+	void reset();
+	inline bool isInside(const glm::vec3& pt) const { return isInside(glm::vec4(pt, 1.f)); }
+	bool isInside(const glm::vec4& pt) const;
+};
+
+
 
 #endif

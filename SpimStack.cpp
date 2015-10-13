@@ -103,18 +103,15 @@ SpimStack::~SpimStack()
 }
 
 
-std::vector<glm::vec4> SpimStack::calculatePoints() const
+
+std::vector<glm::vec4> SpimStack::extractRegistrationPoints(unsigned short threshold) const
 {
 	assert(volume);
-		
-	// find the largest value for scaling
-	unsigned short maxVal = 0;
-	for (unsigned int i = 0; i < width*height*depth; ++i)
-		maxVal = std::max(maxVal, volume[i]);
-	
-	std::vector<glm::vec4> points;
-	points.reserve(width*height*depth);
 
+
+	std::vector<vec4> points;
+
+	
 	for (unsigned int z = 0; z < depth; ++z)
 	{
 		for (unsigned int x = 0; x < width; ++x)
@@ -122,12 +119,11 @@ std::vector<glm::vec4> SpimStack::calculatePoints() const
 			for (unsigned int y = 0; y < height; ++y)
 			{
 				const unsigned short val = volume[x + y*width + z*width*height];
-				//if (val >= threshold)
+				if (val >= threshold)
 				{
 					vec3 coord(x, y, z);
-					//float intensity = (float)val / maxVal;
-					float intensity = (float)val;
-					points.push_back(vec4(coord * DIMENSIONS, intensity));
+					vec4 pt(coord * DIMENSIONS, float(val)/std::numeric_limits<unsigned short>::max());
+					points.push_back(pt); 
 				}
 
 			}
@@ -138,44 +134,7 @@ std::vector<glm::vec4> SpimStack::calculatePoints() const
 	float relSize = (float)points.size() / (width*height*depth);
 	std::cout << "[Stack] Reconstructed " << points.size() << "(" << relSize << ") points.\n";
 
-	return std::move(points);
-}
-
-const std::vector<glm::vec3>& SpimStack::calculateRegistrationPoints(float t)
-{
-	assert(volume);
-
-	registrationPoints.clear();
-	registrationPoints.reserve(width*height);
-
-	// find the largest value for scaling
-	unsigned short maxVal = 0;
-	for (unsigned int i = 0; i < width*height*depth; ++i)
-		maxVal = std::max(maxVal, volume[i]);
-
-	
-	for (unsigned int z = 0; z < depth; ++z)
-	{
-		for (unsigned int x = 0; x < width; ++x)
-		{
-			for (unsigned int y = 0; y < height; ++y)
-			{
-				const unsigned short val = volume[x + y*width + z*width*height];
-				if (val >= t)
-				{
-					vec3 coord(x, y, z);
-					registrationPoints.push_back(coord * DIMENSIONS); 
-				}
-
-			}
-
-		}
-	}
-
-	float relSize = (float)registrationPoints.size() / (width*height*depth);
-	std::cout << "[Stack] Reconstructed " << registrationPoints.size() << "(" << relSize << ") points.\n";
-
-	return registrationPoints;
+	return points;
 }
 
 

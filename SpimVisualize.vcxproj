@@ -15,9 +15,6 @@
     <ClCompile Include="Framebuffer.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="OrbitCamera.cpp" />
-    <ClCompile Include="sdk\libICP\src\icp.cpp" />
-    <ClCompile Include="sdk\libICP\src\icpPointToPoint.cpp" />
-    <ClCompile Include="sdk\libICP\src\kdtree.cpp" />
     <ClCompile Include="sdk\libICP\src\matrix.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="SpimPlane.cpp" />
@@ -28,9 +25,6 @@
     <ClInclude Include="AABB.h" />
     <ClInclude Include="Framebuffer.h" />
     <ClInclude Include="OrbitCamera.h" />
-    <ClInclude Include="sdk\libICP\src\icp.h" />
-    <ClInclude Include="sdk\libICP\src\icpPointToPoint.h" />
-    <ClInclude Include="sdk\libICP\src\kdtree.h" />
     <ClInclude Include="sdk\libICP\src\matrix.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="SpimPlane.h" />
@@ -66,11 +60,11 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\opencv\build\include;C:\Users\mbroecker\Documents\code\ffmpeg\include;C:\boost\include;c:\dev\opengl\include;C:\Users\mbroecker\Documents\code\transformDetection\VaryingPointClouds;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\inc;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Users\mbroecker\Documents\code\sparseicp;C:\Users\mbroecker\Documents\code\sparseicp\include;C:\Users\mbroecker\Documents\code\sparseicp\include\Eigen;C:\opencv\build\include;C:\Users\mbroecker\Documents\code\ffmpeg\include;C:\boost\include;c:\dev\opengl\include;C:\Users\mbroecker\Documents\code\transformDetection\VaryingPointClouds;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\inc;$(IncludePath)</IncludePath>
     <LibraryPath>C:\opencv\sources\build\lib\Release;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\lib;c:\dev\opengl\lib64;c:\dev\opengl\lib64\Release\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>C:\opencv\build\include;C:\Users\mbroecker\Documents\code\ffmpeg\include;C:\boost\include;c:\dev\opengl\include;C:\Users\mbroecker\Documents\code\transformDetection\VaryingPointClouds;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\inc;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Users\mbroecker\Documents\code\sparseicp;C:\Users\mbroecker\Documents\code\sparseicp\include;C:\Users\mbroecker\Documents\code\sparseicp\include\Eigen;C:\opencv\build\include;C:\Users\mbroecker\Documents\code\ffmpeg\include;C:\boost\include;c:\dev\opengl\include;C:\Users\mbroecker\Documents\code\transformDetection\VaryingPointClouds;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\inc;$(IncludePath)</IncludePath>
     <LibraryPath>C:\opencv\sources\build\lib\Release;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\lib;c:\dev\opengl\lib64;c:\dev\opengl\lib64\Release\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">

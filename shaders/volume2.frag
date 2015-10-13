@@ -10,7 +10,7 @@ struct Volume
 	bool			enabled;
 };
 
-#define VOLUMES 4
+#define VOLUMES 5
 uniform Volume volume[VOLUMES];
 
 uniform float sliceCount = 100;
@@ -19,7 +19,7 @@ uniform float sliceWeight;
 uniform int minVal = 90;
 uniform int maxVal = 110;
 
-uniform int beadThreshold = 250;
+uniform int beadThreshold = 150;
 
 in vec4 vertex;
 out vec4 fragColor;
@@ -73,8 +73,6 @@ void main()
 
 	float density = float(intensity - minVal) / float(maxVal - minVal);
 	alpha *= density;
-
-
 
 	// draw all potential beads brightly yellowS
 	if (isBead)

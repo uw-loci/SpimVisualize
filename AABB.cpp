@@ -10,9 +10,10 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_access.hpp>
 
+using namespace glm;
+
 bool AABB::isInside(const glm::vec3& pt) const
 {
-	using namespace glm;
 	/*
 	bool x = all(greaterThanEqual(this->min, pt));
 	bool y = all(lessThanEqual(pt, this->max));
@@ -32,7 +33,6 @@ bool AABB::isInside(const AABB& other) const
 
 std::vector<glm::vec3> AABB::getVertices() const
 {
-	using namespace glm;
 	using namespace std;
 
 	// create the eight vertices of the bounding box
@@ -51,8 +51,6 @@ std::vector<glm::vec3> AABB::getVertices() const
 
 AABB::ClipResult AABB::isVisible(const glm::mat4& mvp) const
 {
-	using namespace glm;
-
 
 	// create the eight vertices of the bounding box
 	vec4 vertices[] = { vec4(min.x, min.y, min.z, 1.f),
@@ -130,8 +128,6 @@ AABB::ClipResult AABB::isVisible(const glm::mat4& mvp) const
 #ifndef NO_GRAPHICS
 void AABB::draw() const
 {
-	using namespace glm;
-
 	vec4 vertices[] = {	vec4(min.x, min.y, min.z, 1.f),
 						vec4(min.x, min.y, max.z, 1.f),
 						vec4(max.x, min.y, max.z, 1.f),
@@ -190,7 +186,7 @@ bool AABB::isIntersectedByRay(const glm::vec3& o, const glm::vec3& v) const
 	// test yz planes
 	float s, t;
 
-	glm::vec3 r = glm::vec3(1.f) / v;
+	vec3 r = glm::vec3(1.f) / v;
 	if (r.x >= 0.f)
 	{
 		s = (min.x - o.x) * r.x;
@@ -256,4 +252,20 @@ void AABB::calculate(const std::vector<glm::vec3>& points)
 	for (size_t i = 1; i < points.size(); ++i)
 		this->extend(points[i]);
 }
+
+void OBB::reset()
+{
+	bbox.reset();
+	transform = mat4(1.f);
+}
+
+bool OBB::isInside(const glm::vec4& pt) const
+{
+	vec4 p = transform * pt;
+
+	return	pt.x >= bbox.min.x && pt.x <= bbox.max.x &&
+			pt.y >= bbox.min.y && pt.y <= bbox.max.y &&
+			pt.z >= bbox.min.z && pt.z <= bbox.max.z;
+}
+
 

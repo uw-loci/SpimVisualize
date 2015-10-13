@@ -23,8 +23,8 @@ public:
 	void saveTransform(const std::string& filename) const;
 	void loadTransform(const std::string& filename);
 
-	std::vector<glm::vec4> calculatePoints() const;
-	const std::vector<glm::vec3>& calculateRegistrationPoints(float threshold) ;
+	// extracts registration points based on a simple threshold in _local_ coords. use the stack's transform to transform them to world space
+	std::vector<glm::vec4> extractRegistrationPoints(unsigned short threshold) const;
 
 
 	AABB&& getBBox() const;
@@ -35,7 +35,6 @@ public:
 	void rotate(float d);
 
 	inline const glm::mat4& getTransform() const { return transform; }
-	inline const std::vector<glm::vec3>& getRegistrationPoints() const { return registrationPoints;  }
 
 	glm::vec3 getCentroid() const;
 
@@ -66,9 +65,6 @@ private:
 
 
 	glm::mat4				transform;
-
-	std::vector<glm::vec3>	registrationPoints;
-
 
 
 	void createPlaneLists();

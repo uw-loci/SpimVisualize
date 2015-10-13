@@ -7,6 +7,9 @@
 #include "SpimStack.h"
 #include "AABB.h"
 
+
+#include <ICP.h>
+
 #include <GL/glew.h>
 #include <GL/freeglut.h>
 
@@ -19,7 +22,7 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
-
+#include <chrono>
 
 
 OrbitCamera		camera;
@@ -128,6 +131,80 @@ static int getActiveViewport()
 
 	return -1;
 }
+
+static void alignStacks(SpimStack* a, SpimStack* b)
+{
+	using namespace glm;
+	using namespace std;
+	
+	const unsigned short THRESHOLD = 210;
+
+	// 1) extract registration points
+	vector<vec4> pa = a->extractRegistrationPoints(THRESHOLD);
+	vector<vec4> pb = b->extractRegistrationPoints(THRESHOLD);
+
+	// 2) reset color to homog. coord to enable transformation
+	for_each(pa.begin(), pa.end(), [](vec4& v) { v.w = 1.f; });
+	for_each(pb.begin(), pb.end(), [](vec4& v) { v.w = 1.f; });
+
+
+	// 3) transform points to world space
+	const mat4& Ma = a->getTransform();
+	const mat4& Mb = b->getTransform();
+	for_each(pa.begin(), pa.end(), [&Ma](vec4& v) { v = Ma * v; });
+	for_each(pb.begin(), pb.end(), [&Mb](vec4& v) { v = Mb * v; });
+
+
+	/*
+	// 4) kill points that are not inside the other's bounding box (after transformation)
+	OBB bboxA; 
+	bboxA.transform = a->getTransform(); 
+	bboxA.bbox = a->getBBox();
+	
+	OBB bboxB; 
+	bboxB.transform = b->getTransform();
+	bboxB.bbox = b->getBBox();
+
+	remove_if(pa.begin(), pa.end(), [bboxB](const vec4& v) { return !bboxB.isInside(v); });
+	remove_if(pb.begin(), pb.end(), [bboxA](const vec4& v) { return !bboxA.isInside(v); });
+
+	// both points should now be valid and overlapping
+	*/
+
+	// 5) reduce the points again for sparceICP
+	typedef Eigen::Matrix<double, 3, Eigen::Dynamic> Vertices;
+	
+	Vertices source;
+	source.resize(Eigen::NoChange, pa.size());
+	for (size_t i = 0; i < pa.size(); ++i)
+	{
+		const glm::vec4& v = pa[i];
+		source(0, i) = v.x;
+		source(1, i) = v.y;
+		source(2, i) = v.z;
+	}
+	
+	
+	Vertices target;
+
+
+
+
+	std::cout << "[Fit] Running icp ...";
+	auto tic = std::chrono::steady_clock::now();
+	
+	SICP::Parameters pars;
+	pars.p = 0.5;
+	pars.max_icp = 20;
+	pars.print_icpn = true;
+	SICP::point_to_point(source, target, pars);
+	
+	auto toc = std::chrono::steady_clock::now();
+	std::cout << " done. Running time: " << std::chrono::duration<double, std::milli>(toc - tic).count() << " ms.\n";
+	
+	
+}
+
 
 static const glm::vec3& getRandomColor(int n)
 {
@@ -354,23 +431,7 @@ static void drawScene(const Viewport& vp)
 		glDisable(GL_BLEND);
 
 	}
-
-	// draw the points
-	if (currentStack > -1 && !stacks[currentStack]->getRegistrationPoints().empty())
-	{
-		pointShader->bind();
-		pointShader->setMatrix4("mvpMatrix", mvp);
-		pointShader->setMatrix4("transform", stacks[currentStack]->getTransform());
 		
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glVertexPointer(3, GL_FLOAT, 0, glm::value_ptr(stacks[currentStack]->getRegistrationPoints()[0]));
-		glDrawArrays(GL_POINTS, 0, stacks[currentStack]->getRegistrationPoints().size());
-		glDisableClientState(GL_VERTEX_ARRAY);
-
-
-		pointShader->disable();
-	}
-
 	if (drawBbox)
 	{
 		glDisable(GL_DEPTH_TEST);
@@ -482,10 +543,10 @@ static void keyboard(unsigned char key, int x, int y)
 	}
 	
 
-	if (key == ' ')
+	if (key == ' ' && stacks.size() >= 2)
 	{
-		std::cout << "Creating point cloud from stack " << currentStack << std::endl;
-		stacks[currentStack]->calculateRegistrationPoints(minThreshold*std::numeric_limits<unsigned short>::max());
+		alignStacks(stacks[0], stacks[1]);
+
 	}
 
 	if (key == '<' && slices > 1)
@@ -779,7 +840,7 @@ int main(int argc, const char** argv)
 		globalBBox.reset();
 
 
-		for (int i = 0; i < 4; ++i)		
+		for (int i = 0; i < 5; ++i)		
 		{
 			char filename[256];
 			//sprintf(filename, "e:/spim/test/spim_TL00_Angle%d.tif", i);
