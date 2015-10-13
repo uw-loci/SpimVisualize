@@ -7,30 +7,38 @@ struct Volume
 	isampler3D		texture;
 	vec3			bboxMin, bboxMax;
 	mat4			inverseMVP;
+	bool			enabled;
 };
 
-uniform Volume volume[3];
+#define VOLUMES 4
+uniform Volume volume[VOLUMES];
 
 uniform float sliceCount = 100;
-uniform float minThreshold = 0.6;
-
 uniform float sliceWeight;
 
 uniform int minVal = 90;
 uniform int maxVal = 110;
 
+uniform int beadThreshold = 250;
 
 in vec4 vertex;
 out vec4 fragColor;
 
 void main()
 {
-	vec3 color = vec3(0.0);
-
+	// total intensity of the all visible volume texels at that fragment
 	int intensity = 0;
 
-	for (int i = 0; i < 2; ++i)
+
+	bool isBead = false;;
+
+	// weight of all visible volume texels at that fragment
+	int weight = 0;
+	for (int i = 0; i < VOLUMES; ++i)
 	{
+		if (!volume[i].enabled)
+			continue;
+
 		vec4 v = volume[i].inverseMVP * vertex;
 		v /= v.w;
 
@@ -48,54 +56,33 @@ void main()
 			worldPosition.z > volume[i].bboxMin.z && worldPosition.z < volume[i].bboxMax.z) 
 		{
 			intensity += t; 
-			color += worldPosition;
-		
+			//color += worldPosition;
+			weight++;
+
+			if (t > beadThreshold)
+				isBead = true;
 		}
 	}
 
 
-	intensity /= 2;
+	intensity /= weight;
+	vec3 color = normalize(vec3(float(intensity)));
 
-	color = normalize(vec3(float(intensity)));
-
-	/*
-	// normalize the texcoords based on the bbox
-	vec3 texcoord = worldPosition - bboxMin; // vec3(1344.0, 1024.0, 101.0);
-	texcoord /= (bboxMax - bboxMin);
-
-	float intensity = texture3D(volumeTexture, texcoord).r;
-
-	intensity *= 100.0;
-
-	vec3 red = vec3(1.0, 0.0, 0.0);
-	vec3 blu = vec3(0.0, 0.0, 1.0);
-
-
-	vec3 color = vec3(intensity);
-
-	
-	if (worldPosition.x > bboxMin.x && worldPosition.x < bboxMax.x &&
-		worldPosition.y > bboxMin.y && worldPosition.y < bboxMax.y &&
-		worldPosition.z > bboxMin.z && worldPosition.z < bboxMax.z) 
-	{
-			//color = vec3(0.0, 1.0, 0.0);
-		
-		color = vec3(intensity);
-		color = normalize(worldPosition);
-		color = normalize(worldPosition) * intensity;
-		color = (texcoord);
-		
-
-	}
-	else
-		discard;
-	*/
-	
 
 	float alpha = 1.0 / sliceCount;
 
 	float density = float(intensity - minVal) / float(maxVal - minVal);
 	alpha *= density;
+
+
+
+	// draw all potential beads brightly yellowS
+	if (isBead)
+	{
+
+		color = vec3(1.0, 1.0, 0.0);
+		alpha = 1.0;
+	}
 	
 	fragColor = vec4(color, alpha);
 }

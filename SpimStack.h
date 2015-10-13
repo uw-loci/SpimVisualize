@@ -45,11 +45,13 @@ public:
 	inline void toggle() { enabled = !enabled;  }
 
 
-
+	inline const std::string& getFilename() const { return filename;  }
 
 private:
 	unsigned int		width, height, depth;
 	unsigned int		textures;
+
+	std::string			filename;
 
 	bool				enabled;
 

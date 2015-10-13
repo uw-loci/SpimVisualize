@@ -325,6 +325,9 @@ static void drawScene(const Viewport& vp)
 			sprintf(uname, "volume[%d].bboxMin", i);
 			volumeShader2->setUniform(uname, bbox.min);
 
+			sprintf(uname, "volume[%d].enabled", i);
+			volumeShader2->setUniform(uname, stacks[i]->isEnabled());
+
 			sprintf(uname, "volume[%d].inverseMVP", i);
 			volumeShader2->setMatrix4(uname, glm::inverse(mvp * stacks[i]->getTransform()));
 		}
@@ -776,7 +779,7 @@ int main(int argc, const char** argv)
 		globalBBox.reset();
 
 
-		for (int i = 0; i < 2; ++i)		
+		for (int i = 0; i < 4; ++i)		
 		{
 			char filename[256];
 			//sprintf(filename, "e:/spim/test/spim_TL00_Angle%d.tif", i);

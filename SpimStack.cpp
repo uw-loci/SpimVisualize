@@ -305,7 +305,13 @@ void SpimStack::saveTransform(const std::string& filename) const
 void SpimStack::loadTransform(const std::string& filename)
 {
 	ifstream file(filename);
-	assert(file.is_open());
+	//assert(file.is_open());
+
+	if (!file.is_open())
+	{
+		std::cerr << "[SpimPlane] Unable to load transformation from \"" << filename << "\"!\n";
+		return;
+	}
 
 	float* m = glm::value_ptr(transform);
 	for (int i = 0; i < 16; ++i)
