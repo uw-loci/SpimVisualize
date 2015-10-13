@@ -20,6 +20,9 @@ public:
 
 	void loadRegistration(const std::string& filename);
 
+	void saveTransform(const std::string& filename) const;
+	void loadTransform(const std::string& filename);
+
 	std::vector<glm::vec4> calculatePoints() const;
 	const std::vector<glm::vec3>& calculateRegistrationPoints(float threshold) ;
 

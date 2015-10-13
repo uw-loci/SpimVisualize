@@ -533,6 +533,29 @@ static void keyboard(unsigned char key, int x, int y)
 			currentStack = 4;
 	}
 
+	if (key == 't')
+	{
+		for (int i = 0; i < stacks.size(); ++i)
+		{
+			char filename[256];
+			sprintf(filename, "E:/temp/stack_%02d.registration.txt", i);
+			stacks[i]->saveTransform(filename);
+		}
+	}
+
+	if (key == 'T')
+	{
+		for (int i = 0; i < stacks.size(); ++i)
+		{
+			char filename[256];
+			sprintf(filename, "E:/temp/stack_%02d.registration.txt", i);
+			stacks[i]->loadTransform(filename);
+		}
+
+	}
+
+
+
 	if (key == 'v' && currentStack > -1)
 		stacks[currentStack]->toggle();
 	
@@ -590,22 +613,27 @@ static void motion(int x, int y)
 	if (vp > -1 && vp < 4)
 	{
 
+		const Viewport& v = view[vp];
+
 		// drag perspective camera
-		if (mouse.button[0] && view[vp].name == Viewport::PERSPECTIVE)
-			view[vp].camera->rotate(dt, dp);
+		if (mouse.button[0] && v.name == Viewport::PERSPECTIVE)
+			v.camera->rotate(dt, dp);
 
 		// drag single stack
-		if (mouse.button[0] && currentStack > -1 && view[vp].name != Viewport::PERSPECTIVE)
+		if (mouse.button[0] && currentStack > -1 && v.name != Viewport::PERSPECTIVE)
 		{
-			stacks[currentStack]->move(view[vp].camera->calculatePlanarMovement(glm::vec2(dx, dy)));
+			// create ray
+			const glm::vec3 rayOrigin = v.camera->getPosition();
+			const glm::vec3 rayDirection = v.camera->getViewDirection();
+		
+			if (stacks[currentStack]->getBBox().isIntersectedByRay(rayOrigin, rayDirection))
+				stacks[currentStack]->move(v.camera->calculatePlanarMovement(glm::vec2(dx, dy)));
 		}
 
 
 		if (mouse.button[1])
-			view[vp].camera->pan(dx * view[vp].getAspect() / 2, dy); 
-
-
-
+			v.camera->pan(dx * v.getAspect() / 2, dy); 
+		
 
 	}
 

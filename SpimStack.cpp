@@ -277,15 +277,41 @@ void SpimStack::loadRegistration(const string& filename)
 		int result = sscanf(buffer.c_str(), "m%*2s: %f", &glm::value_ptr(transform)[i]);
 	}
 
+	/*
 
 	glm::mat4 T(1.f);
 	glm::translate(T, glm::vec3(-(float)width / 2, -(float)height / 2, -(float)depth / 2));
 
 	transform = glm::transpose(glm::inverse(transform)) * T;
 
-
+	*/
 
 	std::cout << "[SpimPlane] Read transform: " << transform << std::endl;
+}
+
+void SpimStack::saveTransform(const std::string& filename) const
+{
+	ofstream file(filename);
+	assert(file.is_open());
+
+	const float* m = glm::value_ptr(transform);
+
+	for (int i = 0; i < 16; ++i)
+		file << m[i] << std::endl;
+
+	std::cout << "[SpimPlane] Saved transform to \"" << filename << "\"\n";
+}
+
+void SpimStack::loadTransform(const std::string& filename)
+{
+	ifstream file(filename);
+	assert(file.is_open());
+
+	float* m = glm::value_ptr(transform);
+	for (int i = 0; i < 16; ++i)
+		file >> m[i];
+
+	std::cout << "[SpimPlane] Read transform: " << transform << " from \"" << filename << "\"\n";
 }
 
 void SpimStack::setRotation(float angle)
