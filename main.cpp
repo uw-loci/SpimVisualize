@@ -49,7 +49,7 @@ Shader*			volumeShader2 = 0;
 unsigned short	minThreshold = 100;
 
 bool			drawSlices = false;
-
+bool			drawGrid = true;
 bool			drawBbox = true;
 
 int				slices = 100;
@@ -180,52 +180,54 @@ static void drawScene(const Viewport& vp)
 	glm::mat4 mvp;// = vp.proj * vp.view;
 	vp.camera->getMVP(mvp);
 
-	// draw a groud grid only in perspective mode
-	if (vp.name == Viewport::PERSPECTIVE || vp.name == Viewport::ORTHO_Y)
+	if (drawGrid)
 	{
-		glColor3f(0.3f, 0.3f, 0.3f);
-		glBegin(GL_LINES);
-		for (int i = -1000; i <= 1000; i += 100)
+		// draw a groud grid only in perspective mode
+		if (vp.name == Viewport::PERSPECTIVE || vp.name == Viewport::ORTHO_Y)
 		{
-			glVertex3i(-1000, 0, i);
-			glVertex3i(1000, 0, i);
-			glVertex3i(i, 0, -1000);
-			glVertex3i(i, 0, 1000);
+			glColor3f(0.3f, 0.3f, 0.3f);
+			glBegin(GL_LINES);
+			for (int i = -1000; i <= 1000; i += 100)
+			{
+				glVertex3i(-1000, 0, i);
+				glVertex3i(1000, 0, i);
+				glVertex3i(i, 0, -1000);
+				glVertex3i(i, 0, 1000);
+			}
+
+			glEnd();
 		}
 
-		glEnd();
-	}
-
-	if (vp.name == Viewport::ORTHO_X)
-	{
-		glColor3f(0.3f, 0.3f, 0.3f);
-		glBegin(GL_LINES);
-		for (int i = -1000; i <= 1000; i += 100)
+		if (vp.name == Viewport::ORTHO_X)
 		{
-			glVertex3i(0, -1000, i);
-			glVertex3i(0, 1000, i);
-			glVertex3i(0, i, -1000);
-			glVertex3i(0, i, 1000);
+			glColor3f(0.3f, 0.3f, 0.3f);
+			glBegin(GL_LINES);
+			for (int i = -1000; i <= 1000; i += 100)
+			{
+				glVertex3i(0, -1000, i);
+				glVertex3i(0, 1000, i);
+				glVertex3i(0, i, -1000);
+				glVertex3i(0, i, 1000);
+			}
+
+			glEnd();
 		}
 
-		glEnd();
-	}
-
-	if (vp.name == Viewport::ORTHO_Z)
-	{
-		glColor3f(0.3f, 0.3f, 0.3f);
-		glBegin(GL_LINES);
-		for (int i = -1000; i <= 1000; i += 100)
+		if (vp.name == Viewport::ORTHO_Z)
 		{
-			glVertex3i(-1000, i, 0);
-			glVertex3i(1000, i,0);
-			glVertex3i(i, -1000, 0);
-			glVertex3i(i, 1000, 0);
+			glColor3f(0.3f, 0.3f, 0.3f);
+			glBegin(GL_LINES);
+			for (int i = -1000; i <= 1000; i += 100)
+			{
+				glVertex3i(-1000, i, 0);
+				glVertex3i(1000, i, 0);
+				glVertex3i(i, -1000, 0);
+				glVertex3i(i, 1000, 0);
+			}
+
+			glEnd();
 		}
-
-		glEnd();
 	}
-
 
 	if (drawSlices)
 	{
@@ -368,6 +370,9 @@ static void drawScene(const Viewport& vp)
 
 	if (drawBbox)
 	{
+		glDisable(GL_DEPTH_TEST);
+		glDepthMask(GL_FALSE);
+
 		for (size_t i = 0; i < stacks.size(); ++i)
 		{
 			if (stacks[i]->isEnabled())
@@ -385,6 +390,9 @@ static void drawScene(const Viewport& vp)
 				glPopMatrix();
 			}
 		}
+
+		glDepthMask(GL_TRUE);
+		glEnable(GL_DEPTH_TEST);
 	}
 }
 
@@ -441,6 +449,9 @@ static void keyboard(unsigned char key, int x, int y)
 
 		std::cout << "Current stack: " << currentStack << std::endl;
 	}
+
+	if (key == 'g')
+		drawGrid = !drawGrid;
 
 	if (key == 'b')
 		drawBbox = !drawBbox;
@@ -626,8 +637,7 @@ static void motion(int x, int y)
 			const glm::vec3 rayOrigin = v.camera->getPosition();
 			const glm::vec3 rayDirection = v.camera->getViewDirection();
 		
-			if (stacks[currentStack]->getBBox().isIntersectedByRay(rayOrigin, rayDirection))
-				stacks[currentStack]->move(v.camera->calculatePlanarMovement(glm::vec2(dx, dy)));
+			stacks[currentStack]->move(v.camera->calculatePlanarMovement(glm::vec2(dx, dy)));
 		}
 
 

@@ -16,14 +16,20 @@ uniform float minThreshold = 0.6;
 
 uniform float sliceWeight;
 
-varying vec4 vertex;
+uniform int minVal = 90;
+uniform int maxVal = 110;
+
+
+in vec4 vertex;
+out vec4 fragColor;
 
 void main()
 {
 	vec3 color = vec3(0.0);
-	float intensity = 0.0;
 
-	for (int i = 0; i < 1; ++i)
+	int intensity = 0;
+
+	for (int i = 0; i < 2; ++i)
 	{
 		vec4 v = volume[i].inverseMVP * vertex;
 		v /= v.w;
@@ -41,14 +47,16 @@ void main()
 			worldPosition.y > volume[i].bboxMin.y && worldPosition.y < volume[i].bboxMax.y &&
 			worldPosition.z > volume[i].bboxMin.z && worldPosition.z < volume[i].bboxMax.z) 
 		{
-			intensity += float(t) / 65535.0;
+			intensity += t; 
 			color += worldPosition;
 		
 		}
 	}
 
 
-	color = normalize(color);
+	intensity /= 2;
+
+	color = normalize(vec3(float(intensity)));
 
 	/*
 	// normalize the texcoords based on the bbox
@@ -83,5 +91,11 @@ void main()
 		discard;
 	*/
 	
-	gl_FragColor = vec4(intensity);
+
+	float alpha = 1.0 / sliceCount;
+
+	float density = float(intensity - minVal) / float(maxVal - minVal);
+	alpha *= density;
+	
+	fragColor = vec4(color, alpha);
 }

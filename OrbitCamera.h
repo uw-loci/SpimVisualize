@@ -31,6 +31,8 @@ public:
 
 
 
+
+
 };
 
 
@@ -60,7 +62,6 @@ public:
 	inline glm::vec3 getViewDirection() const { return -getOffset(); }
 
 	virtual glm::vec3 calculatePlanarMovement(const glm::vec2& delta) const;
-	
 
 private:
 	float	theta, phi;
