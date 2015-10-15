@@ -13,6 +13,7 @@
   <ItemGroup>
     <ClCompile Include="AABB.cpp" />
     <ClCompile Include="Framebuffer.cpp" />
+    <ClCompile Include="Layout.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="OrbitCamera.cpp" />
     <ClCompile Include="sdk\libICP\src\matrix.cpp" />
@@ -24,6 +25,7 @@
   <ItemGroup>
     <ClInclude Include="AABB.h" />
     <ClInclude Include="Framebuffer.h" />
+    <ClInclude Include="Layout.h" />
     <ClInclude Include="OrbitCamera.h" />
     <ClInclude Include="sdk\libICP\src\matrix.h" />
     <ClInclude Include="Shader.h" />
