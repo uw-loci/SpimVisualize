@@ -53,12 +53,18 @@ public:
 class FourViewLayout : public Layout
 {
 public:
-	FourViewLayout();
+	FourViewLayout(const glm::ivec2& size);
 
 	virtual void resize(const glm::ivec2& size);
 	virtual void updateMouseMove(const glm::ivec2& m);
+	
+	virtual Viewport* getActiveViewport();
 
 	virtual ICamera* getPerspectiveCamera() { return views[3].camera; }
+
+	inline size_t getViewCount() const { return 4; }
+	inline Viewport* getView(unsigned int n) { return &views[n]; }
+
 
 private:
 	Viewport		views[4];

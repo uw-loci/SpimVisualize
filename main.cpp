@@ -679,8 +679,15 @@ static void special(int key, int x, int y)
 	}
 
 
-	if (key == GLUT_KEY_UP)
+	if (key == GLUT_KEY_F3)
 	{
+		int w = glutGet(GLUT_WINDOW_WIDTH);
+		int h = glutGet(GLUT_WINDOW_HEIGHT);
+
+		std::cout << "[Layout] Creating four-view layout ... \n";
+		delete layout;
+		layout = new FourViewLayout(glm::ivec2(w, h));
+		layout->updateMouseMove(mouse.coordinates);
 
 	}
 

@@ -100,7 +100,7 @@ PerspectiveFullLayout::PerspectiveFullLayout(const ivec2& resolution) : SingleVi
 
 }
 
-FourViewLayout::FourViewLayout()
+FourViewLayout::FourViewLayout(const ivec2& size)
 {
 	views[0].name = Viewport::ORTHO_X;
 	views[0].camera = new OrthoCamera(glm::vec3(-1, 0, 0), glm::vec3(0.f, 1.f, 0.f));
@@ -117,6 +117,8 @@ FourViewLayout::FourViewLayout()
 	views[3].name = Viewport::PERSPECTIVE;
 	views[3].camera = new OrbitCamera;
 	views[3].color = vec3(1);
+
+	FourViewLayout::resize(size);
 
 }
 
@@ -150,4 +152,13 @@ void FourViewLayout::updateMouseMove(const ivec2& m)
 		else
 			views[i].highlighted = false;
 
+}
+
+Viewport* FourViewLayout::getActiveViewport()
+{
+	for (int i = 0; i < 4; ++i)
+		if (views[i].highlighted)
+			return &views[i];
+
+	return nullptr;
 }
