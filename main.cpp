@@ -64,7 +64,7 @@ AABB			globalBBox;
 typedef Eigen::Matrix<double, 3, Eigen::Dynamic> Vertices;
 Vertices source, target;
 
-Layout*			layout = nullptr;
+ILayout*			layout = nullptr;
 
 
 static void alignStacks(SpimStack* a, SpimStack* b)

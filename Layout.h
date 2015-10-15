@@ -33,10 +33,10 @@ struct Viewport
 };
 
 
-class Layout
+class ILayout
 {
 public:
-	virtual ~Layout() {}
+	virtual ~ILayout() {}
 
 	virtual Viewport* getActiveViewport() = 0;
 
@@ -50,7 +50,7 @@ public:
 };
 
 
-class FourViewLayout : public Layout
+class FourViewLayout : public ILayout
 {
 public:
 	FourViewLayout(const glm::ivec2& size);
@@ -70,7 +70,7 @@ private:
 	Viewport		views[4];
 };
 
-class SingleViewLayout : public Layout
+class SingleViewLayout : public ILayout
 {
 public:
 	SingleViewLayout(const glm::ivec2& resolution);
