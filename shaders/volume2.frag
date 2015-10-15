@@ -10,7 +10,7 @@ struct Volume
 	bool			enabled;
 };
 
-#define VOLUMES 5
+#define VOLUMES 1
 uniform Volume volume[VOLUMES];
 
 uniform float sliceCount = 100;

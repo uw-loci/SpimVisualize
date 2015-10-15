@@ -24,12 +24,9 @@
 #include <algorithm>
 #include <chrono>
 
-
-OrbitCamera		camera;
-
-bool drawLines = false;
-bool rotate = false;
-
+// goddamnit windows! :(
+#undef near
+#undef far
 
 struct Mouse
 {
@@ -54,6 +51,7 @@ unsigned short	minThreshold = 100;
 bool			drawSlices = false;
 bool			drawGrid = true;
 bool			drawBbox = true;
+bool			drawPoints = false;
 
 int				slices = 100;
 
@@ -61,6 +59,14 @@ std::vector<SpimStack*>	stacks;
 int currentStack = -1;
 
 AABB			globalBBox;
+
+typedef Eigen::Matrix<double, 3, Eigen::Dynamic> Vertices;
+Vertices source, target;
+
+class Layout;
+Layout*			layout = nullptr;
+
+const glm::vec3& getRandomColor(int n);
 
 struct Viewport
 {
@@ -119,24 +125,162 @@ struct Viewport
 };
 
 
-Viewport		view[4];
-
-static int getActiveViewport()
+class Layout
 {
-	for (int i = 0; i < 4; ++i)
+public:
+	virtual ~Layout() {}
+
+	virtual Viewport* getActiveViewport() = 0;
+	
+	virtual void updateMouseMove(const glm::ivec2& coords) = 0;
+	virtual void resize(const glm::ivec2& size) = 0;
+	
+	virtual ICamera* getPerspectiveCamera() = 0;
+
+	virtual size_t getViewCount() const = 0;
+	virtual Viewport* getView(unsigned int n) = 0;
+};
+
+
+class FourViewLayout : public Layout
+{
+public:
+	FourViewLayout()
 	{
-		if (view[i].highlighted)
-			return i;
+		views[0].name = Viewport::ORTHO_X;
+		views[0].camera = new OrthoCamera(glm::vec3(-1, 0, 0), glm::vec3(0.f, 1.f, 0.f));
+
+		views[1].name = Viewport::ORTHO_Y;
+		views[1].camera = new OrthoCamera(glm::vec3(0.f, -1, 0), glm::vec3(1.f, 0.f, 0.f));
+
+		views[2].name = Viewport::ORTHO_Z;
+		views[2].camera = new OrthoCamera(glm::vec3(0, 0.f, -1), glm::vec3(0.f, 1.f, 0.f));
+
+		views[3].name = Viewport::PERSPECTIVE;
+		views[3].camera = new OrbitCamera;
+
 	}
 
-	return -1;
-}
+	virtual void resize(const glm::ivec2& size)
+	{
+		using namespace glm;
+
+		const float ASPECT = (float)size.x / size.y;
+		const ivec2 VIEWPORT_SIZE = size / 2;
+
+		// setup the 4 views
+		views[0].position = ivec2(0, 0);
+		views[1].position = ivec2(size.x / 2, 0);
+		views[2].position = ivec2(0, size.y / 2);
+		views[3].position = ivec2(size.x / 2, size.y / 2);
+
+		for (int i = 0; i < 4; ++i)
+		{
+			views[i].color = getRandomColor(i);
+			views[i].size = VIEWPORT_SIZE;
+			views[i].camera->aspect = ASPECT;
+		}
+	}
+
+	virtual void updateMouseMove(const glm::ivec2& m)
+	{
+		for (int i = 0; i < 4; ++i)
+			if (views[i].isInside(m))
+				views[i].highlighted = true;
+			else
+				views[i].highlighted = false;
+
+	}
+
+	virtual ICamera* getPerspectiveCamera() { return views[3].camera; }
+
+private:
+	Viewport		views[4];
+};
+
+class SingleViewLayout : public Layout
+{
+public:
+	virtual ~SingleViewLayout()
+	{
+		delete viewport.camera;
+	}
+
+	virtual Viewport* getActiveViewport()
+	{
+		if (viewport.highlighted)
+			return &viewport;
+		else
+			return nullptr;
+	}
+
+	virtual void updateMouseMove(const glm::ivec2& coords)
+	{
+		if (viewport.isInside(coords))
+			viewport.highlighted = true;
+		else
+			viewport.highlighted = false;
+	}
+
+	virtual void resize(const glm::ivec2& size)
+	{
+		viewport.size = size;
+		viewport.camera->aspect = (float)size.x / size.y;
+	}
+
+	inline size_t getViewCount() const { return 1; }
+	inline Viewport* getView(unsigned int n) { return &viewport; }
+
+protected:
+	Viewport			viewport;
+};
+
+
+class TopViewFullLayout : public SingleViewLayout
+{
+public:
+	TopViewFullLayout()
+	{
+		viewport.name = Viewport::ORTHO_Y;
+		viewport.color = glm::vec3(1.f);
+		viewport.camera = new OrthoCamera(glm::vec3(0.f, -1, 0), glm::vec3(1.f, 0.f, 0.f));
+	}
+
+	inline ICamera* getPerspectiveCamera() { return nullptr; }
+
+};
+
+class PerspectiveFullLayout : public SingleViewLayout
+{
+public:
+	PerspectiveFullLayout()
+	{
+		viewport.camera = new OrbitCamera;
+		viewport.color = glm::vec3(1.f);
+		viewport.name = Viewport::PERSPECTIVE;
+
+		OrbitCamera* cam = dynamic_cast<OrbitCamera*>(viewport.camera);
+		cam->far = globalBBox.getSpanLength() * 2.f;
+		cam->near = 10.0;
+
+		cam->radius = (globalBBox.getSpanLength() * 1.5);
+		cam->target = globalBBox.getCentroid();
+
+	}
+
+
+	
+	inline ICamera* getPerspectiveCamera() { return viewport.camera; }
+};
+
+
+
 
 static void alignStacks(SpimStack* a, SpimStack* b)
 {
 	using namespace glm;
 	using namespace std;
-	
+
 	const unsigned short THRESHOLD = 210;
 
 	// 1) extract registration points
@@ -147,6 +291,7 @@ static void alignStacks(SpimStack* a, SpimStack* b)
 	for_each(pa.begin(), pa.end(), [](vec4& v) { v.w = 1.f; });
 	for_each(pb.begin(), pb.end(), [](vec4& v) { v.w = 1.f; });
 
+	//std::cout << "[Fit] Extracted " << pa.size() << "/" << pb.size() << " points.\n";
 
 	// 3) transform points to world space
 	const mat4& Ma = a->getTransform();
@@ -157,11 +302,11 @@ static void alignStacks(SpimStack* a, SpimStack* b)
 
 	/*
 	// 4) kill points that are not inside the other's bounding box (after transformation)
-	OBB bboxA; 
-	bboxA.transform = a->getTransform(); 
+	OBB bboxA;
+	bboxA.transform = a->getTransform();
 	bboxA.bbox = a->getBBox();
-	
-	OBB bboxB; 
+
+	OBB bboxB;
 	bboxB.transform = b->getTransform();
 	bboxB.bbox = b->getBBox();
 
@@ -172,9 +317,6 @@ static void alignStacks(SpimStack* a, SpimStack* b)
 	*/
 
 	// 5) reduce the points again for sparceICP
-	typedef Eigen::Matrix<double, 3, Eigen::Dynamic> Vertices;
-	
-	Vertices source;
 	source.resize(Eigen::NoChange, pa.size());
 	for (size_t i = 0; i < pa.size(); ++i)
 	{
@@ -183,18 +325,21 @@ static void alignStacks(SpimStack* a, SpimStack* b)
 		source(1, i) = v.y;
 		source(2, i) = v.z;
 	}
+
+	target.resize(Eigen::NoChange, pb.size());
+	for (size_t i = 0; i < pb.size(); ++i)
+	{
+		const glm::vec4& v = pb[i];
+		target(0, i) = v.x;
+		target(1, i) = v.y;
+		target(2, i) = v.z;
+	}
 	
-	
-	Vertices target;
-
-
-
-
 	std::cout << "[Fit] Running icp ...";
 	auto tic = std::chrono::steady_clock::now();
 	
 	SICP::Parameters pars;
-	pars.p = 0.5;
+	pars.p = 0.1;
 	pars.max_icp = 20;
 	pars.print_icpn = true;
 	SICP::point_to_point(source, target, pars);
@@ -256,6 +401,7 @@ static void drawScene(const Viewport& vp)
 {
 	glm::mat4 mvp;// = vp.proj * vp.view;
 	vp.camera->getMVP(mvp);
+
 
 	if (drawGrid)
 	{
@@ -352,8 +498,9 @@ static void drawScene(const Viewport& vp)
 		volumeShader2->setUniform("minThreshold", minThreshold);
 		volumeShader2->setUniform("sliceCount", slices);
 
-		const glm::vec3 camPos = camera.getPosition();
-		const glm::vec3 viewDir = glm::normalize(camera.target - camPos);
+		
+		const glm::vec3 camPos = vp.camera->getPosition();
+		const glm::vec3 viewDir = glm::normalize(vp.camera->target - camPos);
 
 		// the smallest and largest projected bounding box vertices -- used to calculate the extend of planes
 		// to draw
@@ -460,23 +607,19 @@ static void drawScene(const Viewport& vp)
 	}
 }
 
-static void special()
-{
-
-}
-
 static void display()
 {
 		
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	
 	
-	for (int i = 0; i < 4; ++i)
+
+	for (size_t i = 0; i < layout->getViewCount(); ++i)
 	{
-		// setup the correct viewport
-		view[i].setup();
-		drawScene(view[i]);
+		const Viewport* vp = layout->getView(i);
+		vp->setup();
+		drawScene(*vp);
 	}
-	
+
 	
 	glutSwapBuffers();
 
@@ -490,10 +633,7 @@ static void idle()
 
 	float dt = (float)(time - oldTime) / 1000.f;
 	oldTime = time;
-
-	if (rotate)
-		camera.rotate(0.f, 15.f * dt);
-
+	
 	glutPostRedisplay();
 }
 
@@ -546,6 +686,7 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == ' ' && stacks.size() >= 2)
 	{
 		alignStacks(stacks[0], stacks[1]);
+		drawPoints = true;
 
 	}
 
@@ -636,21 +777,21 @@ static void keyboard(unsigned char key, int x, int y)
 	
 
 	// camera controls
-	int vp = getActiveViewport();
-
+	Viewport* vp = layout->getActiveViewport();
+	
 	if (key == '-')
-		view[vp].camera->zoom(0.7f);
+		vp->camera->zoom(0.7f);
 	if (key == '=')
-		view[vp].camera->zoom(1.4f);
+		vp->camera->zoom(1.4f);
 
 	if (key == 'w')
-		view[vp].camera->pan(0.f, 10.f);
+		vp->camera->pan(0.f, 10.f);
 	if (key == 's')
-		view[vp].camera->pan(0.f, -10.f);
+		vp->camera->pan(0.f, -10.f);
 	if (key == 'a')
-		view[vp].camera->pan(-10.f, 0.f); 
+		vp->camera->pan(-10.f, 0.f); 
 	if (key == 'd')
-		view[vp].camera->pan(10.f, 0.f);
+		vp->camera->pan(10.f, 0.f);
 
 
 	if (key == 'c')
@@ -658,9 +799,9 @@ static void keyboard(unsigned char key, int x, int y)
 		//if (view[vp].name == Viewport::PERSPECTIVE)
 		{
 			if (currentStack == -1)
-				view[vp].camera->target = globalBBox.getCentroid();
+				vp->camera->target = globalBBox.getCentroid();
 			else
-				view[vp].camera->target = stacks[currentStack]->getBBox().getCentroid();
+				vp->camera->target = stacks[currentStack]->getBBox().getCentroid();
 		}
 
 
@@ -684,54 +825,59 @@ static void motion(int x, int y)
 	mouse.coordinates.x = x;
 	mouse.coordinates.y = y;
 
-	int vp = getActiveViewport();
-	if (vp > -1 && vp < 4)
+
+	const Viewport* v = layout->getActiveViewport();
+
+	if (v)
 	{
 
-		const Viewport& v = view[vp];
-
 		// drag perspective camera
-		if (mouse.button[0] && v.name == Viewport::PERSPECTIVE)
-			v.camera->rotate(dt, dp);
+		if (mouse.button[0] && v->name == Viewport::PERSPECTIVE)
+			v->camera->rotate(dt, dp);
 
 		// drag single stack
-		if (mouse.button[0] && currentStack > -1 && v.name != Viewport::PERSPECTIVE)
+		if (mouse.button[0] && currentStack > -1 && v->name != Viewport::PERSPECTIVE)
 		{
 			// create ray
-			const glm::vec3 rayOrigin = v.camera->getPosition();
-			const glm::vec3 rayDirection = v.camera->getViewDirection();
-		
-			stacks[currentStack]->move(v.camera->calculatePlanarMovement(glm::vec2(dx, dy)));
+			const glm::vec3 rayOrigin = v->camera->getPosition();
+			const glm::vec3 rayDirection = v->camera->getViewDirection();
+
+			stacks[currentStack]->move(v->camera->calculatePlanarMovement(glm::vec2(dx, dy)));
 		}
 
 
 		if (mouse.button[1])
-			v.camera->pan(dx * v.getAspect() / 2, dy); 
-		
-
+			v->camera->pan(dx * v->getAspect() / 2, dy);
 	}
 
-
 	int h = glutGet(GLUT_WINDOW_HEIGHT);
-
-	// reset viewpoint highlights
-	for (int i = 0; i < 4; ++i)
-		view[i].highlighted = view[i].isInside(glm::ivec2(x, h -y));
+	layout->updateMouseMove(glm::ivec2(x, h - y));
 }
 
 static void passiveMotion(int x, int y)
 {
 
 	int h = glutGet(GLUT_WINDOW_HEIGHT);
-
-	// reset viewpoint highlights
-	for (int i = 0; i < 4; ++i)
-		view[i].highlighted = view[i].isInside(glm::ivec2(x, h-y));
-
+	layout->updateMouseMove(glm::ivec2(x, h-y));
 }
 
 static void special(int key, int x, int y)
 {
+	if (key == GLUT_KEY_F1)
+	{
+		delete layout;
+		layout = new PerspectiveFullLayout;
+		layout->updateMouseMove(mouse.coordinates);
+	}
+
+	if (key == GLUT_KEY_F2)
+	{
+		delete layout;
+		layout = new TopViewFullLayout;
+		layout->updateMouseMove(mouse.coordinates);
+	}
+
+
 	if (key == GLUT_KEY_UP)
 	{
 
@@ -769,22 +915,7 @@ static void button(int button, int state, int x, int y)
 static void reshape(int w, int h)
 {
 	using namespace glm;
-
-	const float ASPECT = (float)w / h;
-	const ivec2 VIEWPORT_SIZE = ivec2(w, h) / 2;
-	
-	// setup the 4 views
-	view[0].position = ivec2(0, 0);
-	view[1].position = ivec2(w / 2, 0);
-	view[2].position = ivec2(0, h / 2);
-	view[3].position = ivec2(w / 2, h / 2);
-	
-	for (int i = 0; i < 4; ++i)
-	{
-		view[i].color = getRandomColor(i);
-		view[i].size = VIEWPORT_SIZE;
-		view[i].camera->aspect = ASPECT;
-	}
+	layout->resize(ivec2(w, h));
 }
 
 int main(int argc, const char** argv)
@@ -817,57 +948,38 @@ int main(int argc, const char** argv)
 	glPointSize(2.f);
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
-
-
-	// setup viewports
-	view[0].name = Viewport::ORTHO_X;
-	view[0].camera = new OrthoCamera(glm::vec3(-1, 0, 0), glm::vec3(0.f, 1.f, 0.f));
-	
-	view[1].name = Viewport::ORTHO_Y;
-	view[1].camera = new OrthoCamera(glm::vec3(0.f, -1, 0), glm::vec3(1.f, 0.f, 0.f));
-	
-	view[2].name = Viewport::ORTHO_Z;
-	view[2].camera = new OrthoCamera(glm::vec3(0,  0.f, -1), glm::vec3(0.f, 1.f, 0.f));
-	
-	view[3].name = Viewport::PERSPECTIVE;
-	view[3].camera = &camera;
-
-
-
-	
+			
 	try
 	{
 		globalBBox.reset();
 
 
-		for (int i = 0; i < 5; ++i)		
+		for (int i = 0; i < 1; ++i)
 		{
 			char filename[256];
 			//sprintf(filename, "e:/spim/test/spim_TL00_Angle%d.tif", i);
 			//sprintf(filename, "E:/spim/091015 SPIM various size beads/091015 20micron beads/spim_TL01_Angle%d.ome.tiff", i);
 			//sprintf(filename, "e:/spim/zebra/spim_TL01_Angle%d.ome.tiff", i);
 
-			sprintf(filename, "e:/spim/zebra_beads/spim_TL01_Angle%d.ome.tiff",i);
+			sprintf(filename, "e:/spim/zebra_beads/spim_TL01_Angle%d.ome.tiff", i);
 
 			SpimStack* stack = new SpimStack(filename);
-			
+
 			/*
 			stack->setRotation(-30 + i * 30);
-						sprintf(filename, "e:/spim/zebra_beads/registration/spim_TL01_Angle%d.ome.tiff.registration", i);
+			sprintf(filename, "e:/spim/zebra_beads/registration/spim_TL01_Angle%d.ome.tiff.registration", i);
 			stack->loadRegistration(filename);
 			*/
 
 			stacks.push_back(stack);
-		
+
 			AABB bbox = stack->getBBox();
 			globalBBox.extend(bbox);
 		}
 
 
-
-		camera.radius = (globalBBox.getSpanLength() * 1.5); // frames[0]->getBBox().getSpanLength() * 1.2);
-		camera.target = globalBBox.getCentroid();// frames[0]->getBBox().getCentroid();
-
+		// setup viewports
+		layout = new PerspectiveFullLayout;
 
 		reloadShaders();
 	}
