@@ -201,6 +201,12 @@ private:
 class SingleViewLayout : public Layout
 {
 public:
+	SingleViewLayout(const glm::ivec2& resolution)
+	{
+		viewport.position = glm::ivec2(0);
+		viewport.size = resolution;
+	}
+
 	virtual ~SingleViewLayout()
 	{
 		delete viewport.camera;
@@ -224,6 +230,7 @@ public:
 
 	virtual void resize(const glm::ivec2& size)
 	{
+		viewport.position = glm::ivec2(0);
 		viewport.size = size;
 		viewport.camera->aspect = (float)size.x / size.y;
 	}
@@ -239,11 +246,12 @@ protected:
 class TopViewFullLayout : public SingleViewLayout
 {
 public:
-	TopViewFullLayout()
+	TopViewFullLayout(const glm::ivec2& resolution) : SingleViewLayout(resolution)
 	{
 		viewport.name = Viewport::ORTHO_Y;
 		viewport.color = glm::vec3(1.f);
 		viewport.camera = new OrthoCamera(glm::vec3(0.f, -1, 0), glm::vec3(1.f, 0.f, 0.f));
+		viewport.camera->aspect = (float)resolution.x / resolution.y;
 	}
 
 	inline ICamera* getPerspectiveCamera() { return nullptr; }
@@ -253,15 +261,16 @@ public:
 class PerspectiveFullLayout : public SingleViewLayout
 {
 public:
-	PerspectiveFullLayout()
+	PerspectiveFullLayout(const glm::ivec2& resolution) : SingleViewLayout(resolution)
 	{
 		viewport.camera = new OrbitCamera;
 		viewport.color = glm::vec3(1.f);
 		viewport.name = Viewport::PERSPECTIVE;
 
 		OrbitCamera* cam = dynamic_cast<OrbitCamera*>(viewport.camera);
-		cam->far = globalBBox.getSpanLength() * 2.f;
-		cam->near = 10.0;
+		cam->far = globalBBox.getSpanLength() * 4.f;
+		cam->near = cam->near / 100.0;
+		cam->aspect = (float)resolution.x / resolution.y;
 
 		cam->radius = (globalBBox.getSpanLength() * 1.5);
 		cam->target = globalBBox.getCentroid();
@@ -779,34 +788,36 @@ static void keyboard(unsigned char key, int x, int y)
 	// camera controls
 	Viewport* vp = layout->getActiveViewport();
 	
-	if (key == '-')
-		vp->camera->zoom(0.7f);
-	if (key == '=')
-		vp->camera->zoom(1.4f);
-
-	if (key == 'w')
-		vp->camera->pan(0.f, 10.f);
-	if (key == 's')
-		vp->camera->pan(0.f, -10.f);
-	if (key == 'a')
-		vp->camera->pan(-10.f, 0.f); 
-	if (key == 'd')
-		vp->camera->pan(10.f, 0.f);
-
-
-	if (key == 'c')
+	if (vp)
 	{
-		//if (view[vp].name == Viewport::PERSPECTIVE)
+		if (key == '-')
+			vp->camera->zoom(0.7f);
+		if (key == '=')
+			vp->camera->zoom(1.4f);
+
+		if (key == 'w')
+			vp->camera->pan(0.f, 10.f);
+		if (key == 's')
+			vp->camera->pan(0.f, -10.f);
+		if (key == 'a')
+			vp->camera->pan(-10.f, 0.f);
+		if (key == 'd')
+			vp->camera->pan(10.f, 0.f);
+
+
+		if (key == 'c')
 		{
-			if (currentStack == -1)
-				vp->camera->target = globalBBox.getCentroid();
-			else
-				vp->camera->target = stacks[currentStack]->getBBox().getCentroid();
+			//if (view[vp].name == Viewport::PERSPECTIVE)
+			{
+				if (currentStack == -1)
+					vp->camera->target = globalBBox.getCentroid();
+				else
+					vp->camera->target = stacks[currentStack]->getBBox().getCentroid();
+			}
+
+
 		}
-
-
 	}
-
 }
 
 
@@ -865,15 +876,23 @@ static void special(int key, int x, int y)
 {
 	if (key == GLUT_KEY_F1)
 	{
+		int w = glutGet(GLUT_WINDOW_WIDTH);
+		int h = glutGet(GLUT_WINDOW_HEIGHT);
+
+		std::cout << "[Layout] Creating fullscreen perspective layout ... \n";
 		delete layout;
-		layout = new PerspectiveFullLayout;
+		layout = new PerspectiveFullLayout(glm::ivec2(w, h));
 		layout->updateMouseMove(mouse.coordinates);
 	}
 
 	if (key == GLUT_KEY_F2)
 	{
+		int w = glutGet(GLUT_WINDOW_WIDTH);
+		int h = glutGet(GLUT_WINDOW_HEIGHT);
+
+		std::cout << "[Layout] Creating fullscreen top-view layout ... \n";
 		delete layout;
-		layout = new TopViewFullLayout;
+		layout = new TopViewFullLayout(glm::ivec2(w, h));;
 		layout->updateMouseMove(mouse.coordinates);
 	}
 
@@ -979,7 +998,7 @@ int main(int argc, const char** argv)
 
 
 		// setup viewports
-		layout = new PerspectiveFullLayout;
+		layout = new PerspectiveFullLayout(glm::ivec2(1024, 768));
 
 		reloadShaders();
 	}
