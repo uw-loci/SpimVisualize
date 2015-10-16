@@ -1,27 +1,13 @@
 
-#include "GeometryImage.h"
-#include "OrbitCamera.h"
-#include "SpimPlane.h"
-#include "Shader.h"
-#include "Framebuffer.h"
-#include "SpimStack.h"
-#include "AABB.h"
-#include "Layout.h"
 #include "SpimRegistrationApp.h"
+#include "Viewport.h"
 
 #include <GL/glew.h>
 #include <GL/freeglut.h>
 
-#include <glm/gtx/matrix_operation.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/io.hpp>
-
-#include <fstream>
 #include <iostream>
 #include <vector>
 #include <algorithm>
-#include <chrono>
 
 // goddamnit windows! :(
 #undef near
@@ -171,38 +157,20 @@ static void motion(int x, int y)
 	mouse.coordinates.y = y;
 
 
-	if (mouse.button[0])
-		regoApp->rotateCamera(glm::vec2(dt, dp));
 	
 	if (mouse.button[1])
 		regoApp->panCamera(glm::vec2(dx, dy));
 
-
-	// drag single stack here ...
-
-	/*
-	if (v)
+	if (mouse.button[0])
 	{
+		// let the application decide what to do with it:
+		// camera movement in a perspective window
+		regoApp->rotateCamera(glm::vec2(dt, dp));
+		
+		// stack movement in an ortho window
+		regoApp->moveStack(glm::vec2(dx, dy));
 
-		// drag perspective camera
-		if (mouse.button[0] && v->name == Viewport::PERSPECTIVE)
-			v->camera->rotate(dt, dp);
-
-		// drag single stack
-		if (mouse.button[0] && currentStack > -1 && v->name != Viewport::PERSPECTIVE)
-		{
-			// create ray
-			const glm::vec3 rayOrigin = v->camera->getPosition();
-			const glm::vec3 rayDirection = v->camera->getViewDirection();
-
-			stacks[currentStack]->move(v->camera->calculatePlanarMovement(glm::vec2(dx, dy)));
-		}
-
-
-		if (mouse.button[1])
-			v->camera->pan(dx * v->getAspect() / 2, dy);
 	}
-	*/
 
 	int h = glutGet(GLUT_WINDOW_HEIGHT);
 	regoApp->updateMouseMotion(glm::ivec2(x, h - y));

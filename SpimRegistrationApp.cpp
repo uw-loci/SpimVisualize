@@ -372,6 +372,7 @@ void SpimRegistrationApp::rotateCamera(const glm::vec2& delta)
 		vp->camera->rotate(delta.x, delta.y);
 }
 
+
 void SpimRegistrationApp::updateMouseMotion(const glm::ivec2& cursor)
 {
 	layout->updateMouseMove(cursor);
@@ -402,4 +403,16 @@ void SpimRegistrationApp::rotateCurrentStack(float rotY)
 		return;
 
 	stacks[currentStack]->rotate(rotY);
+}
+
+void SpimRegistrationApp::moveStack(const glm::vec2& delta)
+{
+	if (!currentStackValid())
+		return;
+
+	Viewport* vp = layout->getActiveViewport();
+	if (vp && vp->name != Viewport::PERSPECTIVE)
+	{
+		stacks[currentStack]->move(vp->camera->calculatePlanarMovement(delta));
+	}
 }

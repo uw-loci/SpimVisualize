@@ -29,6 +29,7 @@ public:
 	void toggleSelectStack(int n);
 	void toggleStack(int n);
 	inline void toggleCurrentStack() { toggleStack(currentStack); }
+	void moveStack(const glm::vec2& delta);
 
 	void rotateCurrentStack(float rotY);
 
@@ -39,7 +40,7 @@ public:
 	void setPerspectiveLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
 	void setTopviewLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
 	void setThreeViewLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
-
+	
 	void rotateCamera(const glm::vec2& delta);
 	void zoomCamera(float dt);
 	void panCamera(const glm::vec2& delta);
