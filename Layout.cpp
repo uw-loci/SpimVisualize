@@ -8,8 +8,8 @@
 using namespace std;
 using namespace glm;
 
-
-extern AABB globalBBox;
+const float CAMERA_DISTANCE = 4000.f;
+const vec3 CAMERA_TARGET(0.f);
 
 void Viewport::setup() const
 {
@@ -91,12 +91,12 @@ PerspectiveFullLayout::PerspectiveFullLayout(const ivec2& resolution) : SingleVi
 	viewport.name = Viewport::PERSPECTIVE;
 
 	OrbitCamera* cam = dynamic_cast<OrbitCamera*>(viewport.camera);
-	cam->far = globalBBox.getSpanLength() * 4.f;
+	cam->far = CAMERA_DISTANCE;
 	cam->near = cam->near / 100.0;
 	cam->aspect = (float)resolution.x / resolution.y;
 
-	cam->radius = (globalBBox.getSpanLength() * 1.5);
-	cam->target = globalBBox.getCentroid();
+	cam->radius = (CAMERA_DISTANCE * 1.5);
+	cam->target = CAMERA_TARGET;
 
 }
 
@@ -117,6 +117,12 @@ FourViewLayout::FourViewLayout(const ivec2& size)
 	views[3].name = Viewport::PERSPECTIVE;
 	views[3].camera = new OrbitCamera;
 	views[3].color = vec3(1);
+
+	OrbitCamera* cam = dynamic_cast<OrbitCamera*>(views[3].camera);
+	cam->far = CAMERA_DISTANCE;
+	cam->near = cam->near / 100.0;
+	cam->radius = (CAMERA_DISTANCE * 1.5);
+	cam->target = CAMERA_TARGET;
 
 	FourViewLayout::resize(size);
 

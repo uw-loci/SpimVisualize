@@ -16,9 +16,11 @@
     <ClCompile Include="Layout.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="OrbitCamera.cpp" />
+    <ClCompile Include="Registration.cpp" />
     <ClCompile Include="sdk\libICP\src\matrix.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="SpimPlane.cpp" />
+    <ClCompile Include="SpimRegistrationApp.cpp" />
     <ClCompile Include="SpimStack.cpp" />
     <ClCompile Include="stb_image.c" />
   </ItemGroup>
@@ -27,9 +29,11 @@
     <ClInclude Include="Framebuffer.h" />
     <ClInclude Include="Layout.h" />
     <ClInclude Include="OrbitCamera.h" />
+    <ClInclude Include="Registration.h" />
     <ClInclude Include="sdk\libICP\src\matrix.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="SpimPlane.h" />
+    <ClInclude Include="SpimRegistrationApp.h" />
     <ClInclude Include="SpimStack.h" />
     <ClInclude Include="stb_image.h" />
   </ItemGroup>

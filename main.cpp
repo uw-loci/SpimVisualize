@@ -7,9 +7,7 @@
 #include "SpimStack.h"
 #include "AABB.h"
 #include "Layout.h"
-
-
-#include <ICP.h>
+#include "SpimRegistrationApp.h"
 
 #include <GL/glew.h>
 #include <GL/freeglut.h>
@@ -36,381 +34,15 @@ struct Mouse
 }				mouse;
 
 
+SpimRegistrationApp*	regoApp = nullptr;
 
-Shader*			planeShader = 0;
-Shader*			quadShader = 0;
-
-std::vector<SpimPlane*> planes;
-
-Shader*			pointShader = 0;
-
-
-Shader*			volumeShader = 0;
-Shader*			volumeShader2 = 0;
-unsigned short	minThreshold = 100;
-
-bool			drawSlices = false;
-bool			drawGrid = true;
-bool			drawBbox = true;
-bool			drawPoints = false;
-
-int				slices = 100;
-
-std::vector<SpimStack*>	stacks;
-int currentStack = -1;
-
-AABB			globalBBox;
-
-typedef Eigen::Matrix<double, 3, Eigen::Dynamic> Vertices;
-Vertices source, target;
-
-ILayout*			layout = nullptr;
-
-
-static void alignStacks(SpimStack* a, SpimStack* b)
-{
-	using namespace glm;
-	using namespace std;
-
-	const unsigned short THRESHOLD = 210;
-
-	// 1) extract registration points
-	vector<vec4> pa = a->extractRegistrationPoints(THRESHOLD);
-	vector<vec4> pb = b->extractRegistrationPoints(THRESHOLD);
-
-	// 2) reset color to homog. coord to enable transformation
-	for_each(pa.begin(), pa.end(), [](vec4& v) { v.w = 1.f; });
-	for_each(pb.begin(), pb.end(), [](vec4& v) { v.w = 1.f; });
-
-	//std::cout << "[Fit] Extracted " << pa.size() << "/" << pb.size() << " points.\n";
-
-	// 3) transform points to world space
-	const mat4& Ma = a->getTransform();
-	const mat4& Mb = b->getTransform();
-	for_each(pa.begin(), pa.end(), [&Ma](vec4& v) { v = Ma * v; });
-	for_each(pb.begin(), pb.end(), [&Mb](vec4& v) { v = Mb * v; });
-
-
-	/*
-	// 4) kill points that are not inside the other's bounding box (after transformation)
-	OBB bboxA;
-	bboxA.transform = a->getTransform();
-	bboxA.bbox = a->getBBox();
-
-	OBB bboxB;
-	bboxB.transform = b->getTransform();
-	bboxB.bbox = b->getBBox();
-
-	remove_if(pa.begin(), pa.end(), [bboxB](const vec4& v) { return !bboxB.isInside(v); });
-	remove_if(pb.begin(), pb.end(), [bboxA](const vec4& v) { return !bboxA.isInside(v); });
-
-	// both points should now be valid and overlapping
-	*/
-
-	// 5) reduce the points again for sparceICP
-	source.resize(Eigen::NoChange, pa.size());
-	for (size_t i = 0; i < pa.size(); ++i)
-	{
-		const glm::vec4& v = pa[i];
-		source(0, i) = v.x;
-		source(1, i) = v.y;
-		source(2, i) = v.z;
-	}
-
-	target.resize(Eigen::NoChange, pb.size());
-	for (size_t i = 0; i < pb.size(); ++i)
-	{
-		const glm::vec4& v = pb[i];
-		target(0, i) = v.x;
-		target(1, i) = v.y;
-		target(2, i) = v.z;
-	}
-	
-	std::cout << "[Fit] Running icp ...";
-	auto tic = std::chrono::steady_clock::now();
-	
-	SICP::Parameters pars;
-	pars.p = 0.1;
-	pars.max_icp = 20;
-	pars.print_icpn = true;
-	SICP::point_to_point(source, target, pars);
-	
-	auto toc = std::chrono::steady_clock::now();
-	std::cout << " done. Running time: " << std::chrono::duration<double, std::milli>(toc - tic).count() << " ms.\n";
-	
-	
-}
-
-
-static const glm::vec3& getRandomColor(int n)
-{
-	static std::vector<glm::vec3> pool;
-	if (pool.empty() || n >= pool.size())
-	{
-		pool.push_back(glm::vec3(1, 0, 0));
-		pool.push_back(glm::vec3(1, 0.6, 0));
-		pool.push_back(glm::vec3(1, 1, 0));
-		pool.push_back(glm::vec3(0, 1, 0));
-		pool.push_back(glm::vec3(0, 1, 1));
-		pool.push_back(glm::vec3(0, 0, 1));
-		pool.push_back(glm::vec3(1, 0, 1));
-		pool.push_back(glm::vec3(1, 1, 1));
-
-
-		for (int i = 0; i < (n + 1) * 2; ++i)
-		{
-			float r = (float)rand() / RAND_MAX;
-			float g = (float)rand() / RAND_MAX;
-			float b = 1.f - (r + g);
-			pool.push_back(glm::vec3(r, g, b));
-		}
-	}
-
-	return pool[n];
-}
-
-static void reloadShaders()
-{
-	delete planeShader;
-	planeShader = new Shader("shaders/plane.vert", "shaders/plane.frag");
-
-
-	delete quadShader;
-	quadShader = new Shader("shaders/drawQuad.vert", "shaders/drawQuad.frag");
-
-	delete pointShader;
-	pointShader = new Shader("shaders/points2.vert", "shaders/points2.frag");
-
-	delete volumeShader;
-	volumeShader = new Shader("shaders/volume.vert", "shaders/volume.frag");
-
-	delete volumeShader2;
-	volumeShader2 = new Shader("shaders/volume2.vert", "shaders/volume2.frag");
-}
-
-static void drawScene(const Viewport& vp)
-{
-	glm::mat4 mvp;// = vp.proj * vp.view;
-	vp.camera->getMVP(mvp);
-
-
-	if (drawGrid)
-	{
-		// draw a groud grid only in perspective mode
-		if (vp.name == Viewport::PERSPECTIVE || vp.name == Viewport::ORTHO_Y)
-		{
-			glColor3f(0.3f, 0.3f, 0.3f);
-			glBegin(GL_LINES);
-			for (int i = -1000; i <= 1000; i += 100)
-			{
-				glVertex3i(-1000, 0, i);
-				glVertex3i(1000, 0, i);
-				glVertex3i(i, 0, -1000);
-				glVertex3i(i, 0, 1000);
-			}
-
-			glEnd();
-		}
-
-		if (vp.name == Viewport::ORTHO_X)
-		{
-			glColor3f(0.3f, 0.3f, 0.3f);
-			glBegin(GL_LINES);
-			for (int i = -1000; i <= 1000; i += 100)
-			{
-				glVertex3i(0, -1000, i);
-				glVertex3i(0, 1000, i);
-				glVertex3i(0, i, -1000);
-				glVertex3i(0, i, 1000);
-			}
-
-			glEnd();
-		}
-
-		if (vp.name == Viewport::ORTHO_Z)
-		{
-			glColor3f(0.3f, 0.3f, 0.3f);
-			glBegin(GL_LINES);
-			for (int i = -1000; i <= 1000; i += 100)
-			{
-				glVertex3i(-1000, i, 0);
-				glVertex3i(1000, i, 0);
-				glVertex3i(i, -1000, 0);
-				glVertex3i(i, 1000, 0);
-			}
-
-			glEnd();
-		}
-	}
-
-	if (drawSlices)
-	{
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-
-		glDisable(GL_DEPTH_TEST);
-		glDepthMask(GL_FALSE);
-
-		volumeShader->bind();
-		volumeShader->setUniform("minThreshold", (int)minThreshold);
-		volumeShader->setUniform("mvpMatrix", mvp);
-		
-		for (size_t i = 0; i < stacks.size(); ++i)
-		{
-			if (stacks[i]->isEnabled())
-			{
-				volumeShader->setUniform("color", getRandomColor(i));
-				volumeShader->setMatrix4("transform", stacks[i]->getTransform());
-
-
-				// calculate view vector
-				glm::vec3 view = vp.camera->getViewDirection();
-				stacks[i]->drawSlices(volumeShader, view);
-
-			}
-
-
-		}
-
-		volumeShader->disable();
-
-		glDisable(GL_BLEND);
-		glEnable(GL_DEPTH_TEST);
-		glDepthMask(GL_TRUE);
-	}
-	else
-	{
-
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-		volumeShader2->bind();
-		volumeShader2->setUniform("minThreshold", minThreshold);
-		volumeShader2->setUniform("sliceCount", slices);
-
-		
-		const glm::vec3 camPos = vp.camera->getPosition();
-		const glm::vec3 viewDir = glm::normalize(vp.camera->target - camPos);
-
-		// the smallest and largest projected bounding box vertices -- used to calculate the extend of planes
-		// to draw
-		glm::vec3 minPVal(std::numeric_limits<float>::max()), maxPVal(std::numeric_limits<float>::lowest());
-
-		for (size_t i = 0; i < stacks.size(); ++i)
-		{
-			if (!stacks[i]->isEnabled())
-				continue;
-
-
-			// draw screen filling quads
-			// find max/min distances of bbox cube from camera
-			std::vector<glm::vec3> boxVerts = stacks[i]->getBBox().getVertices();
-
-			// calculate max/min distance
-			float maxDist = 0.f, minDist = std::numeric_limits<float>::max();
-			for (size_t k = 0; k < boxVerts.size(); ++k)
-			{
-				glm::vec4 p = mvp * stacks[i]->getTransform() * glm::vec4(boxVerts[k], 1.f);
-				p /= p.w;
-
-				minPVal = glm::min(minPVal, glm::vec3(p));
-				maxPVal = glm::max(maxPVal, glm::vec3(p));
-
-			}
-
-		}
-
-		maxPVal = glm::min(maxPVal, glm::vec3(1.f));
-		minPVal = glm::max(minPVal, glm::vec3(-1.f));
-		
-
-		for (size_t i = 0; i < stacks.size(); ++i)
-		{
-			glActiveTexture(GL_TEXTURE0 + i);
-			glBindTexture(GL_TEXTURE_3D, stacks[i]->getTexture());
-
-			char uname[256];
-			sprintf(uname, "volume[%d].texture", i);
-			volumeShader2->setUniform(uname, (int)i);
-
-			AABB bbox = stacks[i]->getBBox();
-			sprintf(uname, "volume[%d].bboxMax", i);
-			volumeShader2->setUniform(uname, bbox.max);
-			sprintf(uname, "volume[%d].bboxMin", i);
-			volumeShader2->setUniform(uname, bbox.min);
-
-			sprintf(uname, "volume[%d].enabled", i);
-			volumeShader2->setUniform(uname, stacks[i]->isEnabled());
-
-			sprintf(uname, "volume[%d].inverseMVP", i);
-			volumeShader2->setMatrix4(uname, glm::inverse(mvp * stacks[i]->getTransform()));
-		}
-
-
-		// draw all slices
-		glBegin(GL_QUADS);
-		for (int z = 0; z < slices; ++z)
-		{
-			// render back-to-front
-			float zf = glm::mix(maxPVal.z, minPVal.z, (float)z / slices);
-
-			glVertex3f(minPVal.x, maxPVal.y, zf);
-			glVertex3f(minPVal.x, minPVal.y, zf);
-			glVertex3f(maxPVal.x, minPVal.y, zf);
-			glVertex3f(maxPVal.x, maxPVal.y, zf);
-		}
-		glEnd();
-
-
-		glActiveTexture(GL_TEXTURE0);
-
-		volumeShader2->disable();
-		glDisable(GL_BLEND);
-
-	}
-		
-	if (drawBbox)
-	{
-		glDisable(GL_DEPTH_TEST);
-		glDepthMask(GL_FALSE);
-
-		for (size_t i = 0; i < stacks.size(); ++i)
-		{
-			if (stacks[i]->isEnabled())
-			{
-				glPushMatrix();
-				glMultMatrixf(glm::value_ptr(stacks[i]->getTransform()));
-
-
-				if (i == currentStack)
-					glColor3f(1, 1, 0);
-				else
-					glColor3f(0.6, 0.6, 0.6);
-				stacks[i]->getBBox().draw();
-
-				glPopMatrix();
-			}
-		}
-
-		glDepthMask(GL_TRUE);
-		glEnable(GL_DEPTH_TEST);
-	}
-}
 
 static void display()
 {
 		
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	
 	
-
-	for (size_t i = 0; i < layout->getViewCount(); ++i)
-	{
-		const Viewport* vp = layout->getView(i);
-		vp->setup();
-		drawScene(*vp);
-	}
-
+	regoApp->drawScene();
 	
 	glutSwapBuffers();
 
@@ -434,112 +66,49 @@ static void keyboard(unsigned char key, int x, int y)
 		exit(0);
 
 	if (key == '/')
-		drawSlices = !drawSlices;
-
-	if (key == 'n')
-	{
-		++currentStack;
-		if (currentStack == stacks.size())
-			currentStack = 0;
-
-		std::cout << "Current stack: " << currentStack << std::endl;
-	}
+		regoApp->toggleSlices();
 
 	if (key == 'g')
-		drawGrid = !drawGrid;
+		regoApp->toggleGrid();
 
 	if (key == 'b')
-		drawBbox = !drawBbox;
+		regoApp->toggleBboxes();
 
 	if (key == ',')
-	{
-		minThreshold -= 10;
-		std::cout << "min thresh: " << minThreshold << std::endl;
-	}
+		regoApp->decreaseMinThreshold();
+
 	if (key == '.')
-	{
-		minThreshold += 10;
-		std::cout << "min thresh: " << minThreshold << std::endl;
-	}
+		regoApp->increaseMinThreshold();
 
 	
-	if (key == '[' && currentStack > -1)
-	{
-		stacks[currentStack]->rotate(-1);
-	}
+	if (key == '[')
+		regoApp->rotateCurrentStack(-1);
 
-	if (key == ']' && currentStack > -1)
-	{
-		stacks[currentStack]->rotate(1.f);
-	}
+	if (key == ']')
+		regoApp->rotateCurrentStack(1);
 	
-
-	if (key == ' ' && stacks.size() >= 2)
-	{
-		alignStacks(stacks[0], stacks[1]);
-		drawPoints = true;
-
-	}
-
-	if (key == '<' && slices > 1)
-	{
-		slices /= 2;;
-		if (slices == 0)
-			slices = 1;
-		std::cout << "slices: " << slices << std::endl;
-	}
-
-	if (key == '>')
-	{
-		slices *= 2;
-		std::cout << "slices: " << slices << std::endl;
-	}
-
 	if (key == 'S')
-		reloadShaders();
+		regoApp->reloadShaders();
 
 
 
 	if (key == '1')
-	{
-		if (currentStack == 0)
-			currentStack = -1;
-		else
-			currentStack = 0;
-	}
+		regoApp->toggleSelectStack(0);
 
-	if (key == '2' && stacks.size() >= 2)
-	{
-		if (currentStack == 1)
-			currentStack = -1;
-		else
-			currentStack = 1;
-	}
+	if (key == '2')
+		regoApp->toggleSelectStack(1);
 
-	if (key == '3' && stacks.size() >= 3)
-	{
-		if (currentStack == 2)
-			currentStack = -1;
-		else
-			currentStack = 2;
-	}
+	if (key == '3')
+		regoApp->toggleSelectStack(2);
 
-	if (key == '4' && stacks.size() >= 4)
-	{
-		if (currentStack == 3)
-			currentStack = -1;
-		else
-			currentStack = 3;
-	}
+	if (key == '4')
+		regoApp->toggleSelectStack(3);
 
-	if (key == '5' && stacks.size() >= 5)
-	{
-		if (currentStack == 4)
-			currentStack = -1;
-		else
-			currentStack = 4;
-	}
+	if (key == '5')
+		regoApp->toggleSelectStack(4);
 
+	
+	/*
 	if (key == 't')
 	{
 		for (int i = 0; i < stacks.size(); ++i)
@@ -560,46 +129,29 @@ static void keyboard(unsigned char key, int x, int y)
 		}
 
 	}
+	*/
 
 
-
-	if (key == 'v' && currentStack > -1)
-		stacks[currentStack]->toggle();
-	
-
-	// camera controls
-	Viewport* vp = layout->getActiveViewport();
-	
-	if (vp)
-	{
-		if (key == '-')
-			vp->camera->zoom(0.7f);
-		if (key == '=')
-			vp->camera->zoom(1.4f);
-
-		if (key == 'w')
-			vp->camera->pan(0.f, 10.f);
-		if (key == 's')
-			vp->camera->pan(0.f, -10.f);
-		if (key == 'a')
-			vp->camera->pan(-10.f, 0.f);
-		if (key == 'd')
-			vp->camera->pan(10.f, 0.f);
+	if (key == 'v')
+		regoApp->toggleCurrentStack();
 
 
-		if (key == 'c')
-		{
-			//if (view[vp].name == Viewport::PERSPECTIVE)
-			{
-				if (currentStack == -1)
-					vp->camera->target = globalBBox.getCentroid();
-				else
-					vp->camera->target = stacks[currentStack]->getBBox().getCentroid();
-			}
+	if (key == '-')
+		regoApp->zoomCamera(0.7f);
+	if (key == '=')
+		regoApp->zoomCamera(1.4f);
+	if (key == 'c')
+		regoApp->centerCamera();
 
+	if (key == 'w')
+		regoApp->panCamera(glm::vec2(0, 10));
+	if (key == 's')
+		regoApp->panCamera(glm::vec2(0, -10));
+	if (key == 'a')
+		regoApp->panCamera(glm::vec2(-10, 0));
+	if (key == 'd')
+		regoApp->panCamera(glm::vec2(10, 0));
 
-		}
-	}
 }
 
 
@@ -619,8 +171,16 @@ static void motion(int x, int y)
 	mouse.coordinates.y = y;
 
 
-	const Viewport* v = layout->getActiveViewport();
+	if (mouse.button[0])
+		regoApp->rotateCamera(glm::vec2(dt, dp));
+	
+	if (mouse.button[1])
+		regoApp->panCamera(glm::vec2(dx, dy));
 
+
+	// drag single stack here ...
+
+	/*
 	if (v)
 	{
 
@@ -642,54 +202,33 @@ static void motion(int x, int y)
 		if (mouse.button[1])
 			v->camera->pan(dx * v->getAspect() / 2, dy);
 	}
+	*/
 
 	int h = glutGet(GLUT_WINDOW_HEIGHT);
-	layout->updateMouseMove(glm::ivec2(x, h - y));
+	regoApp->updateMouseMotion(glm::ivec2(x, h - y));
 }
 
 static void passiveMotion(int x, int y)
 {
-
 	int h = glutGet(GLUT_WINDOW_HEIGHT);
-	layout->updateMouseMove(glm::ivec2(x, h-y));
+	regoApp->updateMouseMotion(glm::ivec2(x, h - y));
 }
 
 static void special(int key, int x, int y)
 {
-	if (key == GLUT_KEY_F1)
-	{
-		int w = glutGet(GLUT_WINDOW_WIDTH);
-		int h = glutGet(GLUT_WINDOW_HEIGHT);
+	int w = glutGet(GLUT_WINDOW_WIDTH);
+	int h = glutGet(GLUT_WINDOW_HEIGHT);
+	const glm::ivec2 winRes(w, h);
 
-		std::cout << "[Layout] Creating fullscreen perspective layout ... \n";
-		delete layout;
-		layout = new PerspectiveFullLayout(glm::ivec2(w, h));
-		layout->updateMouseMove(mouse.coordinates);
-	}
+	if (key == GLUT_KEY_F1)
+		regoApp->setPerspectiveLayout(winRes, mouse.coordinates);
 
 	if (key == GLUT_KEY_F2)
-	{
-		int w = glutGet(GLUT_WINDOW_WIDTH);
-		int h = glutGet(GLUT_WINDOW_HEIGHT);
-
-		std::cout << "[Layout] Creating fullscreen top-view layout ... \n";
-		delete layout;
-		layout = new TopViewFullLayout(glm::ivec2(w, h));;
-		layout->updateMouseMove(mouse.coordinates);
-	}
-
-
+		regoApp->setTopviewLayout(winRes, mouse.coordinates);
+	
 	if (key == GLUT_KEY_F3)
-	{
-		int w = glutGet(GLUT_WINDOW_WIDTH);
-		int h = glutGet(GLUT_WINDOW_HEIGHT);
-
-		std::cout << "[Layout] Creating four-view layout ... \n";
-		delete layout;
-		layout = new FourViewLayout(glm::ivec2(w, h));
-		layout->updateMouseMove(mouse.coordinates);
-
-	}
+		regoApp->setThreeViewLayout(winRes, mouse.coordinates);
+	
 
 	if (key == GLUT_KEY_DOWN)
 	{
@@ -722,8 +261,7 @@ static void button(int button, int state, int x, int y)
 
 static void reshape(int w, int h)
 {
-	using namespace glm;
-	layout->resize(ivec2(w, h));
+	regoApp->resize(glm::ivec2(w, h));
 }
 
 int main(int argc, const char** argv)
@@ -757,11 +295,12 @@ int main(int argc, const char** argv)
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 			
+
+	regoApp = new SpimRegistrationApp(glm::ivec2(1024,768));
+
 	try
 	{
-		globalBBox.reset();
-
-
+		
 		for (int i = 0; i < 1; ++i)
 		{
 			char filename[256];
@@ -770,26 +309,11 @@ int main(int argc, const char** argv)
 			//sprintf(filename, "e:/spim/zebra/spim_TL01_Angle%d.ome.tiff", i);
 
 			sprintf(filename, "e:/spim/zebra_beads/spim_TL01_Angle%d.ome.tiff", i);
-
-			SpimStack* stack = new SpimStack(filename);
-
-			/*
-			stack->setRotation(-30 + i * 30);
-			sprintf(filename, "e:/spim/zebra_beads/registration/spim_TL01_Angle%d.ome.tiff.registration", i);
-			stack->loadRegistration(filename);
-			*/
-
-			stacks.push_back(stack);
-
-			AABB bbox = stack->getBBox();
-			globalBBox.extend(bbox);
+			regoApp->addSpimStack(filename);
 		}
 
 
-		// setup viewports
-		layout = new PerspectiveFullLayout(glm::ivec2(1024, 768));
 
-		reloadShaders();
 	}
 	catch (const std::runtime_error& e)
 	{

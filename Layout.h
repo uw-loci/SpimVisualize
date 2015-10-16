@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 
 class ICamera;
+struct AABB;
 
 struct Viewport
 {
