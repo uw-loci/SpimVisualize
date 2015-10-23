@@ -33,6 +33,10 @@ public:
 	void rotateCurrentStack(float rotY);
 
 
+	std::vector<glm::vec4> TEST_points;
+	void TEST_extractPoints();
+
+
 	void updateMouseMotion(const glm::ivec2& cursor);
 	
 

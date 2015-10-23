@@ -23,14 +23,22 @@ public:
 	void saveTransform(const std::string& filename) const;
 	void loadTransform(const std::string& filename);
 
+	// halfs the internal resolution of the dataset
 	void subsample();
 
 
 	// extracts registration points based on a simple threshold in _local_ coords. use the stack's transform to transform them to world space
 	std::vector<glm::vec4> extractRegistrationPoints(unsigned short threshold) const;
 
+	// extracts the points in world coords. The w coordinate contains the point's value
+	std::vector<glm::vec4> extractTransformedPoints() const;
 
-	AABB&& getBBox() const;
+	/// Tries to automatically align two datasets based on their voxel values.
+	/// @return the mean error
+	float alignSingleStep(const SpimStack* reference, glm::mat4& deltaTransform);
+
+
+	AABB getBBox() const;
 
 	void setRotation(float angle);
 
@@ -45,6 +53,8 @@ public:
 
 	inline bool isEnabled() const { return enabled; }
 	inline void toggle() { enabled = !enabled;  }
+
+
 
 
 	inline const std::string& getFilename() const { return filename;  }

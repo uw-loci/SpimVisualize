@@ -66,6 +66,11 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == '.')
 		regoApp->increaseBeadThreshold();
 
+	if (key == 't')
+		regoApp->TEST_extractPoints();
+	if (key == 'T')
+		regoApp->TEST_points.clear();
+
 	
 	if (key == '[')
 		regoApp->rotateCurrentStack(-1);
@@ -269,7 +274,7 @@ int main(int argc, const char** argv)
 	try
 	{
 		
-		for (int i = 0; i < 1; ++i)
+		for (int i = 0; i < 2; ++i)
 		{
 			char filename[256];
 			//sprintf(filename, "e:/spim/test/spim_TL00_Angle%d.tif", i);

@@ -59,6 +59,8 @@ void SpimRegistrationApp::addSpimStack(const std::string& filename)
 {
 	SpimStack* stack = new SpimStack(filename);
 	stack->subsample();
+	stack->subsample();
+	stack->subsample();
 
 
 	stacks.push_back(stack);
@@ -273,10 +275,25 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 				glPopMatrix();
 			}
 		}
-
+		
 		glDepthMask(GL_TRUE);
 		glEnable(GL_DEPTH_TEST);
 	}
+
+	if (!TEST_points.empty())
+	{
+		// draw points
+		glEnableClientState(GL_VERTEX_ARRAY);
+		glVertexPointer(3, GL_FLOAT, sizeof(glm::vec4), glm::value_ptr(TEST_points[0]));
+
+		glPointSize(2.f);
+		glColor3f(1.f, 0.f, 0.f);
+		glDrawArrays(GL_POINTS, 1, TEST_points.size());
+
+		glDisableClientState(GL_VERTEX_ARRAY);
+
+	}
+
 }
 
 glm::vec3 SpimRegistrationApp::getRandomColor(int n)
@@ -408,6 +425,7 @@ void SpimRegistrationApp::rotateCurrentStack(float rotY)
 	stacks[currentStack]->rotate(rotY);
 }
 
+
 void SpimRegistrationApp::moveStack(const glm::vec2& delta)
 {
 	if (!currentStackValid())
@@ -418,4 +436,33 @@ void SpimRegistrationApp::moveStack(const glm::vec2& delta)
 	{
 		stacks[currentStack]->move(vp->camera->calculatePlanarMovement(delta));
 	}
+}
+
+
+void SpimRegistrationApp::TEST_extractPoints()
+{
+	using namespace glm;
+
+	TEST_points.clear();
+
+	if (stacks.size() < 2)
+		return;
+	
+	std::vector<vec4> tmp = stacks[1]->extractTransformedPoints();
+	
+	// keep only the points that are in the first point's bbox
+	mat4 invMat = inverse(stacks[0]->getTransform());
+
+	const AABB& bbox = stacks[0]->getBBox();
+
+	for (size_t i = 0; i < tmp.size(); ++i)
+	{
+		vec4 pt = invMat * vec4(vec3(tmp[i]), 1.f);
+		if (bbox.isInside(vec3(pt)))
+			TEST_points.push_back(tmp[i]);
+	}
+	
+	std::cout << "[Extract] Extracted " << TEST_points.size() << " points. (" << (float)TEST_points.size() / tmp.size() << ")\n";
+
+	
 }

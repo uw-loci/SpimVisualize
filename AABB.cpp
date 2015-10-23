@@ -252,20 +252,3 @@ void AABB::calculate(const std::vector<glm::vec3>& points)
 	for (size_t i = 1; i < points.size(); ++i)
 		this->extend(points[i]);
 }
-
-void OBB::reset()
-{
-	bbox.reset();
-	transform = mat4(1.f);
-}
-
-bool OBB::isInside(const glm::vec4& pt) const
-{
-	vec4 p = transform * pt;
-
-	return	pt.x >= bbox.min.x && pt.x <= bbox.max.x &&
-			pt.y >= bbox.min.y && pt.y <= bbox.max.y &&
-			pt.z >= bbox.min.z && pt.z <= bbox.max.z;
-}
-
-

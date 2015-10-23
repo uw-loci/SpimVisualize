@@ -177,7 +177,7 @@ std::vector<glm::vec4> SpimStack::extractRegistrationPoints(unsigned short thres
 }
 
 
-AABB&& SpimStack::getBBox() const
+AABB SpimStack::getBBox() const
 {
 	AABB bbox;
 	vec3 vol = dimensions * vec3(width, height, depth);
@@ -501,4 +501,102 @@ void SpimStack::drawXPlanes(const glm::vec3& view) const
 
 
 	glEnd();
+}
+
+float SpimStack::alignSingleStep(const SpimStack* reference, glm::mat4& delta)
+{
+
+	vector<vec4> referencePoints;// = reference->extractPoints(this->getOBBox());
+	vector<vec4> targetPoints;// = this->extractPoints(reference->getOBBox());
+
+	std::cout << "[Align] Extracted " << referencePoints.size() << " reference and " << targetPoints.size() << " target points.\n";
+
+
+	// build a Kd-tree here?
+
+
+	// find the closest points
+	vector<size_t> closestReference(referencePoints.size());
+	
+	
+
+	for (size_t i = 0; i < referencePoints.size(); ++i)
+	{
+		
+		float closestDistance = numeric_limits<float>::max();
+		size_t closest = 0;
+
+		
+		for (size_t k = 0; k < targetPoints.size(); ++k)
+		{
+			float d = dot(referencePoints[i], targetPoints[k]);
+			if (d < closestDistance)
+			{
+				closestDistance = d;
+				closest = k;
+			}
+		}
+
+		closestReference[i] = closest;
+	}
+
+
+	// calculate mean distance/error
+	float meanDistance = 0.f;
+	for (size_t i = 0; i < closestReference.size(); ++i)
+		meanDistance += sqrtf(dot(referencePoints[i], targetPoints[closestReference[i]]));
+	
+	meanDistance /= closestReference.size();
+	std::cout << "[Align] Mean distance before alignment: " << meanDistance << std::endl;
+
+
+	// calculate delta transformation
+
+
+
+
+
+
+	// transform points
+
+
+	
+
+	// calculate new error ... ?
+	float oldMDistance = meanDistance;
+
+
+
+
+	return meanDistance;
+}
+
+
+vector<vec4> SpimStack::extractTransformedPoints() const
+{
+	vector<vec4> points;
+	points.reserve(width*height*depth);
+
+	for (unsigned int z = 0; z < depth; ++z)
+	{
+		for (unsigned int x = 0; x < width; ++x)
+		{
+			for (unsigned int y = 0; y < height; ++y)
+			{
+				const unsigned short val = volume[x + y*width + z*width*height];
+				vec3 coord(x, y, z);
+				vec4 point(coord * dimensions, 1.f);
+
+				// transform to world space
+				point = transform * point;
+				point.w = float(val) / std::numeric_limits<unsigned short>::max();
+				points.push_back(point);
+			}
+
+		}
+	}
+
+	//cout << "[Stack] Extracted " << points.size() << " points (" << (float)points.size() / (width*height*depth) * 100 << "%)" << std::endl;
+
+ 	return std::move(points);
 }
