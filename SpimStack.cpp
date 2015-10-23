@@ -1,6 +1,7 @@
 #include "SpimStack.h"
 #include "AABB.h"
 #include "Shader.h"
+#include "nanoflann.hpp"
 
 #include <iostream>
 #include <cstring>
@@ -13,6 +14,8 @@
 
 #include <FreeImage.h>
 #include <GL/glew.h>
+
+
 
 using namespace std;
 using namespace glm;
@@ -525,6 +528,46 @@ vector<vec4> SpimStack::clipPoints(const vector<vec4>& points) const
 	return std::move(clipped);
 }
 
+
+// And this is the "dataset to kd-tree" adaptor class:
+struct PointCloudAdaptor
+{
+	const std::vector<glm::vec4>&		points;
+
+	/// The constructor that sets the data set source
+	PointCloudAdaptor(const std::vector<glm::vec4>& p) : points(p){ }
+	
+	// Must return the number of data points
+	inline size_t kdtree_get_point_count() const { return points.size(); }
+
+	// Returns the distance between the vector "p1[0:size-1]" and the data point with index "idx_p2" stored in the class:
+	inline float kdtree_distance(const float *p1, const size_t idx_p2, size_t /*size*/) const
+	{
+		vec4 a(p1[0], p1[1], p1[2], p1[3]);
+		vec4 delta = a - points[idx_p2];
+		return dot(delta, delta);
+	}
+
+	// Returns the dim'th component of the idx'th point in the class:
+	// Since this is inlined and the "dim" argument is typically an immediate value, the
+	//  "if/else's" are actually solved at compile time.
+	inline float kdtree_get_pt(const size_t idx, int dim) const
+	{
+		if (dim == 0) return points[idx].x;
+		else if (dim == 1) return points[idx].y;
+		else if (dim == 2) return points[idx].z;
+		else return points[idx].w;
+	}
+
+	// Optional bounding-box computation: return false to default to a standard bbox computation loop.
+	//   Return true if the BBOX was already computed by the class and returned in "bb" so it can be avoided to redo it again.
+	//   Look at bb.size() to find out the expected dimensionality (e.g. 2 or 3 for point clouds)
+	template <class BBOX>
+	bool kdtree_get_bbox(BBOX& /*bb*/) const { return false; }
+
+}; // end of PointCloudAdaptor
+
+
 float SpimStack::alignSingleStep(const SpimStack* reference, glm::mat4& delta, std::vector<glm::vec4>& debugPoints)
 {
 
@@ -543,13 +586,51 @@ float SpimStack::alignSingleStep(const SpimStack* reference, glm::mat4& delta, s
 	std::cout << "[Align]           " << targetPoints.size() << " target points.\n";
 	std::cout << "[Align] Overlap:  " << (float)std::min(referencePoints.size(), targetPoints.size()) / std::max(referencePoints.size(), targetPoints.size()) << std::endl;
 
-	/*
-	// build a Kd-tree here?
+
+	const PointCloudAdaptor refAdaptor(referencePoints);
+	const PointCloudAdaptor tgtAdaptor(targetPoints);
+		
+	// construct a kd-tree index:
+	typedef nanoflann::KDTreeSingleIndexAdaptor<
+		nanoflann::L2_Simple_Adaptor<float, PointCloudAdaptor>,
+		PointCloudAdaptor,
+		4 /* dim */
+	> KdTree;
+	
+	const int MAX_LEAF = 12;
+	KdTree refTree(4, refAdaptor, MAX_LEAF);
+	refTree.buildIndex();
 
 
 	// find the closest points
-	vector<size_t> closestReference(referencePoints.size());
+	vector<size_t> closestReference(targetPoints.size());
+	float meanDistance = 0.f;
+
+	std::cout << "[Align] Searching for closest points (O(nlogn)) = O(" << (int)(referencePoints.size()*log((float)targetPoints.size())) / 1000000 << "e6) ... \n";
+	for (size_t i = 0; i < targetPoints.size(); ++i)
+	{
+		// knn search
+		const size_t num_results = 1;
+		size_t ret_index;
+		float out_dist_sqr;
+		nanoflann::KNNResultSet<float> resultSet(num_results);
+		resultSet.init(&ret_index, &out_dist_sqr);
 		
+		const vec4& queryPt = targetPoints[i];
+		
+		refTree.findNeighbors(resultSet, &queryPt[0], nanoflann::SearchParams(10));
+	
+		closestReference[i] = ret_index;
+		meanDistance += sqrtf(out_dist_sqr);
+	}
+
+	std::cout << "[Align] Mean distance before alignment: " << meanDistance << std::endl;
+
+
+	/*
+	// build a Kd-tree here?
+
+	
 	std::cout << "[Align] Searching for closest points (O(n^2)) = O(" << (int)(referencePoints.size()*targetPoints.size())/1000000 << "e6) ... \n";
 	for (size_t i = 0; i < referencePoints.size(); ++i)
 	{
