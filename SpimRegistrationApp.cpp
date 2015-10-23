@@ -280,8 +280,11 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 		glEnable(GL_DEPTH_TEST);
 	}
 
+	
 	if (!TEST_points.empty())
 	{
+		std::cout << "[Debug] Drawing " << TEST_points.size() << " points.\n";
+
 		// draw points
 		glEnableClientState(GL_VERTEX_ARRAY);
 		glVertexPointer(3, GL_FLOAT, sizeof(glm::vec4), glm::value_ptr(TEST_points[0]));
@@ -293,7 +296,7 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 		glDisableClientState(GL_VERTEX_ARRAY);
 
 	}
-
+	
 }
 
 glm::vec3 SpimRegistrationApp::getRandomColor(int n)
@@ -439,30 +442,16 @@ void SpimRegistrationApp::moveStack(const glm::vec2& delta)
 }
 
 
-void SpimRegistrationApp::TEST_extractPoints()
+void SpimRegistrationApp::TEST_alignStacks()
 {
 	using namespace glm;
 
-	TEST_points.clear();
-
 	if (stacks.size() < 2)
 		return;
-	
-	std::vector<vec4> tmp = stacks[1]->extractTransformedPoints();
-	
-	// keep only the points that are in the first point's bbox
-	mat4 invMat = inverse(stacks[0]->getTransform());
 
-	const AABB& bbox = stacks[0]->getBBox();
+	TEST_points.clear();
 
-	for (size_t i = 0; i < tmp.size(); ++i)
-	{
-		vec4 pt = invMat * vec4(vec3(tmp[i]), 1.f);
-		if (bbox.isInside(vec3(pt)))
-			TEST_points.push_back(tmp[i]);
-	}
-	
-	std::cout << "[Extract] Extracted " << TEST_points.size() << " points. (" << (float)TEST_points.size() / tmp.size() << ")\n";
+	mat4 delta(1.f);
+	stacks[1]->alignSingleStep(stacks[0], delta, TEST_points);
 
-	
 }

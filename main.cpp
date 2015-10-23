@@ -66,10 +66,10 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == '.')
 		regoApp->increaseBeadThreshold();
 
-	if (key == 't')
-		regoApp->TEST_extractPoints();
-	if (key == 'T')
-		regoApp->TEST_points.clear();
+
+	if (key == ' ')
+		regoApp->TEST_alignStacks();
+
 
 	
 	if (key == '[')

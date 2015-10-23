@@ -503,23 +503,54 @@ void SpimStack::drawXPlanes(const glm::vec3& view) const
 	glEnd();
 }
 
-float SpimStack::alignSingleStep(const SpimStack* reference, glm::mat4& delta)
+
+vector<vec4> SpimStack::clipPoints(const vector<vec4>& points) const
+{
+	// keep only the points that are in this stacks's bbox
+	mat4 invMat = inverse(transform);
+	const AABB bbox = this->getBBox();
+
+	vector<vec4> clipped;
+
+	for (size_t i = 0; i < points.size(); ++i)
+	{
+		vec4 pt = invMat * vec4(vec3(points[i]), 1.f);
+		if (bbox.isInside(vec3(pt)))
+			clipped.push_back(points[i]);
+	}
+
+
+	std::cout << "[Stack] Clipped " << points.size() - clipped.size() << " points.\n";
+
+	return std::move(clipped);
+}
+
+float SpimStack::alignSingleStep(const SpimStack* reference, glm::mat4& delta, std::vector<glm::vec4>& debugPoints)
 {
 
-	vector<vec4> referencePoints;// = reference->extractPoints(this->getOBBox());
-	vector<vec4> targetPoints;// = this->extractPoints(reference->getOBBox());
+	// extract transformed points
+	vector<vec4> referencePoints = reference->extractTransformedPoints();;
+	vector<vec4> targetPoints = this->extractTransformedPoints();
 
-	std::cout << "[Align] Extracted " << referencePoints.size() << " reference and " << targetPoints.size() << " target points.\n";
 
+	// clip points
+	referencePoints = this->clipPoints(referencePoints);
+	targetPoints = reference->clipPoints(targetPoints);
+	
+	
 
+	std::cout << "[Align] Extracted " << referencePoints.size() << " reference and\n";
+	std::cout << "[Align]           " << targetPoints.size() << " target points.\n";
+	std::cout << "[Align] Overlap:  " << (float)std::min(referencePoints.size(), targetPoints.size()) / std::max(referencePoints.size(), targetPoints.size()) << std::endl;
+
+	/*
 	// build a Kd-tree here?
 
 
 	// find the closest points
 	vector<size_t> closestReference(referencePoints.size());
-	
-	
-
+		
+	std::cout << "[Align] Searching for closest points (O(n^2)) = O(" << (int)(referencePoints.size()*targetPoints.size())/1000000 << "e6) ... \n";
 	for (size_t i = 0; i < referencePoints.size(); ++i)
 	{
 		
@@ -548,7 +579,7 @@ float SpimStack::alignSingleStep(const SpimStack* reference, glm::mat4& delta)
 	
 	meanDistance /= closestReference.size();
 	std::cout << "[Align] Mean distance before alignment: " << meanDistance << std::endl;
-
+	*/
 
 	// calculate delta transformation
 
@@ -563,12 +594,15 @@ float SpimStack::alignSingleStep(const SpimStack* reference, glm::mat4& delta)
 	
 
 	// calculate new error ... ?
-	float oldMDistance = meanDistance;
+	
+
+
+	debugPoints = referencePoints;
+	std::cout << "[Debug] Extracted " << debugPoints.size() << " points.\n";
 
 
 
-
-	return meanDistance;
+	return 0.f;
 }
 
 

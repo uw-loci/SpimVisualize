@@ -32,12 +32,15 @@ public:
 
 	// extracts the points in world coords. The w coordinate contains the point's value
 	std::vector<glm::vec4> extractTransformedPoints() const;
+	
+	// clips the input points against this transformed volume
+	std::vector<glm::vec4> clipPoints(const std::vector<glm::vec4>& points) const;
+
 
 	/// Tries to automatically align two datasets based on their voxel values.
 	/// @return the mean error
-	float alignSingleStep(const SpimStack* reference, glm::mat4& deltaTransform);
-
-
+	float alignSingleStep(const SpimStack* reference, glm::mat4& deltaTransform, std::vector<glm::vec4>& debugPoints);
+	
 	AABB getBBox() const;
 
 	void setRotation(float angle);
@@ -80,15 +83,13 @@ private:
 
 
 	glm::mat4				transform;
-
-
+	
 	void createPlaneLists();
 
 
 	void drawZPlanes(const glm::vec3& view) const;
 	void drawXPlanes(const glm::vec3& view) const;
 	void drawYPlanes(const glm::vec3& view) const;
-
 
 };
 

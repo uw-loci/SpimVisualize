@@ -32,10 +32,7 @@ public:
 	void moveStack(const glm::vec2& delta);
 	void rotateCurrentStack(float rotY);
 
-
-	std::vector<glm::vec4> TEST_points;
-	void TEST_extractPoints();
-
+	void TEST_alignStacks();
 
 	void updateMouseMotion(const glm::ivec2& cursor);
 	
@@ -81,6 +78,9 @@ private:
 	Shader*					volumeShader;
 	Shader*					sliceShader;
 	
+
+	std::vector<glm::vec4>	TEST_points;
+
 
 	SpimRegistrationApp(const SpimRegistrationApp&);
 
