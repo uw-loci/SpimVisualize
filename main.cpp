@@ -269,7 +269,7 @@ int main(int argc, const char** argv)
 	try
 	{
 		
-		for (int i = 0; i < 2; ++i)
+		for (int i = 0; i < 1; ++i)
 		{
 			char filename[256];
 			//sprintf(filename, "e:/spim/test/spim_TL00_Angle%d.tif", i);

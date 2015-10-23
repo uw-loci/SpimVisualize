@@ -50,6 +50,8 @@ public:
 	inline const std::string& getFilename() const { return filename;  }
 
 private:
+	glm::vec3			dimensions;
+
 	unsigned int		width, height, depth;
 	unsigned int		textures;
 

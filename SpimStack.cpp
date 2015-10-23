@@ -18,9 +18,9 @@ using namespace std;
 using namespace glm;
 
 // voxel dimensions in microns
-static const vec3 DIMENSIONS(0.625, 0.625, 3);
+static const vec3 DEFAULT_DIMENSIONS(0.625, 0.625, 3);
 
-SpimStack::SpimStack(const string& filename) : width(0), height(0), depth(0), volume(nullptr), volumeTextureId(0), transform(1.f), enabled(true)
+SpimStack::SpimStack(const string& filename) : dimensions(DEFAULT_DIMENSIONS), width(0), height(0), depth(0), volume(nullptr), volumeTextureId(0), transform(1.f), enabled(true)
 {
 	volumeList[0] = 0;
 	volumeList[1] = 0;
@@ -108,20 +108,24 @@ void SpimStack::subsample()
 	assert(volume);
 
 
-	unsigned int w = width / 2;
-	unsigned int h = height / 2;
+	dimensions *= vec3(2.f, 2.f, 1.f);
+	
+	std::cout << "[Spimstack] Subsampling to " << width / 2 << "x" << height / 2 << "x" << depth << std::endl;
 
-	unsigned short* newData = new unsigned short[w*h*depth];
-
-
+	unsigned short* newData = new unsigned short[(width/2)*(height/2)*depth];
+	
 	for (unsigned int z = 0; z < depth; ++z)
 	{
-		for (unsigned int x = 0; x < w; ++x)
+		for (unsigned int x = 0, nx = 0; x < width;  x+=2, ++nx)
 		{
-			for (unsigned int y = 0; y < h; ++y)
+			for (unsigned int y = 0, ny = 0; y < height; y += 2, ++ny)
 			{
-				const unsigned short val = volume[(x * 2) + (y * 2)*w + z*w*h];
-				newData[x + y*w + z*w*h] = val;
+				//std::cout << "x y z " << x << "," << y << "," << z << " -> " << (x * 2) << "," << (y * 2) << "," << z << std::endl;
+
+
+				const unsigned short val = volume[x + y*width + z*width*height];
+				newData[nx + ny*width / 2 + z*width / 2 * height / 2] = val;
+
 			}
 		}
 	}
@@ -130,8 +134,8 @@ void SpimStack::subsample()
 
 	delete volume;
 	volume = newData;
-	width = w;
-	height = h;
+	width /= 2;
+	height /= 2;
 
 	glBindTexture(GL_TEXTURE_3D, volumeTextureId);
 	glTexImage3D(GL_TEXTURE_3D, 0, GL_R16I, width, height, depth, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, volume);
@@ -157,7 +161,7 @@ std::vector<glm::vec4> SpimStack::extractRegistrationPoints(unsigned short thres
 				if (val >= threshold)
 				{
 					vec3 coord(x, y, z);
-					vec4 pt(coord * DIMENSIONS, float(val)/std::numeric_limits<unsigned short>::max());
+					vec4 pt(coord * dimensions, float(val) / std::numeric_limits<unsigned short>::max());
 					points.push_back(pt); 
 				}
 
@@ -176,7 +180,7 @@ std::vector<glm::vec4> SpimStack::extractRegistrationPoints(unsigned short thres
 AABB&& SpimStack::getBBox() const
 {
 	AABB bbox;
-	vec3 vol = DIMENSIONS * vec3(width, height, depth);
+	vec3 vol = dimensions * vec3(width, height, depth);
 	bbox.min = vec3(0.f); // -vol * 0.5f;
 	bbox.max = vol;// *0.5f;
 	
@@ -185,7 +189,7 @@ AABB&& SpimStack::getBBox() const
 
 glm::vec3 SpimStack::getCentroid() const
 {
-	glm::vec3 center = DIMENSIONS * vec3(width, height, depth) * 0.5f;
+	glm::vec3 center = dimensions * vec3(width, height, depth) * 0.5f;
 	glm::vec4 c = transform * glm::vec4(center, 1.f);
 	
 	return glm::vec3(c);
@@ -332,11 +336,11 @@ void SpimStack::drawZPlanes(const glm::vec3& view) const
 	{
 		for (unsigned int z = 0; z < depth; ++z)
 		{
-			float zf = (float)z * DIMENSIONS.z;
+			float zf = (float)z * dimensions.z;
 			float zn = (float)z / depth;
 
-			const float w = width * DIMENSIONS.x;
-			const float h = height * DIMENSIONS.y;
+			const float w = width * dimensions.x;
+			const float h = height * dimensions.y;
 
 			glTexCoord3f(0.f, 0.f, zn);
 			glVertex3f(0.f, 0.f, zf);
@@ -357,11 +361,11 @@ void SpimStack::drawZPlanes(const glm::vec3& view) const
 
 		for (unsigned int z = depth; z > 0; --z)
 		{
-			float zf = (float)z * DIMENSIONS.z;
+			float zf = (float)z * dimensions.z;
 			float zn = (float)z / depth;
 
-			const float w = width * DIMENSIONS.x;
-			const float h = height * DIMENSIONS.y;
+			const float w = width * dimensions.x;
+			const float h = height * dimensions.y;
 
 			glTexCoord3f(0.f, 0.f, zn);
 			glVertex3f(0.f, 0.f, zf);
@@ -388,11 +392,11 @@ void SpimStack::drawYPlanes(const glm::vec3& view) const
 	{
 		for (unsigned int y = 0; y < height; ++y)
 		{
-			float yf = (float)y  * DIMENSIONS.y;
+			float yf = (float)y  * dimensions.y;
 			float yn = (float)y / height;
 
-			const float w = width * DIMENSIONS.x;
-			const float d = depth * DIMENSIONS.z;
+			const float w = width * dimensions.x;
+			const float d = depth * dimensions.z;
 
 
 			glTexCoord3f(0, yn, 0);
@@ -413,11 +417,11 @@ void SpimStack::drawYPlanes(const glm::vec3& view) const
 	{
 		for (unsigned int y = height; y > 0; --y)
 		{
-			float yf = (float)y  * DIMENSIONS.y;
+			float yf = (float)y  * dimensions.y;
 			float yn = (float)y / height;
 
-			const float w = width * DIMENSIONS.x;
-			const float d = depth * DIMENSIONS.z;
+			const float w = width * dimensions.x;
+			const float d = depth * dimensions.z;
 
 
 			glTexCoord3f(0, yn, 0);
@@ -450,11 +454,11 @@ void SpimStack::drawXPlanes(const glm::vec3& view) const
 	{
 		for (unsigned x = 0; x < width; ++x)
 		{
-			float xf = (float)x * DIMENSIONS.x;
+			float xf = (float)x * dimensions.x;
 			float xn = (float)x / width;
 
-			const float h = height * DIMENSIONS.y;
-			const float d = depth* DIMENSIONS.z;
+			const float h = height * dimensions.y;
+			const float d = depth* dimensions.z;
 
 
 			glTexCoord3f(xn, 0, 0);
@@ -474,11 +478,11 @@ void SpimStack::drawXPlanes(const glm::vec3& view) const
 	{
 		for (unsigned x = width; x > 0; --x)
 		{
-			float xf = (float)x * DIMENSIONS.x;
+			float xf = (float)x * dimensions.x;
 			float xn = (float)x / width;
 
-			const float h = height * DIMENSIONS.y;
-			const float d = depth* DIMENSIONS.z;
+			const float h = height * dimensions.y;
+			const float d = depth* dimensions.z;
 
 
 			glTexCoord3f(xn, 0, 0);
