@@ -23,6 +23,9 @@ public:
 	void saveTransform(const std::string& filename) const;
 	void loadTransform(const std::string& filename);
 
+	void subsample();
+
+
 	// extracts registration points based on a simple threshold in _local_ coords. use the stack's transform to transform them to world space
 	std::vector<glm::vec4> extractRegistrationPoints(unsigned short threshold) const;
 

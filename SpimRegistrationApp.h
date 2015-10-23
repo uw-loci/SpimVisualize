@@ -30,7 +30,6 @@ public:
 	void toggleStack(int n);
 	inline void toggleCurrentStack() { toggleStack(currentStack); }
 	void moveStack(const glm::vec2& delta);
-
 	void rotateCurrentStack(float rotY);
 
 
@@ -51,8 +50,8 @@ public:
 	inline void toggleBboxes() { drawBboxes = !drawBboxes; }
 	inline void toggleSlices() { drawSlices = !drawSlices; }
 
-	inline void increaseMinThreshold() { minThreshold += 10; }
-	inline void decreaseMinThreshold() { minThreshold -= 10; }
+	inline void increaseBeadThreshold() { beadThreshold += 10; }
+	inline void decreaseBeadThreshold() { beadThreshold -= 10; }
 
 private:
 	ILayout*				layout;
@@ -72,7 +71,7 @@ private:
 	unsigned int			sliceCount;
 
 	// thresholding values
-	unsigned short			minThreshold;
+	unsigned short			beadThreshold;
 
 	Shader*					pointShader;
 	Shader*					volumeShader;

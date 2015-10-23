@@ -10,14 +10,14 @@ struct Volume
 	bool			enabled;
 };
 
-#define VOLUMES 1
+#define VOLUMES 2
 uniform Volume volume[VOLUMES];
 
 uniform float sliceCount = 100;
 uniform float sliceWeight;
 
-uniform int minVal = 90;
-uniform int maxVal = 110;
+uniform int minVal = 70;
+uniform int maxVal = 100;
 
 uniform int beadThreshold = 150;
 

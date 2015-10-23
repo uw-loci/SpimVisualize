@@ -103,6 +103,41 @@ SpimStack::~SpimStack()
 }
 
 
+void SpimStack::subsample()
+{
+	assert(volume);
+
+
+	unsigned int w = width / 2;
+	unsigned int h = height / 2;
+
+	unsigned short* newData = new unsigned short[w*h*depth];
+
+
+	for (unsigned int z = 0; z < depth; ++z)
+	{
+		for (unsigned int x = 0; x < w; ++x)
+		{
+			for (unsigned int y = 0; y < h; ++y)
+			{
+				const unsigned short val = volume[(x * 2) + (y * 2)*w + z*w*h];
+				newData[x + y*w + z*w*h] = val;
+			}
+		}
+	}
+
+
+
+	delete volume;
+	volume = newData;
+	width = w;
+	height = h;
+
+	glBindTexture(GL_TEXTURE_3D, volumeTextureId);
+	glTexImage3D(GL_TEXTURE_3D, 0, GL_R16I, width, height, depth, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, volume);
+
+}
+
 
 std::vector<glm::vec4> SpimStack::extractRegistrationPoints(unsigned short threshold) const
 {

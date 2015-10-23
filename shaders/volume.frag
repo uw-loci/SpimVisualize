@@ -4,7 +4,7 @@
 
 uniform isampler3D volumeTexture;
 
-uniform int minThreshold = 200;
+uniform int beadThreshold = 150;
 
 varying vec3 texcoord;
 
@@ -14,8 +14,8 @@ uniform float sliceWeight = 1.0;
 
 uniform vec3 viewDir;
 
-uniform int minVal = 90;
-uniform int maxVal = 110;
+uniform int minVal = 80;
+uniform int maxVal = 120;
 
 void main()
 {
@@ -50,6 +50,13 @@ void main()
 
 
 
-	gl_FragColor = vec4(vec3(value) * viewDir, alpha);
+	vec3 color = vec3(value);// * viewDir;
+
+	if (intensity > beadThreshold)
+		color = vec3(1.0, 1.0, .0);
+
+	gl_FragColor = vec4(color, alpha);
+
+
 
 }

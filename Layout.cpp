@@ -91,8 +91,8 @@ PerspectiveFullLayout::PerspectiveFullLayout(const ivec2& resolution) : SingleVi
 	viewport.name = Viewport::PERSPECTIVE;
 
 	OrbitCamera* cam = dynamic_cast<OrbitCamera*>(viewport.camera);
-	cam->far = CAMERA_DISTANCE;
-	cam->near = cam->near / 100.0;
+	cam->far = CAMERA_DISTANCE * 4.0;
+	cam->near = cam->far / 100.0;
 	cam->aspect = (float)resolution.x / resolution.y;
 
 	cam->radius = (CAMERA_DISTANCE * 1.5);
@@ -119,8 +119,8 @@ FourViewLayout::FourViewLayout(const ivec2& size)
 	views[3].color = vec3(1);
 
 	OrbitCamera* cam = dynamic_cast<OrbitCamera*>(views[3].camera);
-	cam->far = CAMERA_DISTANCE;
-	cam->near = cam->near / 100.0;
+	cam->far = CAMERA_DISTANCE * 4.0;
+	cam->near = cam->far / 100.0;
 	cam->radius = (CAMERA_DISTANCE * 1.5);
 	cam->target = CAMERA_TARGET;
 

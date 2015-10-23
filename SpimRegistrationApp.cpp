@@ -10,7 +10,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(0), sliceShader(0), volumeShader(0), layout(0), 
-drawGrid(true), drawBboxes(false), drawSlices(false), currentStack(-1), sliceCount(100)
+drawGrid(true), drawBboxes(false), drawSlices(false), currentStack(-1), sliceCount(100), beadThreshold(100)
 {
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
@@ -58,6 +58,9 @@ void SpimRegistrationApp::drawScene()
 void SpimRegistrationApp::addSpimStack(const std::string& filename)
 {
 	SpimStack* stack = new SpimStack(filename);
+	stack->subsample();
+
+
 	stacks.push_back(stack);
 	AABB bbox = stack->getBBox();
 	
@@ -131,7 +134,7 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 		glDepthMask(GL_FALSE);
 
 		sliceShader->bind();
-		sliceShader->setUniform("minThreshold", (int)minThreshold);
+		sliceShader->setUniform("beadThreshold", (int)beadThreshold);
 		sliceShader->setUniform("mvpMatrix", mvp);
 
 		for (size_t i = 0; i < stacks.size(); ++i)
@@ -164,7 +167,7 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 		volumeShader->bind();
-		volumeShader->setUniform("minThreshold", minThreshold);
+		volumeShader->setUniform("beadThreshold", beadThreshold);
 		volumeShader->setUniform("sliceCount", (float)sliceCount);
 
 
