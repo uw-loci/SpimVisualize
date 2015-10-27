@@ -22,6 +22,7 @@
     <ClCompile Include="SpimPlane.cpp" />
     <ClCompile Include="SpimRegistrationApp.cpp" />
     <ClCompile Include="SpimStack.cpp" />
+    <ClCompile Include="StackRegistration.cpp" />
     <ClCompile Include="stb_image.c" />
   </ItemGroup>
   <ItemGroup>
@@ -36,6 +37,7 @@
     <ClInclude Include="SpimPlane.h" />
     <ClInclude Include="SpimRegistrationApp.h" />
     <ClInclude Include="SpimStack.h" />
+    <ClInclude Include="StackRegistration.h" />
     <ClInclude Include="stb_image.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

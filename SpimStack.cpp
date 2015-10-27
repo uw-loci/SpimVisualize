@@ -1,7 +1,7 @@
 #include "SpimStack.h"
 #include "AABB.h"
 #include "Shader.h"
-#include "nanoflann.hpp"
+#include "StackRegistration.h"
 
 #include <iostream>
 #include <cstring>
@@ -526,266 +526,6 @@ void SpimStack::drawXPlanes(const glm::vec3& view) const
 }
 
 
-vector<vec4> SpimStack::clipPoints(const vector<vec4>& points) const
-{
-	// keep only the points that are in this stacks's bbox
-	mat4 invMat = inverse(transform);
-	const AABB bbox = this->getBBox();
-
-	vector<vec4> clipped;
-
-	for (size_t i = 0; i < points.size(); ++i)
-	{
-		vec4 pt = invMat * vec4(vec3(points[i]), 1.f);
-		if (bbox.isInside(vec3(pt)))
-			clipped.push_back(points[i]);
-	}
-
-
-	std::cout << "[Stack] Clipped " << points.size() - clipped.size() << " points.\n";
-
-	return std::move(clipped);
-}
-
-
-// And this is the "dataset to kd-tree" adaptor class:
-struct PointCloudAdaptor
-{
-	const std::vector<glm::vec4>&		points;
-
-	/// The constructor that sets the data set source
-	PointCloudAdaptor(const std::vector<glm::vec4>& p) : points(p){ }
-	
-	// Must return the number of data points
-	inline size_t kdtree_get_point_count() const { return points.size(); }
-
-	// Returns the distance between the vector "p1[0:size-1]" and the data point with index "idx_p2" stored in the class:
-	inline float kdtree_distance(const float *p1, const size_t idx_p2, size_t /*size*/) const
-	{
-		vec4 a(p1[0], p1[1], p1[2], p1[3]);
-		vec4 delta = a - points[idx_p2];
-		return dot(delta, delta);
-	}
-
-	// Returns the dim'th component of the idx'th point in the class:
-	// Since this is inlined and the "dim" argument is typically an immediate value, the
-	//  "if/else's" are actually solved at compile time.
-	inline float kdtree_get_pt(const size_t idx, int dim) const
-	{
-		if (dim == 0) return points[idx].x;
-		else if (dim == 1) return points[idx].y;
-		else if (dim == 2) return points[idx].z;
-		else return points[idx].w;
-	}
-
-	// Optional bounding-box computation: return false to default to a standard bbox computation loop.
-	//   Return true if the BBOX was already computed by the class and returned in "bb" so it can be avoided to redo it again.
-	//   Look at bb.size() to find out the expected dimensionality (e.g. 2 or 3 for point clouds)
-	template <class BBOX>
-	bool kdtree_get_bbox(BBOX& /*bb*/) const { return false; }
-
-}; // end of PointCloudAdaptor
-
-
-float SpimStack::alignSingleStep(const SpimStack* reference, glm::mat4& delta, std::vector<glm::vec4>& debugPoints)
-{
-
-	// extract transformed points and clip against other bbox
-	vector<vec4> referencePoints = reference->extractTransformedPoints();;
-	referencePoints = this->clipPoints(referencePoints);
-
-	// if we have no points here, the other cloud must also be empty
-	if (referencePoints.empty())
-	{
-		std::cout << "[Align] No overlapping points remaining, quitting.\n";
-		return 0.f;
-	}
-
-	vector<vec4> targetPoints = this->extractTransformedPoints();
-	targetPoints = reference->clipPoints(targetPoints);
-
-
-
-	std::cout << "[Align] Extracted " << referencePoints.size() << " reference and\n";
-	std::cout << "[Align]           " << targetPoints.size() << " target points.\n";
-	std::cout << "[Align] Overlap:  " << (float)std::min(referencePoints.size(), targetPoints.size()) / std::max(referencePoints.size(), targetPoints.size()) << std::endl;
-	/*
-
-
-	const PointCloudAdaptor refAdaptor(referencePoints);
-	const PointCloudAdaptor tgtAdaptor(targetPoints);
-
-	// construct a kd-tree index:
-	typedef nanoflann::KDTreeSingleIndexAdaptor<
-	nanoflann::L2_Simple_Adaptor<float, PointCloudAdaptor>,
-	PointCloudAdaptor,
-	4
-	> KdTree;
-
-	const int MAX_LEAF = 12;
-	KdTree refTree(4, refAdaptor, MAX_LEAF);
-	refTree.buildIndex();
-
-
-	// find the closest points
-	vector<size_t> closestReference(targetPoints.size());
-	float meanDistance = 0.f;
-
-	std::cout << "[Align] Searching for closest points (O(nlogn)) = O(" << (int)(referencePoints.size()*log((float)targetPoints.size())) / 1000000 << "e6) ... \n";
-	for (size_t i = 0; i < targetPoints.size(); ++i)
-	{
-	// knn search
-	const size_t num_results = 1;
-	size_t ret_index;
-	float out_dist_sqr;
-	nanoflann::KNNResultSet<float> resultSet(num_results);
-	resultSet.init(&ret_index, &out_dist_sqr);
-
-	const vec4& queryPt = targetPoints[i];
-
-	refTree.findNeighbors(resultSet, &queryPt[0], nanoflann::SearchParams(10));
-
-	closestReference[i] = ret_index;
-	meanDistance += sqrtf(out_dist_sqr);
-	}
-
-	// calculate mean distance/error
-	meanDistance /= closestReference.size();
-	std::cout << "[Align] Mean distance before alignment: " << meanDistance << std::endl;
-	*/
-
-
-	// calculate delta transformation
-	delta = mat4(1.f);
-
-
-	/*
-	// convert to pcl pointclouds
-	pcl::PointCloud<pcl::PointXYZI>::Ptr refCloud(new pcl::PointCloud<pcl::PointXYZI>);
-	pcl::PointCloud<pcl::PointXYZI>::Ptr tgtCloud(new pcl::PointCloud<pcl::PointXYZI>);
-
-	std::for_each(targetPoints.begin(), targetPoints.end(), [&tgtCloud](const glm::vec4& v)
-	{
-	pcl::PointXYZI pt;
-	pt.x = v.x;
-	pt.y = v.y;
-	pt.z = v.z;
-	pt.intensity = v.w;
-
-	tgtCloud->push_back(pt);
-	});
-
-	std::for_each(referencePoints.begin(), referencePoints.end(), [&refCloud](const glm::vec4& v)
-	{
-	pcl::PointXYZI pt;
-	pt.x = v.x;
-	pt.y = v.y;
-	pt.z = v.z;
-	pt.intensity = v.w;
-
-	refCloud->push_back(pt);
-	});
-
-
-	pcl::IterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI> icp;
-	icp.setInputCloud(tgtCloud);
-	icp.setInputTarget(refCloud);
-	pcl::PointCloud<pcl::PointXYZI> finalCloud;
-	icp.align(finalCloud);
-	std::cout << "has converged:" << icp.hasConverged() << " score: " <<
-	icp.getFitnessScore() << std::endl;
-	std::cout << icp.getFinalTransformation() << std::endl;
-
-
-	*/
-
-
-	// convert clouds to opencv
-	cv::Mat tgtCloud(1, targetPoints.size(), CV_32FC3);
-	cv::Point3f* data = tgtCloud.ptr<cv::Point3f>();
-	for (size_t i = 0; i < targetPoints.size(); ++i)
-	{
-		const glm::vec4& pt = targetPoints[i];
-		data[i].x = pt.x;
-		data[i].y = pt.y;
-		data[i].z = pt.z;
-	}
-		
-	cv::Mat refCloud(1, referencePoints.size(), CV_32FC3);
-	data = refCloud.ptr<cv::Point3f>();
-	for (size_t i = 0; i < referencePoints.size(); ++i)
-	{
-		const glm::vec4& pt = referencePoints[i];
-		data[i].x = pt.x;
-		data[i].y = pt.y;
-		data[i].z = pt.z;
-	}
-
-	
-	cv::Mat transformEstimate(3, 4, CV_32F);
-	vector<uchar> outliers;
-
-	try
-	{
-
-		double ransacThreshold = 0.1;
-		double confidence = 0.9;
-		cv::estimateAffine3D(tgtCloud, refCloud, transformEstimate, outliers, ransacThreshold, confidence);
-
-		std::cout << "[Debug] Transform estimate: " << transformEstimate << std::endl;
-
-
-		// transform points
-		mat4 oldTransform = this->transform;
-
-		transform = mat4(1.f);
-		for (int i = 0; i < 4; ++i)
-		{
-			for (int j = 0; j < 3; ++j)
-				transform[i][j] = transformEstimate.at<float>(i, j);
-
-			transform[i][3] = 0.f;
-		}
-		transform[3][3] = 1.f;
-
-		transform *= delta;
-	}
-	catch (cv::Exception& e)
-	{
-		std::cout << "[Debug] OpenCV error: " << e.what() << std::endl;
-		return 0.f;
-	}
-
-
-	/*
-	
-
-	// calculate new error ... ?
-	float  meanDistance = 0.f;
-	for (size_t i = 0; i < closestReference.size(); ++i)
-	{
-		vec4 a = targetPoints[i];
-		vec4 b = referencePoints[closestReference[i]];
-		vec4 d = a - b;
-
-		meanDistance += dot(d, d);
-	}
-	meanDistance /= closestReference.size();
-	std::cout << "[Align] Mean distance after alignment: " << meanDistance << std::endl;
-
-	*/
-
-
-
-	debugPoints = referencePoints;
-	std::cout << "[Debug] Extracted " << debugPoints.size() << " points.\n";
-
-
-
-	return 0.f;
-}
-
-
 vector<vec4> SpimStack::extractTransformedPoints() const
 {
 	vector<vec4> points;
@@ -813,4 +553,43 @@ vector<vec4> SpimStack::extractTransformedPoints() const
 	//cout << "[Stack] Extracted " << points.size() << " points (" << (float)points.size() / (width*height*depth) * 100 << "%)" << std::endl;
 
  	return std::move(points);
+}
+
+vector<vec4> SpimStack::extractTransformedPoints(const SpimStack* clip) const
+{
+	vector<vec4> points;
+	points.reserve(width*height*depth);
+
+
+	mat4 invMat = inverse(clip->transform);
+	const AABB bbox = clip->getBBox();
+
+	for (unsigned int z = 0; z < depth; ++z)
+	{
+		for (unsigned int x = 0; x < width; ++x)
+		{
+			for (unsigned int y = 0; y < height; ++y)
+			{
+				const unsigned short val = volume[x + y*width + z*width*height];
+				vec3 coord(x, y, z);
+				vec4 point(coord * dimensions, 1.f);
+
+				// transform to world space
+				point = transform * point;
+				
+				// transform to the other's clip space
+				vec4 pt = invMat * point;
+				if (bbox.isInside(vec3(pt)))
+				{
+					point.w = float(val) / std::numeric_limits<unsigned short>::max();
+					points.push_back(point);
+				}
+			}
+
+		}
+	}
+
+	//cout << "[Stack] Extracted " << points.size() << " points (" << (float)points.size() / (width*height*depth) * 100 << "%)" << std::endl;
+
+	return std::move(points);
 }

@@ -297,20 +297,19 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 	}
 
 	
-	if (!TEST_points.empty())
+	if (!refPointsA.empty())
 	{
 		//std::cout << "[Debug] Drawing " << TEST_points.size() << " points.\n";
 
-		// draw points
 		glEnableClientState(GL_VERTEX_ARRAY);
-		glVertexPointer(3, GL_FLOAT, sizeof(glm::vec4), glm::value_ptr(TEST_points[0]));
 
-		glPointSize(2.f);
+		// draw points
 		glColor3f(1.f, 0.f, 0.f);
-		glDrawArrays(GL_POINTS, 1, TEST_points.size());
+		refPointsA.draw();
+		glColor3f(0.f, 1.f, 0.f);
+		refPointsB.draw();
 
 		glDisableClientState(GL_VERTEX_ARRAY);
-
 	}
 	
 }
@@ -465,9 +464,7 @@ void SpimRegistrationApp::TEST_alignStacks()
 	if (stacks.size() < 2)
 		return;
 
-	TEST_points.clear();
-
-	mat4 delta(1.f);
-	stacks[1]->alignSingleStep(stacks[0], delta, TEST_points);
+	refPointsA.setPoints(stacks[0]->extractTransformedPoints(stacks[1]));
+	refPointsB.setPoints(stacks[1]->extractTransformedPoints(stacks[0]));
 
 }

@@ -4,11 +4,13 @@
 #include <string>
 
 #include "AABB.h"
+#include "StackRegistration.h"
 
 class Shader;
 class ILayout;
 class SpimStack;
 class Viewport;
+class ReferencePoints;
 
 class SpimRegistrationApp
 {
@@ -81,8 +83,7 @@ private:
 	Shader*					volumeShader;
 	Shader*					sliceShader;
 	
-
-	std::vector<glm::vec4>	TEST_points;
+	ReferencePoints			refPointsA, refPointsB;
 
 
 	SpimRegistrationApp(const SpimRegistrationApp&);

@@ -7,6 +7,7 @@
 
 struct AABB;
 class Shader;
+class ReferencePoints;
 
 // a single stack of SPIM images
 class SpimStack
@@ -32,14 +33,12 @@ public:
 
 	// extracts the points in world coords. The w coordinate contains the point's value
 	std::vector<glm::vec4> extractTransformedPoints() const;
-	
-	// clips the input points against this transformed volume
-	std::vector<glm::vec4> clipPoints(const std::vector<glm::vec4>& points) const;
-
+	// extracts the points in world space and clip them against the other's transformed bounding box. The w coordinate contains the point's value
+	std::vector<glm::vec4> extractTransformedPoints(const SpimStack* clip) const;
 
 	/// Tries to automatically align two datasets based on their voxel values.
 	/// @return the mean error
-	float alignSingleStep(const SpimStack* reference, glm::mat4& deltaTransform, std::vector<glm::vec4>& debugPoints);
+	float alignSingleStep(const SpimStack* reference, glm::mat4& deltaTransform, std::vector<glm::vec4>& debugPointsRef, std::vector<glm::vec4>& debugPointsTgt);
 	
 	AABB getBBox() const;
 
