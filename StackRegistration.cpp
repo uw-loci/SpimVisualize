@@ -53,13 +53,10 @@ struct PointCloudAdaptor
 
 }; // end of PointCloudAdaptor
 
-float ReferencePoints::determineClosestPairs(const ReferencePoints* reference)
-{
-	if (reference->points.size() > this->points.size())
-		throw exception("There must be fewer reference points than target points!");
 
-	
-	const PointCloudAdaptor refAdaptor(reference->points);
+void ReferencePoints::trim(const ReferencePoints* smaller)
+{
+	const PointCloudAdaptor refAdaptor(smaller->points);
 
 	// construct a kd-tree index:
 	typedef nanoflann::KDTreeSingleIndexAdaptor<
@@ -72,11 +69,11 @@ float ReferencePoints::determineClosestPairs(const ReferencePoints* reference)
 	KdTree refTree(4, refAdaptor, MAX_LEAF);
 	refTree.buildIndex();
 
-
 	// find the closest points
-	vector<size_t> closestIndex(reference->points.size(), 0);
-	cout << "[Align] Searching for closest points (O(nlogn)) = O(" << (int)(reference->points.size()*log((float)this->points.size())) / 1000000 << "e6) ... \n";
-	for (size_t i = 0; i < this->points.size(); ++i)
+	vector<size_t> closestIndex(smaller->size(), 0);
+
+	cout << "[Align] Searching for closest points (O(nlogn)) = O(" << (int)(smaller->points.size()*log((float)this->points.size())) / 1000000 << "e6) ... \n";
+	for (size_t i = 0; i < points.size(); ++i)
 	{
 		// knn search
 		const size_t num_results = 1;
@@ -89,17 +86,39 @@ float ReferencePoints::determineClosestPairs(const ReferencePoints* reference)
 
 		refTree.findNeighbors(resultSet, &queryPt[0], nanoflann::SearchParams(10));
 
-		closestIndex[i] = ret_index;
+		closestIndex[ret_index] = i;;
 	}
 
-	std::cout << "[Align] Rearranging points ... ";
+	
 	vector<vec4> temp(points);
+	points.resize(closestIndex.size());
 
 	for (size_t i = 0; i < closestIndex.size(); ++i)
+	{
 		points[i] = temp[closestIndex[i]];
-	std::cout << "done.\n";
+	}
 
 
+	std::cout << "[Align] Done reshuffling points. Trimmed " << temp.size() - points.size() << " points.\n";
+
+}
+static inline cv::Point3f makePt(const glm::vec4& v)
+{
+	return cv::Point3f(v.x, v.y, v.z);
+}
+
+static inline vector<cv::Point3f> makeCVCloud(const vector<vec4>& points)
+{
+	vector<cv::Point3f> result(points.size());
+	for (size_t i = 0; i < points.size(); ++i)
+		result[i] = makePt(points[i]);
+	
+	return move(result);
+}
+
+
+float ReferencePoints::calculateMeanDistance(const ReferencePoints* reference) const
+{
 	assert(points.size() == reference->points.size());
 
 	// calculate mean distance/error
@@ -111,23 +130,8 @@ float ReferencePoints::determineClosestPairs(const ReferencePoints* reference)
 		meanDistance += sqrtf(dot(d, d));
 	}
 
-	meanDistance /= closestIndex.size();
-	std::cout << "[Align] Mean distance before alignment: " << meanDistance << std::endl;
-
+	meanDistance /= points.size();
 	return meanDistance;
-}
-
-static inline cv::Point3f makePt(const glm::vec4& v)
-{
-	return cv::Point3f(v.x, v.y, v.z);
-}
-
-static inline vector<cv::Point3f> makeCVCloud(const vector<vec4>& points)
-{
-	vector<cv::Point3f> result(points.size());
-	for (size_t i = 0; i < points.size(); ++i)
-		result[i] = makePt(points[i]);
-	std::move(result);
 }
 
 
@@ -140,9 +144,7 @@ void ReferencePoints::draw() const
 float ReferencePoints::align(const ReferencePoints* reference, mat4& delta)
 {
 	assert(points.size() == reference->points.size());
-
-
-
+	
 	// convert clouds to opencv
 	vector<cv::Point3f> refCloud = makeCVCloud(reference->points);
 	vector<cv::Point3f> tgtCloud = makeCVCloud(this->points);
@@ -154,8 +156,8 @@ float ReferencePoints::align(const ReferencePoints* reference, mat4& delta)
 		cv::Mat transformEstimate(3, 4, CV_64F);
 		vector<uchar> inliers;
 
-		double ransacThreshold = 0.1;
-		double confidence = 0.9;
+		double ransacThreshold = 1.0;
+		double confidence = 0.95;
 		cv::estimateAffine3D(tgtCloud, refCloud, transformEstimate, inliers, ransacThreshold, confidence);
 
 		// count inliers:
@@ -175,6 +177,8 @@ float ReferencePoints::align(const ReferencePoints* reference, mat4& delta)
 		
 		std::cout << "[Debug] Transform (glm): " << deltaTransform << std::endl;
 		delta = deltaTransform;
+
+		this->applyTransform(deltaTransform);
 	}
 	catch (cv::Exception& e)
 	{
@@ -182,32 +186,16 @@ float ReferencePoints::align(const ReferencePoints* reference, mat4& delta)
 		return 0.f;
 	}
 
+	
+}
 
-
-
-
-
-
-
-
-
-
-
-
-	// calculate mean distance/error
-	float meanDistance = 0.f;
-
+void ReferencePoints::applyTransform(const mat4& m)
+{
 	for (size_t i = 0; i < points.size(); ++i)
 	{
-		vec4 d = this->points[i] - reference->points[i];
-		meanDistance += sqrtf(dot(d, d));
+		float w = points[i].w;
+		vec4 pt = m * vec4(vec3(points[i]), 1.f);
+		points[i] = pt;
+		points[i].w = w;
 	}
-
-	meanDistance /= points.size();
-	std::cout << "[Align] Mean distance after alignment: " << meanDistance << std::endl;
-
-	return meanDistance;
-
-
-
 }

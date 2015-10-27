@@ -8,7 +8,9 @@
 #include <algorithm>
 #include <iostream>
 #include <GL/glew.h>
+
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/io.hpp>
 
 SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(0), sliceShader(0), volumeShader(0), layout(0), 
 drawGrid(true), drawBboxes(false), drawSlices(false), currentStack(-1), sliceCount(100), beadThreshold(100)
@@ -466,5 +468,27 @@ void SpimRegistrationApp::TEST_alignStacks()
 
 	refPointsA.setPoints(stacks[0]->extractTransformedPoints(stacks[1]));
 	refPointsB.setPoints(stacks[1]->extractTransformedPoints(stacks[0]));
+
+	std::cout << "[Align] Extracted " << refPointsA.size() << " and\n";
+	std::cout << "[Align]           " << refPointsB.size() << " points.\n";
+		
+
+	if (refPointsA.size() > refPointsB.size())
+		refPointsA.trim(&refPointsB);
+	else
+		refPointsB.trim(&refPointsA);
+
+
+
+	std::cout << "[Align] Mean distance before alignment: " << refPointsA.calculateMeanDistance(&refPointsB) << std::endl;
+
+	mat4 delta(1.f);
+	refPointsA.align(&refPointsB, delta);
+
+	std::cout << delta << std::endl;
+
+
+
+	std::cout << "[Align] Mean distance after alignment: " << refPointsA.calculateMeanDistance(&refPointsB) << std::endl;
 
 }
