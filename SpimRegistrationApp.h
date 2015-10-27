@@ -47,6 +47,9 @@ public:
 	void centerCamera();
 
 
+	void saveStackTransformations() const;
+	void loadStackTransformations();
+	
 	inline void toggleGrid() { drawGrid = !drawGrid; }
 	inline void toggleBboxes() { drawBboxes = !drawBboxes; }
 	inline void toggleSlices() { drawSlices = !drawSlices; }

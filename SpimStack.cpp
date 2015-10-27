@@ -15,7 +15,16 @@
 #include <FreeImage.h>
 #include <GL/glew.h>
 
+/*
+#include <pcl/common/common.h>
+#include <pcl/point_types.h>
+#include <pcl/registration/icp.h>
+#include <pcl/registration/transformation_estimation.h>
+*/
 
+#include <opencv2/calib3d.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/opencv.hpp>
 
 using namespace std;
 using namespace glm;
@@ -23,7 +32,7 @@ using namespace glm;
 // voxel dimensions in microns
 static const vec3 DEFAULT_DIMENSIONS(0.625, 0.625, 3);
 
-SpimStack::SpimStack(const string& filename) : dimensions(DEFAULT_DIMENSIONS), width(0), height(0), depth(0), volume(nullptr), volumeTextureId(0), transform(1.f), enabled(true)
+SpimStack::SpimStack(const string& name, unsigned int subsampleSteps) : filename(name), dimensions(DEFAULT_DIMENSIONS), width(0), height(0), depth(0), volume(nullptr), volumeTextureId(0), transform(1.f), enabled(true)
 {
 	volumeList[0] = 0;
 	volumeList[1] = 0;
@@ -67,7 +76,6 @@ SpimStack::SpimStack(const string& filename) : dimensions(DEFAULT_DIMENSIONS), w
 
 	FreeImage_CloseMultiBitmap(fmb);
 
-
 	cout << "[Stack] Updating stats ... ";
 	maxVal = 0;
 	minVal = std::numeric_limits<unsigned short>::max();
@@ -79,6 +87,12 @@ SpimStack::SpimStack(const string& filename) : dimensions(DEFAULT_DIMENSIONS), w
 	}
 	cout << "done; range: " << minVal << "-" << maxVal << endl;
 
+	
+	if (subsampleSteps> 0)
+	{
+		for (int s = 0; s < subsampleSteps; ++s)
+			this->subsample(false);
+	}
 
 	cout << "[Stack] Creating 3D texture ... ";
 	glGenTextures(1, &volumeTextureId);
@@ -106,7 +120,7 @@ SpimStack::~SpimStack()
 }
 
 
-void SpimStack::subsample()
+void SpimStack::subsample(bool updateTexture)
 {
 	assert(volume);
 
@@ -140,9 +154,14 @@ void SpimStack::subsample()
 	width /= 2;
 	height /= 2;
 
-	glBindTexture(GL_TEXTURE_3D, volumeTextureId);
-	glTexImage3D(GL_TEXTURE_3D, 0, GL_R16I, width, height, depth, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, volume);
+	if (updateTexture)
+	{
+		if (!glIsTexture(volumeTextureId))
+			glGenTextures(1, &volumeTextureId);
 
+		glBindTexture(GL_TEXTURE_3D, volumeTextureId);
+		glTexImage3D(GL_TEXTURE_3D, 0, GL_R16I, width, height, depth, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, volume);
+	}
 }
 
 
@@ -300,7 +319,7 @@ void SpimStack::saveTransform(const std::string& filename) const
 	for (int i = 0; i < 16; ++i)
 		file << m[i] << std::endl;
 
-	std::cout << "[SpimPlane] Saved transform to \"" << filename << "\"\n";
+	std::cout << "[SpimStack] Saved transform to \"" << filename << "\"\n";
 }
 
 void SpimStack::loadTransform(const std::string& filename)
@@ -310,7 +329,7 @@ void SpimStack::loadTransform(const std::string& filename)
 
 	if (!file.is_open())
 	{
-		std::cerr << "[SpimPlane] Unable to load transformation from \"" << filename << "\"!\n";
+		std::cerr << "[SpimStack] Unable to load transformation from \"" << filename << "\"!\n";
 		return;
 	}
 
@@ -318,7 +337,7 @@ void SpimStack::loadTransform(const std::string& filename)
 	for (int i = 0; i < 16; ++i)
 		file >> m[i];
 
-	std::cout << "[SpimPlane] Read transform: " << transform << " from \"" << filename << "\"\n";
+	std::cout << "[SpimStack] Read transform: " << transform << " from \"" << filename << "\"\n";
 }
 
 void SpimStack::setRotation(float angle)
@@ -571,32 +590,38 @@ struct PointCloudAdaptor
 float SpimStack::alignSingleStep(const SpimStack* reference, glm::mat4& delta, std::vector<glm::vec4>& debugPoints)
 {
 
-	// extract transformed points
+	// extract transformed points and clip against other bbox
 	vector<vec4> referencePoints = reference->extractTransformedPoints();;
-	vector<vec4> targetPoints = this->extractTransformedPoints();
-
-
-	// clip points
 	referencePoints = this->clipPoints(referencePoints);
+
+	// if we have no points here, the other cloud must also be empty
+	if (referencePoints.empty())
+	{
+		std::cout << "[Align] No overlapping points remaining, quitting.\n";
+		return 0.f;
+	}
+
+	vector<vec4> targetPoints = this->extractTransformedPoints();
 	targetPoints = reference->clipPoints(targetPoints);
-	
-	
+
+
 
 	std::cout << "[Align] Extracted " << referencePoints.size() << " reference and\n";
 	std::cout << "[Align]           " << targetPoints.size() << " target points.\n";
 	std::cout << "[Align] Overlap:  " << (float)std::min(referencePoints.size(), targetPoints.size()) / std::max(referencePoints.size(), targetPoints.size()) << std::endl;
+	/*
 
 
 	const PointCloudAdaptor refAdaptor(referencePoints);
 	const PointCloudAdaptor tgtAdaptor(targetPoints);
-		
+
 	// construct a kd-tree index:
 	typedef nanoflann::KDTreeSingleIndexAdaptor<
-		nanoflann::L2_Simple_Adaptor<float, PointCloudAdaptor>,
-		PointCloudAdaptor,
-		4 /* dim */
+	nanoflann::L2_Simple_Adaptor<float, PointCloudAdaptor>,
+	PointCloudAdaptor,
+	4
 	> KdTree;
-	
+
 	const int MAX_LEAF = 12;
 	KdTree refTree(4, refAdaptor, MAX_LEAF);
 	refTree.buildIndex();
@@ -609,73 +634,147 @@ float SpimStack::alignSingleStep(const SpimStack* reference, glm::mat4& delta, s
 	std::cout << "[Align] Searching for closest points (O(nlogn)) = O(" << (int)(referencePoints.size()*log((float)targetPoints.size())) / 1000000 << "e6) ... \n";
 	for (size_t i = 0; i < targetPoints.size(); ++i)
 	{
-		// knn search
-		const size_t num_results = 1;
-		size_t ret_index;
-		float out_dist_sqr;
-		nanoflann::KNNResultSet<float> resultSet(num_results);
-		resultSet.init(&ret_index, &out_dist_sqr);
-		
-		const vec4& queryPt = targetPoints[i];
-		
-		refTree.findNeighbors(resultSet, &queryPt[0], nanoflann::SearchParams(10));
-	
-		closestReference[i] = ret_index;
-		meanDistance += sqrtf(out_dist_sqr);
+	// knn search
+	const size_t num_results = 1;
+	size_t ret_index;
+	float out_dist_sqr;
+	nanoflann::KNNResultSet<float> resultSet(num_results);
+	resultSet.init(&ret_index, &out_dist_sqr);
+
+	const vec4& queryPt = targetPoints[i];
+
+	refTree.findNeighbors(resultSet, &queryPt[0], nanoflann::SearchParams(10));
+
+	closestReference[i] = ret_index;
+	meanDistance += sqrtf(out_dist_sqr);
 	}
-
-	std::cout << "[Align] Mean distance before alignment: " << meanDistance << std::endl;
-
-
-	/*
-	// build a Kd-tree here?
-
-	
-	std::cout << "[Align] Searching for closest points (O(n^2)) = O(" << (int)(referencePoints.size()*targetPoints.size())/1000000 << "e6) ... \n";
-	for (size_t i = 0; i < referencePoints.size(); ++i)
-	{
-		
-		float closestDistance = numeric_limits<float>::max();
-		size_t closest = 0;
-
-		
-		for (size_t k = 0; k < targetPoints.size(); ++k)
-		{
-			float d = dot(referencePoints[i], targetPoints[k]);
-			if (d < closestDistance)
-			{
-				closestDistance = d;
-				closest = k;
-			}
-		}
-
-		closestReference[i] = closest;
-	}
-
 
 	// calculate mean distance/error
-	float meanDistance = 0.f;
-	for (size_t i = 0; i < closestReference.size(); ++i)
-		meanDistance += sqrtf(dot(referencePoints[i], targetPoints[closestReference[i]]));
-	
 	meanDistance /= closestReference.size();
 	std::cout << "[Align] Mean distance before alignment: " << meanDistance << std::endl;
 	*/
 
+
 	// calculate delta transformation
+	delta = mat4(1.f);
 
 
+	/*
+	// convert to pcl pointclouds
+	pcl::PointCloud<pcl::PointXYZI>::Ptr refCloud(new pcl::PointCloud<pcl::PointXYZI>);
+	pcl::PointCloud<pcl::PointXYZI>::Ptr tgtCloud(new pcl::PointCloud<pcl::PointXYZI>);
+
+	std::for_each(targetPoints.begin(), targetPoints.end(), [&tgtCloud](const glm::vec4& v)
+	{
+	pcl::PointXYZI pt;
+	pt.x = v.x;
+	pt.y = v.y;
+	pt.z = v.z;
+	pt.intensity = v.w;
+
+	tgtCloud->push_back(pt);
+	});
+
+	std::for_each(referencePoints.begin(), referencePoints.end(), [&refCloud](const glm::vec4& v)
+	{
+	pcl::PointXYZI pt;
+	pt.x = v.x;
+	pt.y = v.y;
+	pt.z = v.z;
+	pt.intensity = v.w;
+
+	refCloud->push_back(pt);
+	});
 
 
+	pcl::IterativeClosestPoint<pcl::PointXYZI, pcl::PointXYZI> icp;
+	icp.setInputCloud(tgtCloud);
+	icp.setInputTarget(refCloud);
+	pcl::PointCloud<pcl::PointXYZI> finalCloud;
+	icp.align(finalCloud);
+	std::cout << "has converged:" << icp.hasConverged() << " score: " <<
+	icp.getFitnessScore() << std::endl;
+	std::cout << icp.getFinalTransformation() << std::endl;
 
 
-	// transform points
+	*/
 
 
+	// convert clouds to opencv
+	cv::Mat tgtCloud(1, targetPoints.size(), CV_32FC3);
+	cv::Point3f* data = tgtCloud.ptr<cv::Point3f>();
+	for (size_t i = 0; i < targetPoints.size(); ++i)
+	{
+		const glm::vec4& pt = targetPoints[i];
+		data[i].x = pt.x;
+		data[i].y = pt.y;
+		data[i].z = pt.z;
+	}
+		
+	cv::Mat refCloud(1, referencePoints.size(), CV_32FC3);
+	data = refCloud.ptr<cv::Point3f>();
+	for (size_t i = 0; i < referencePoints.size(); ++i)
+	{
+		const glm::vec4& pt = referencePoints[i];
+		data[i].x = pt.x;
+		data[i].y = pt.y;
+		data[i].z = pt.z;
+	}
+
+	
+	cv::Mat transformEstimate(3, 4, CV_32F);
+	vector<uchar> outliers;
+
+	try
+	{
+
+		double ransacThreshold = 0.1;
+		double confidence = 0.9;
+		cv::estimateAffine3D(tgtCloud, refCloud, transformEstimate, outliers, ransacThreshold, confidence);
+
+		std::cout << "[Debug] Transform estimate: " << transformEstimate << std::endl;
+
+
+		// transform points
+		mat4 oldTransform = this->transform;
+
+		transform = mat4(1.f);
+		for (int i = 0; i < 4; ++i)
+		{
+			for (int j = 0; j < 3; ++j)
+				transform[i][j] = transformEstimate.at<float>(i, j);
+
+			transform[i][3] = 0.f;
+		}
+		transform[3][3] = 1.f;
+
+		transform *= delta;
+	}
+	catch (cv::Exception& e)
+	{
+		std::cout << "[Debug] OpenCV error: " << e.what() << std::endl;
+		return 0.f;
+	}
+
+
+	/*
 	
 
 	// calculate new error ... ?
-	
+	float  meanDistance = 0.f;
+	for (size_t i = 0; i < closestReference.size(); ++i)
+	{
+		vec4 a = targetPoints[i];
+		vec4 b = referencePoints[closestReference[i]];
+		vec4 d = a - b;
+
+		meanDistance += dot(d, d);
+	}
+	meanDistance /= closestReference.size();
+	std::cout << "[Align] Mean distance after alignment: " << meanDistance << std::endl;
+
+	*/
+
 
 
 	debugPoints = referencePoints;

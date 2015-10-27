@@ -99,28 +99,11 @@ static void keyboard(unsigned char key, int x, int y)
 		regoApp->toggleSelectStack(4);
 
 	
-	/*
 	if (key == 't')
-	{
-		for (int i = 0; i < stacks.size(); ++i)
-		{
-			char filename[256];
-			sprintf(filename, "E:/temp/stack_%02d.registration.txt", i);
-			stacks[i]->saveTransform(filename);
-		}
-	}
+		regoApp->loadStackTransformations();
 
 	if (key == 'T')
-	{
-		for (int i = 0; i < stacks.size(); ++i)
-		{
-			char filename[256];
-			sprintf(filename, "E:/temp/stack_%02d.registration.txt", i);
-			stacks[i]->loadTransform(filename);
-		}
-
-	}
-	*/
+		regoApp->saveStackTransformations();
 
 
 	if (key == 'v')
@@ -284,6 +267,8 @@ int main(int argc, const char** argv)
 			sprintf(filename, "e:/spim/zebra_beads/spim_TL01_Angle%d.ome.tiff", i);
 			regoApp->addSpimStack(filename);
 		}
+
+		regoApp->loadStackTransformations();
 
 
 

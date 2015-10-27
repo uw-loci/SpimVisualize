@@ -5,6 +5,7 @@
 #include "SpimStack.h"
 #include "OrbitCamera.h"
 
+#include <algorithm>
 #include <iostream>
 #include <GL/glew.h>
 #include <glm/gtc/type_ptr.hpp>
@@ -55,12 +56,27 @@ void SpimRegistrationApp::drawScene()
 
 }
 
+void SpimRegistrationApp::saveStackTransformations() const
+{
+	std::for_each(stacks.begin(), stacks.end(), [](const SpimStack* s) 
+	{ 
+		std::string filename = s->getFilename() + ".registration.txt";
+		s->saveTransform(filename); 
+	});
+}
+
+void SpimRegistrationApp::loadStackTransformations()
+{
+	std::for_each(stacks.begin(), stacks.end(), [](SpimStack* s)
+	{
+		std::string filename = s->getFilename() + ".registration.txt";
+		s->loadTransform(filename);
+	});
+}
+
 void SpimRegistrationApp::addSpimStack(const std::string& filename)
 {
-	SpimStack* stack = new SpimStack(filename);
-	stack->subsample();
-	stack->subsample();
-	stack->subsample();
+	SpimStack* stack = new SpimStack(filename, 3);
 
 
 	stacks.push_back(stack);
@@ -283,7 +299,7 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 	
 	if (!TEST_points.empty())
 	{
-		std::cout << "[Debug] Drawing " << TEST_points.size() << " points.\n";
+		//std::cout << "[Debug] Drawing " << TEST_points.size() << " points.\n";
 
 		// draw points
 		glEnableClientState(GL_VERTEX_ARRAY);

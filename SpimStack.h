@@ -12,7 +12,7 @@ class Shader;
 class SpimStack
 {
 public:
-	SpimStack(const std::string& filename);
+	SpimStack(const std::string& filename, unsigned int subsample=0);
 	~SpimStack();
 	
 	void draw() const;
@@ -24,7 +24,7 @@ public:
 	void loadTransform(const std::string& filename);
 
 	// halfs the internal resolution of the dataset
-	void subsample();
+	void subsample(bool updateTexture=true);
 
 
 	// extracts registration points based on a simple threshold in _local_ coords. use the stack's transform to transform them to world space
