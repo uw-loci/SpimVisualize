@@ -4,15 +4,19 @@
 #include <vector>
 #include <glm/glm.hpp>
 
+#include <boost/utility.hpp>
+
 class SpimStack;
 
 struct Threshold
 {
 	unsigned short	min;
 	unsigned short	max;
+
+	inline float getRelativeValue(unsigned short v) const { return float(v - min) / float(max - min); }
 };
 
-class ReferencePoints
+class ReferencePoints : boost::noncopyable
 {
 public:	
 	void draw() const;

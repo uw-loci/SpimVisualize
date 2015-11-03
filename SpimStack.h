@@ -5,13 +5,15 @@
 
 #include <glm/glm.hpp>
 
+#include <boost/utility.hpp>
+
 struct AABB;
 class Shader;
 class ReferencePoints;
 struct Threshold;
 
 // a single stack of SPIM images
-class SpimStack
+class SpimStack : boost::noncopyable
 {
 public:
 	SpimStack(const std::string& filename, unsigned int subsample=0);
@@ -87,6 +89,8 @@ private:
 	void drawZPlanes(const glm::vec3& view) const;
 	void drawXPlanes(const glm::vec3& view) const;
 	void drawYPlanes(const glm::vec3& view) const;
+
+	std::vector<glm::vec3> calculateVolumeNormals() const;
 
 };
 

@@ -588,3 +588,9 @@ void SpimRegistrationApp::toggleAllStacks()
 	for (size_t i = 0; i < stacks.size(); ++i)
 		stacks[i]->enabled = stat;
 }
+
+void SpimRegistrationApp::subsampleAllStacks()
+{
+	for (auto it = stacks.begin(); it != stacks.end(); ++it)
+		(*it)->subsample(true);
+}

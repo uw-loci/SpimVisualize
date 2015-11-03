@@ -8,6 +8,9 @@
 #include <algorithm>
 #include <fstream>
 
+#include <boost/smart_ptr.hpp>
+
+
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/io.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -23,6 +26,8 @@
 #include <pcl/features/normal_3d_omp.h>
 #include <pcl/features/boundary.h>
 #include <pcl/search/kdtree.h>
+
+#include <extrema.h>
 
 /*
 #include <pcl/registration/icp.h>
@@ -617,6 +622,88 @@ void SpimStack::extractTransformedFeaturePoints(const Threshold& t, ReferencePoi
 {
 	using namespace pcl;
 	
+
+
+	std::cout << "[Stack] Calculating 3D gradient ... ";
+
+	// extract points based on value
+	int bufferDims[] = { width, height, depth };
+	float filterCoefficients[] = { 1.f, 1.f, 1.f };
+	int borderLengths[] = { 0, 0, 0 };
+	recursiveFilterType filterType = GAUSSIAN_DERICHE;
+	
+	boost::scoped_array<float> gradients(new float[width*height*depth]);
+
+	if (!Extract_Gradient_Maxima_3D(volume, USHORT, gradients.get(), FLOAT, bufferDims, borderLengths, filterCoefficients, filterType))
+	{
+		std::cerr << "failed with error!\n";
+
+		std::cout << "[Stack] Copying data to gradients ... ";
+		for (size_t i = 0; i < width*height*depth; ++i)
+		{
+			float v = t.getRelativeValue(volume[i]);
+
+			gradients[i] = v * numeric_limits<unsigned short>::max();
+			gradients[i] = volume[i];
+
+		}
+
+	}
+	std::cout << "done.\n";
+
+
+	vector<vec3> normals = this->calculateVolumeNormals();
+	
+
+	result.points.clear();
+	result.points.reserve(width*height*depth);
+	result.normals.clear();
+	result.normals.reserve(width*height*depth);
+
+	
+
+	// extract points based on gradient
+	const float gradientThreshold = 0.28f;
+	std::cout << "[Stack] Extracking points between [" << (int)t.min << "->" << (int)t.max << ") ... ";
+
+	for (unsigned int z = 0; z < depth; ++z)
+	{
+		for (unsigned int x = 0; x < width; ++x)
+		{
+			for (unsigned int y = 0; y < height; ++y)
+			{
+				const unsigned int index = x + y*width + z*width*height;
+
+				float g = gradients[index];
+				//if (abs(g) < gradientThreshold)
+				
+				unsigned short val = volume[index];
+
+				if (val >= t.min && val <= t.max)				
+				{
+					result.normals.push_back(normals[index]);
+
+					vec3 coord(x, y, z);
+					vec4 point(coord * dimensions, 1.f);
+
+					// transform to world space
+					point = transform * point;
+					point.w = g;
+					
+					result.points.push_back(point);
+				}
+			}
+		}
+	}
+
+	cout << "done.\n";
+
+
+
+	std::cout << "[Stack] Extracted " << result.points.size() << " points (" << (float)result.points.size() / (width*height*depth) << ")\n";
+
+
+	/*
 	// extract points based on threshold
 	std::cout << "[Stack] Extracking points within [" << (int)t.min << " -> " << (int)t.max << "] ... \n";
 	PointCloud<PointXYZI>::Ptr points(new PointCloud<PointXYZI>);
@@ -628,9 +715,9 @@ void SpimStack::extractTransformedFeaturePoints(const Threshold& t, ReferencePoi
 		{
 			for (unsigned int y = 0; y < height; ++y)
 			{
-				const unsigned short val = volume[x + y*width + z*width*height];
+				const unsigned char val = gradients[x + y*width + z*width*height];
 
-				if (val >= t.min && val <= t.max)
+				if (val >= 10)
 				{
 
 					vec3 coord(x, y, z);
@@ -641,7 +728,8 @@ void SpimStack::extractTransformedFeaturePoints(const Threshold& t, ReferencePoi
 					point.w = float(val) / std::numeric_limits<unsigned short>::max();
 				
 
-					float fval = float(val - t.min) / float(t.max - t.min);
+					//float fval = float(val - t.min) / float(t.max - t.min);
+					float fval = 1.f;
 
 
 					PointXYZI p(fval);
@@ -656,17 +744,18 @@ void SpimStack::extractTransformedFeaturePoints(const Threshold& t, ReferencePoi
 		}
 	}
 
-	cout << "[Stack] Extracted " << points->size() << " points (" << (float)points->size() / (width*height*depth) * 100 << "%)" << std::endl;
+	std::cout << "[Stack] Extracted " << points->size() << " points (" << (float)points->size() / (width*height*depth) * 100 << "%)" << std::endl;
 
 
+	
 	// create KdTree for searches
 	std::cout << "[Stack] Creating Kd Search tree ... ";
 	search::KdTree<PointXYZI>::Ptr tree(new search::KdTree<PointXYZI>);
-	cout << "done.\n";
+	std::cout << "done.\n";
 
 
 
-	cout << "[Stack] Extracting hull ";
+	std::cout << "[Stack] Extracting hull ";
 	tree->setInputCloud(points);
 	
 	PointCloud<PointXYZI>::Ptr hull(new PointCloud<PointXYZI>);
@@ -691,15 +780,21 @@ void SpimStack::extractTransformedFeaturePoints(const Threshold& t, ReferencePoi
 		else
 			it = points->erase(it);
 
+
 		++counter;
-		if (counter / 100000 == 0)
-			cout << ".";
+		if (counter == 1000000)
+		{
+			std::cout << ".";
+			counter = 0;
+		}
 	}
 
-	cout << " done. Reduced to " << points->size() << " points (" << (float)points->size() / (float)oldSize << ")\n";
+	std::cout << " done. Reduced to " << points->size() << " points (" << (float)points->size() / (float)oldSize << ")\n";
 
 
-	cout << "[Stack] Calculating normals ... ";
+	
+	
+	std::cout << "[Stack] Calculating normals ... ";
 	PointCloud<Normal>::Ptr  normals(new PointCloud<Normal>);
 
 	NormalEstimationOMP<PointXYZI, Normal> ne;
@@ -709,10 +804,10 @@ void SpimStack::extractTransformedFeaturePoints(const Threshold& t, ReferencePoi
 
 	ne.compute(*normals);
 
-	cout << "done.\n";
-		
+	std::cout << "done.\n";
+	
 
-	cout << "[Stack] Writing registration points ... ";
+	std::cout << "[Stack] Writing registration points ... ";
 	result.points.clear();
 	result.points.resize(points->size());
 	for (size_t i = 0; i < points->size(); ++i)
@@ -732,8 +827,8 @@ void SpimStack::extractTransformedFeaturePoints(const Threshold& t, ReferencePoi
 
 	assert(result.normals.size() == result.points.size());
 
-	cout << "done.\n";
-
+	std::cout << "done.\n";
+	*/
 
 }
 
@@ -754,4 +849,64 @@ Threshold SpimStack::getLimits() const
 	}
 
 	return std::move(t);
+}
+
+std::vector<glm::vec3> SpimStack::calculateVolumeNormals() const
+{
+	std::cout << "[Stack] Calculating volume normals ";
+
+	vector<vec3> normals(width*height*depth);
+
+	for (unsigned int z = 0; z < depth; ++z)
+	{
+		for (unsigned int x = 0; x < width; ++x)
+		{
+			normals[x + z*width*height].y = 0.f;
+			for (unsigned int y = 1; y < height; ++y)
+			{
+				short v = volume[x + y*width + z*width*height] - volume[x + (y-1)*width + z*width*height];
+				normals[x + y*width + z*width*height].y = float(v) / numeric_limits<short>::max();
+			}
+		}
+	}
+
+	cout << ".";
+
+	for (unsigned int z = 0; z < depth; ++z)
+	{
+		for (unsigned int y = 0; y < height; ++y)
+		{
+			normals[y*width + z*width*height].x = 0.f;
+			for (unsigned int x = 1; x < width; ++x)
+			{
+				short v = volume[x + y*width + z*width*height] - volume[x -1 + y*width + z*width*height];
+				normals[x + y*width + z*width*height].x = float(v) / numeric_limits<short>::max();
+			}
+		}
+	}
+
+	cout << ".";
+
+	for (unsigned int x = 0; x < width; ++x)
+	{
+		for (unsigned int y = 0; y < height; ++y)
+		{
+			normals[x + y*width].z = 0.f;
+			for (unsigned int z = 1; z < depth; ++z)
+			{
+				short v = volume[x + y*width + z*width*height] - volume[x + y*width + (z-1)*width*height];
+				normals[x + y*width + z*width*height].z = float(v) / numeric_limits<short>::max();
+			}
+		}
+	}
+
+	cout << ".";
+
+	for (size_t i = 0; i < width*height*depth; ++i)
+		normals[i] = normalize(normals[i]);
+	
+
+	cout << "done.\n";
+
+	return std::move(normals);
 }

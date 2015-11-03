@@ -90,6 +90,8 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == 'S')
 		regoApp->reloadShaders();
 
+	if (key == 'u')
+		regoApp->subsampleAllStacks();
 
 
 	if (key == '1')

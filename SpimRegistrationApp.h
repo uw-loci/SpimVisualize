@@ -20,6 +20,8 @@ public:
 	
 
 	void addSpimStack(const std::string& filename);
+	void subsampleAllStacks();
+
 
 	void reloadShaders();
 

@@ -256,3 +256,4 @@ void ReferencePoints::applyTransform(const mat4& m)
 		points[i].w = w;
 	}
 }
+
