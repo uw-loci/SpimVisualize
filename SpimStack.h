@@ -30,13 +30,12 @@ public:
 	void subsample(bool updateTexture=true);
 
 	
-	// extracts registration points based on a simple threshold in _local_ coords. use the stack's transform to transform them to world space
-	std::vector<glm::vec4> extractRegistrationPoints(unsigned short threshold) const;
-
 	// extracts the points in world coords. The w coordinate contains the point's value
 	std::vector<glm::vec4> extractTransformedPoints() const;
 	// extracts the points in world space and clip them against the other's transformed bounding box. The w coordinate contains the point's value
 	std::vector<glm::vec4> extractTransformedPoints(const SpimStack* clip, const Threshold& t) const;
+
+	void extractTransformedFeaturePoints(const Threshold& t, ReferencePoints& result) const;
 
 	AABB getBBox() const;
 

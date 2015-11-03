@@ -39,5 +39,6 @@ private:
 	friend class SpimStack;
 
 	std::vector<glm::vec4>		points;
+	std::vector<glm::vec3>		normals;
 
 };

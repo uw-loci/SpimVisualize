@@ -309,14 +309,18 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 		//std::cout << "[Debug] Drawing " << TEST_points.size() << " points.\n";
 
 		glEnableClientState(GL_VERTEX_ARRAY);
+		glEnableClientState(GL_COLOR_ARRAY);
 
 		// draw points
 		glColor3f(1.f, 0.f, 0.f);
 		refPointsA.draw();
+		/*
 		glColor3f(0.f, 1.f, 0.f);
 		refPointsB.draw();
+		*/
 
 		glDisableClientState(GL_VERTEX_ARRAY);
+		glEnableClientState(GL_COLOR_ARRAY);
 	}
 	
 }
@@ -466,6 +470,10 @@ void SpimRegistrationApp::moveStack(const glm::vec2& delta)
 
 void SpimRegistrationApp::TEST_extractFeaturePoints()
 {
+
+	stacks[0]->extractTransformedFeaturePoints(globalThreshold, refPointsA);
+
+	/*
 	using namespace glm;
 	if (stacks.size() < 2)
 		return;
@@ -490,7 +498,7 @@ void SpimRegistrationApp::TEST_extractFeaturePoints()
 	else
 		refPointsB.trim(&refPointsA);
 
-
+	*/
 
 }
 

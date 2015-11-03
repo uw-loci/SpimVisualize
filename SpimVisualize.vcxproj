@@ -16,7 +16,6 @@
     <ClCompile Include="Layout.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="OrbitCamera.cpp" />
-    <ClCompile Include="Registration.cpp" />
     <ClCompile Include="sdk\libICP\src\matrix.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="SpimPlane.cpp" />
@@ -31,7 +30,6 @@
     <ClInclude Include="Layout.h" />
     <ClInclude Include="nanoflann.hpp" />
     <ClInclude Include="OrbitCamera.h" />
-    <ClInclude Include="Registration.h" />
     <ClInclude Include="sdk\libICP\src\matrix.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="SpimPlane.h" />

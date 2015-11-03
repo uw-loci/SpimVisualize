@@ -15,9 +15,16 @@
 #include <FreeImage.h>
 #include <GL/glew.h>
 
-/*
+
 #include <pcl/common/common.h>
 #include <pcl/point_types.h>
+#include <pcl/features/feature.h>
+#include <pcl/features/intensity_gradient.h>
+#include <pcl/features/normal_3d_omp.h>
+#include <pcl/features/boundary.h>
+#include <pcl/search/kdtree.h>
+
+/*
 #include <pcl/registration/icp.h>
 #include <pcl/registration/transformation_estimation.h>
 */
@@ -164,7 +171,7 @@ void SpimStack::subsample(bool updateTexture)
 	}
 }
 
-
+/*
 std::vector<glm::vec4> SpimStack::extractRegistrationPoints(unsigned short threshold) const
 {
 	assert(volume);
@@ -197,7 +204,7 @@ std::vector<glm::vec4> SpimStack::extractRegistrationPoints(unsigned short thres
 
 	return points;
 }
-
+*/
 
 AABB SpimStack::getBBox() const
 {
@@ -605,6 +612,131 @@ vector<vec4> SpimStack::extractTransformedPoints(const SpimStack* clip, const Th
 
 	return std::move(points);
 }
+
+void SpimStack::extractTransformedFeaturePoints(const Threshold& t, ReferencePoints& result) const
+{
+	using namespace pcl;
+	
+	// extract points based on threshold
+	std::cout << "[Stack] Extracking points within [" << (int)t.min << " -> " << (int)t.max << "] ... \n";
+	PointCloud<PointXYZI>::Ptr points(new PointCloud<PointXYZI>);
+	points->reserve(width*height*depth);
+
+	for (unsigned int z = 0; z < depth; ++z)
+	{
+		for (unsigned int x = 0; x < width; ++x)
+		{
+			for (unsigned int y = 0; y < height; ++y)
+			{
+				const unsigned short val = volume[x + y*width + z*width*height];
+
+				if (val >= t.min && val <= t.max)
+				{
+
+					vec3 coord(x, y, z);
+					vec4 point(coord * dimensions, 1.f);
+
+					// transform to world space
+					point = transform * point;
+					point.w = float(val) / std::numeric_limits<unsigned short>::max();
+				
+
+					float fval = float(val - t.min) / float(t.max - t.min);
+
+
+					PointXYZI p(fval);
+					p.x = point.x;
+					p.y = point.y;
+					p.z = point.z;
+					
+					points->push_back(p);				
+				}
+			}
+
+		}
+	}
+
+	cout << "[Stack] Extracted " << points->size() << " points (" << (float)points->size() / (width*height*depth) * 100 << "%)" << std::endl;
+
+
+	// create KdTree for searches
+	std::cout << "[Stack] Creating Kd Search tree ... ";
+	search::KdTree<PointXYZI>::Ptr tree(new search::KdTree<PointXYZI>);
+	cout << "done.\n";
+
+
+
+	cout << "[Stack] Extracting hull ";
+	tree->setInputCloud(points);
+	
+	PointCloud<PointXYZI>::Ptr hull(new PointCloud<PointXYZI>);
+	
+	size_t oldSize = points->size();
+	int counter = 0;
+
+	auto it = points->begin();
+	while (it != points->end())	
+	{
+		const PointXYZI& center = *it;
+		float radius = 2.0f;
+
+		vector<int> indices;
+		vector<float> sqDistances;
+
+		tree->radiusSearch(center, radius, indices, sqDistances, 20);
+
+		// if we have few neighbours we are in the shell and keep the point
+		if (indices.size() < 10)
+			++it;
+		else
+			it = points->erase(it);
+
+		++counter;
+		if (counter / 100000 == 0)
+			cout << ".";
+	}
+
+	cout << " done. Reduced to " << points->size() << " points (" << (float)points->size() / (float)oldSize << ")\n";
+
+
+	cout << "[Stack] Calculating normals ... ";
+	PointCloud<Normal>::Ptr  normals(new PointCloud<Normal>);
+
+	NormalEstimationOMP<PointXYZI, Normal> ne;
+	ne.setInputCloud(points);
+	ne.setSearchMethod(tree);
+	ne.setRadiusSearch(3);
+
+	ne.compute(*normals);
+
+	cout << "done.\n";
+		
+
+	cout << "[Stack] Writing registration points ... ";
+	result.points.clear();
+	result.points.resize(points->size());
+	for (size_t i = 0; i < points->size(); ++i)
+	{
+		const PointXYZI& p = points->at(i);
+		result.points[i] = vec4(p.x, p.y, p.z, p.intensity);
+	}
+
+
+	result.normals.clear();
+	result.normals.resize(normals->size());
+	for (size_t i = 0; i < normals->size(); ++i)
+	{
+		const Normal& n = normals->at(i);
+		result.normals[i] = vec3(n.normal_x, n.normal_y, n.normal_z);
+	}
+
+	assert(result.normals.size() == result.points.size());
+
+	cout << "done.\n";
+
+
+}
+
 
 Threshold SpimStack::getLimits() const
 {

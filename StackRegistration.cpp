@@ -161,8 +161,17 @@ float ReferencePoints::calculateMeanDistance(const ReferencePoints* reference) c
 
 void ReferencePoints::draw() const
 {
+	if (points.empty() || normals.empty())
+		return;
+
+
 	glVertexPointer(3, GL_FLOAT, sizeof(vec4), value_ptr(points[0]));
+	glColorPointer(3, GL_FLOAT, 0, value_ptr(normals[0]));
+	
 	glDrawArrays(GL_POINTS, 1, points.size());
+
+	
+
 }
 
 float ReferencePoints::align(const ReferencePoints* reference, mat4& delta)
