@@ -16,10 +16,9 @@ uniform Volume volume[VOLUMES];
 uniform float sliceCount = 100;
 uniform float sliceWeight;
 
-uniform int minVal = 70;
-uniform int maxVal = 100;
+uniform int minThreshold;
+uniform int maxThreshold;
 
-uniform int beadThreshold = 150;
 
 in vec4 vertex;
 out vec4 fragColor;
@@ -28,9 +27,6 @@ void main()
 {
 	// total intensity of the all visible volume texels at that fragment
 	int intensity = 0;
-
-
-	bool isBead = false;;
 
 	// weight of all visible volume texels at that fragment
 	int weight = 0;
@@ -58,9 +54,6 @@ void main()
 			intensity += t; 
 			//color += worldPosition;
 			weight++;
-
-			if (t > beadThreshold)
-				isBead = true;
 		}
 	}
 
@@ -68,19 +61,16 @@ void main()
 	intensity /= weight;
 	vec3 color = normalize(vec3(float(intensity)));
 
+	if (intensity > maxThreshold)
+		vec3 color = vec3(0.0, 1.0, 0.0);
+	if (intensity < minThreshold)
+		vec3 color = vec3(1.0, 0.0, 0.0);
+
 
 	float alpha = 1.0 / sliceCount;
 
-	float density = float(intensity - minVal) / float(maxVal - minVal);
+	float density = float(intensity - minThreshold) / float(maxThreshold - minThreshold);
 	alpha *= density;
-
-	// draw all potential beads brightly yellowS
-	if (isBead)
-	{
-
-		color = vec3(1.0, 1.0, 0.0);
-		alpha = 1.0;
-	}
 	
 	fragColor = vec4(color, alpha);
 }

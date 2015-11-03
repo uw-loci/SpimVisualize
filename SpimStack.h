@@ -8,6 +8,7 @@
 struct AABB;
 class Shader;
 class ReferencePoints;
+struct Threshold;
 
 // a single stack of SPIM images
 class SpimStack
@@ -23,23 +24,20 @@ public:
 
 	void saveTransform(const std::string& filename) const;
 	void loadTransform(const std::string& filename);
+	void applyTransform(const glm::mat4& t);
 
 	// halfs the internal resolution of the dataset
 	void subsample(bool updateTexture=true);
 
-
+	
 	// extracts registration points based on a simple threshold in _local_ coords. use the stack's transform to transform them to world space
 	std::vector<glm::vec4> extractRegistrationPoints(unsigned short threshold) const;
 
 	// extracts the points in world coords. The w coordinate contains the point's value
 	std::vector<glm::vec4> extractTransformedPoints() const;
 	// extracts the points in world space and clip them against the other's transformed bounding box. The w coordinate contains the point's value
-	std::vector<glm::vec4> extractTransformedPoints(const SpimStack* clip) const;
+	std::vector<glm::vec4> extractTransformedPoints(const SpimStack* clip, const Threshold& t) const;
 
-	/// Tries to automatically align two datasets based on their voxel values.
-	/// @return the mean error
-	float alignSingleStep(const SpimStack* reference, glm::mat4& deltaTransform, std::vector<glm::vec4>& debugPointsRef, std::vector<glm::vec4>& debugPointsTgt);
-	
 	AABB getBBox() const;
 
 	void setRotation(float angle);
@@ -53,10 +51,12 @@ public:
 
 	inline const unsigned int getTexture() const { return volumeTextureId; }
 
-	inline bool isEnabled() const { return enabled; }
-	inline void toggle() { enabled = !enabled;  }
+
+	bool	enabled;
+	inline void toggle() { enabled = !enabled; }
 
 
+	Threshold getLimits() const;
 
 
 	inline const std::string& getFilename() const { return filename;  }
@@ -69,8 +69,7 @@ private:
 
 	std::string			filename;
 
-	bool				enabled;
-
+	
 	// 3d volume texture
 	unsigned int			volumeTextureId;
 

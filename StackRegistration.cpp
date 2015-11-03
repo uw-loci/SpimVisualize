@@ -7,6 +7,12 @@
 #include <opencv2/core.hpp>
 #include <opencv2/calib3d.hpp>
 
+
+#include <pcl/point_types.h>
+#include <pcl/point_cloud.h>
+#include <pcl/registration/transformation_estimation_svd.h>
+
+
 #include <glm/gtx/io.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
@@ -116,6 +122,24 @@ static inline vector<cv::Point3f> makeCVCloud(const vector<vec4>& points)
 	return move(result);
 }
 
+static inline pcl::PointXYZI makePclPt(const glm::vec4& pt)
+{
+	pcl::PointXYZI result(pt.w);
+	result.x = pt.x;
+	result.y = pt.y;
+	result.z = pt.z;
+	return std::move(result);
+}
+
+static inline vector<pcl::PointXYZI> makePCLCloud(const vector<vec4>& points)
+{
+	vector<pcl::PointXYZI> result(points.size());
+	for (size_t i = 0; i < points.size(); ++i)
+		result[i] = makePclPt(points[i]);
+
+	return std::move(result);
+}
+
 
 float ReferencePoints::calculateMeanDistance(const ReferencePoints* reference) const
 {
@@ -143,8 +167,30 @@ void ReferencePoints::draw() const
 
 float ReferencePoints::align(const ReferencePoints* reference, mat4& delta)
 {
-	assert(points.size() == reference->points.size());
+	using namespace pcl;
+
+	vector<PointXYZI> refCloud = makePCLCloud(reference->points);
+	vector<PointXYZI> tgtCloud = makePCLCloud(this->points);
+
+	try
+	{
+
+
+	}
+	catch (cv::Exception& e)
+	{
+		std::cout << "[Debug] OpenCV error: " << e.what() << std::endl;
+		return 0.f;
+	}
+
 	
+}
+
+/*
+float ReferencePoints::align(const ReferencePoints* reference, mat4& delta)
+{
+	assert(points.size() == reference->points.size());
+
 	// convert clouds to opencv
 	vector<cv::Point3f> refCloud = makeCVCloud(reference->points);
 	vector<cv::Point3f> tgtCloud = makeCVCloud(this->points);
@@ -174,7 +220,7 @@ float ReferencePoints::align(const ReferencePoints* reference, mat4& delta)
 				//std::cout << "[Debug] [" << i << "," << j << "]: " << transformEstimate.at<double>(i, j) << std::endl;
 			}
 		}
-		
+
 		std::cout << "[Debug] Transform (glm): " << deltaTransform << std::endl;
 		delta = deltaTransform;
 
@@ -186,8 +232,10 @@ float ReferencePoints::align(const ReferencePoints* reference, mat4& delta)
 		return 0.f;
 	}
 
-	
+
 }
+
+*/
 
 void ReferencePoints::applyTransform(const mat4& m)
 {

@@ -340,6 +340,11 @@ void SpimStack::loadTransform(const std::string& filename)
 	std::cout << "[SpimStack] Read transform: " << transform << " from \"" << filename << "\"\n";
 }
 
+void SpimStack::applyTransform(const glm::mat4& t)
+{
+	transform = t * transform;
+}
+
 void SpimStack::setRotation(float angle)
 {
 	transform = translate(glm::mat4(1.f), getBBox().getCentroid());
@@ -555,7 +560,7 @@ vector<vec4> SpimStack::extractTransformedPoints() const
  	return std::move(points);
 }
 
-vector<vec4> SpimStack::extractTransformedPoints(const SpimStack* clip) const
+vector<vec4> SpimStack::extractTransformedPoints(const SpimStack* clip, const Threshold& t) const
 {
 	vector<vec4> points;
 	points.reserve(width*height*depth);
@@ -571,18 +576,25 @@ vector<vec4> SpimStack::extractTransformedPoints(const SpimStack* clip) const
 			for (unsigned int y = 0; y < height; ++y)
 			{
 				const unsigned short val = volume[x + y*width + z*width*height];
-				vec3 coord(x, y, z);
-				vec4 point(coord * dimensions, 1.f);
-
-				// transform to world space
-				point = transform * point;
 				
-				// transform to the other's clip space
-				vec4 pt = invMat * point;
-				if (bbox.isInside(vec3(pt)))
+				if (val >= t.min && val <= t.max)
 				{
-					point.w = float(val) / std::numeric_limits<unsigned short>::max();
-					points.push_back(point);
+
+
+
+					vec3 coord(x, y, z);
+					vec4 point(coord * dimensions, 1.f);
+
+					// transform to world space
+					point = transform * point;
+
+					// transform to the other's clip space
+					vec4 pt = invMat * point;
+					if (bbox.isInside(vec3(pt)))
+					{
+						point.w = float(val) / std::numeric_limits<unsigned short>::max();
+						points.push_back(point);
+					}
 				}
 			}
 
@@ -592,4 +604,22 @@ vector<vec4> SpimStack::extractTransformedPoints(const SpimStack* clip) const
 	//cout << "[Stack] Extracted " << points.size() << " points (" << (float)points.size() / (width*height*depth) * 100 << "%)" << std::endl;
 
 	return std::move(points);
+}
+
+Threshold SpimStack::getLimits() const
+{
+	assert(volume);
+	Threshold t;
+
+	t.max = 0;
+	t.min = numeric_limits<unsigned short>::max();
+
+	for (unsigned int i = 0; i < width*height*depth; ++i)
+	{
+		const unsigned short& v = volume[i];
+		t.max = std::max(t.max, v);
+		t.min = std::min(t.min, v);
+	}
+
+	return std::move(t);
 }

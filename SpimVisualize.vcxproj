@@ -69,12 +69,12 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\dev\opencv\build\include;C:\Users\mbroecker\Documents\code\sparseicp;C:\Users\mbroecker\Documents\code\sparseicp\include;C:\Users\mbroecker\Documents\code\sparseicp\include\Eigen;C:\opencv\build\include;C:\Users\mbroecker\Documents\code\ffmpeg\include;C:\boost\include;c:\dev\opengl\include;C:\Users\mbroecker\Documents\code\transformDetection\VaryingPointClouds;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\inc;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\dev\opencv\build\x64\vc12\staticlib;C:\opencv\sources\build\lib\Release;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\lib;c:\dev\opengl\lib64;c:\dev\opengl\lib64\Release\x64;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\dev\eigen\source;C:\dev\flann\include;C:\dev\pcl\include\pcl-1.8;C:\dev\opencv\build\include;C:\Users\mbroecker\Documents\code\sparseicp;C:\Users\mbroecker\Documents\code\sparseicp\include;C:\Users\mbroecker\Documents\code\sparseicp\include\Eigen;C:\opencv\build\include;C:\Users\mbroecker\Documents\code\ffmpeg\include;C:\boost\include;c:\dev\opengl\include;C:\Users\mbroecker\Documents\code\transformDetection\VaryingPointClouds;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\inc;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\dev\flann\lib;C:\dev\pcl\lib;C:\dev\opencv\build\x64\vc12\staticlib;C:\opencv\sources\build\lib\Release;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\lib;c:\dev\opengl\lib64;c:\dev\opengl\lib64\Release\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>C:\dev\opencv\build\include;C:\Users\mbroecker\Documents\code\sparseicp;C:\Users\mbroecker\Documents\code\sparseicp\include;C:\Users\mbroecker\Documents\code\sparseicp\include\Eigen;C:\opencv\build\include;C:\Users\mbroecker\Documents\code\ffmpeg\include;C:\boost\include;c:\dev\opengl\include;C:\Users\mbroecker\Documents\code\transformDetection\VaryingPointClouds;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\inc;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\dev\opencv\build\x64\vc12\staticlib;C:\opencv\sources\build\lib\Release;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\lib;c:\dev\opengl\lib64;c:\dev\opengl\lib64\Release\x64;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\dev\eigen\source;C:\dev\flann\include;C:\dev\pcl\include\pcl-1.8;C:\dev\opencv\build\include;C:\Users\mbroecker\Documents\code\sparseicp;C:\Users\mbroecker\Documents\code\sparseicp\include;C:\Users\mbroecker\Documents\code\sparseicp\include\Eigen;C:\opencv\build\include;C:\Users\mbroecker\Documents\code\ffmpeg\include;C:\boost\include;c:\dev\opengl\include;C:\Users\mbroecker\Documents\code\transformDetection\VaryingPointClouds;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\inc;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\dev\flann\lib;C:\dev\pcl\lib;C:\dev\opencv\build\x64\vc12\staticlib;C:\opencv\sources\build\lib\Release;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\lib;c:\dev\opengl\lib64;c:\dev\opengl\lib64\Release\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -88,7 +88,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>IlmImf.lib;ippicvmt.lib;opencv_calib3d300.lib;opencv_core300.lib;opencv_flann300.lib;opencv_hal300.lib;zlib.lib;FreeImage.lib;glew32.lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>pcl_common_release.lib;pcl_features_release.lib;pcl_filters_release.lib;pcl_registration_release.lib;pcl_octree_release.lib;pcl_sample_consensus_release.lib;pcl_search_release.lib;pcl_surface_release.lib;IlmImf.lib;ippicvmt.lib;opencv_calib3d300.lib;opencv_core300.lib;opencv_flann300.lib;opencv_hal300.lib;zlib.lib;FreeImage.lib;glew32.lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -107,7 +107,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>IlmImf.lib;ippicvmt.lib;opencv_calib3d300.lib;opencv_core300.lib;opencv_flann300.lib;opencv_hal300.lib;zlib.lib;FreeImage.lib;glew32.lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>pcl_common_release.lib;pcl_features_release.lib;pcl_filters_release.lib;pcl_registration_release.lib;pcl_octree_release.lib;pcl_sample_consensus_release.lib;pcl_search_release.lib;pcl_surface_release.lib;IlmImf.lib;ippicvmt.lib;opencv_calib3d300.lib;opencv_core300.lib;opencv_flann300.lib;opencv_hal300.lib;zlib.lib;FreeImage.lib;glew32.lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -6,6 +6,11 @@
 
 class SpimStack;
 
+struct Threshold
+{
+	unsigned short	min;
+	unsigned short	max;
+};
 
 class ReferencePoints
 {
@@ -23,6 +28,7 @@ public:
 
 	inline bool empty() const { return points.empty(); }
 	inline size_t size() const { return points.size(); }
+	inline void clear() { points.clear(); }
 
 	inline void setPoints(const std::vector<glm::vec4>& pts) { points = pts; }
 

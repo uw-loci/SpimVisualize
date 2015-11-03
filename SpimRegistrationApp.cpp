@@ -13,10 +13,13 @@
 #include <glm/gtx/io.hpp>
 
 SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(0), sliceShader(0), volumeShader(0), layout(0), 
-drawGrid(true), drawBboxes(false), drawSlices(false), currentStack(-1), sliceCount(100), beadThreshold(100)
+drawGrid(true), drawBboxes(false), drawSlices(false), currentStack(-1), sliceCount(150)
 {
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
+
+	globalThreshold.min = 100;
+	globalThreshold.max = 130; // std::numeric_limits<unsigned short>::max();
 
 	reloadShaders();
 }
@@ -78,7 +81,7 @@ void SpimRegistrationApp::loadStackTransformations()
 
 void SpimRegistrationApp::addSpimStack(const std::string& filename)
 {
-	SpimStack* stack = new SpimStack(filename, 3);
+	SpimStack* stack = new SpimStack(filename);
 
 
 	stacks.push_back(stack);
@@ -154,12 +157,13 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 		glDepthMask(GL_FALSE);
 
 		sliceShader->bind();
-		sliceShader->setUniform("beadThreshold", (int)beadThreshold);
+		sliceShader->setUniform("minThreshold", (int)globalThreshold.min);
+		sliceShader->setUniform("maxThreshold", (int)globalThreshold.max);
 		sliceShader->setUniform("mvpMatrix", mvp);
 
 		for (size_t i = 0; i < stacks.size(); ++i)
 		{
-			if (stacks[i]->isEnabled())
+			if (stacks[i]->enabled)
 			{
 				sliceShader->setUniform("color", getRandomColor(i));
 				sliceShader->setMatrix4("transform", stacks[i]->getTransform());
@@ -187,7 +191,8 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 		volumeShader->bind();
-		volumeShader->setUniform("beadThreshold", beadThreshold);
+		volumeShader->setUniform("minThreshold", globalThreshold.min);
+		volumeShader->setUniform("maxThreshold", globalThreshold.max);
 		volumeShader->setUniform("sliceCount", (float)sliceCount);
 
 
@@ -200,7 +205,7 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 
 		for (size_t i = 0; i < stacks.size(); ++i)
 		{
-			if (!stacks[i]->isEnabled())
+			if (!stacks[i]->enabled)
 				continue;
 
 
@@ -242,7 +247,7 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 			volumeShader->setUniform(uname, bbox.min);
 
 			sprintf(uname, "volume[%d].enabled", i);
-			volumeShader->setUniform(uname, stacks[i]->isEnabled());
+			volumeShader->setUniform(uname, stacks[i]->enabled);
 
 			sprintf(uname, "volume[%d].inverseMVP", i);
 			volumeShader->setMatrix4(uname, glm::inverse(mvp * stacks[i]->getTransform()));
@@ -278,7 +283,7 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 
 		for (size_t i = 0; i < stacks.size(); ++i)
 		{
-			if (stacks[i]->isEnabled())
+			if (stacks[i]->enabled)
 			{
 				glPushMatrix();
 				glMultMatrixf(glm::value_ptr(stacks[i]->getTransform()));
@@ -459,6 +464,36 @@ void SpimRegistrationApp::moveStack(const glm::vec2& delta)
 }
 
 
+void SpimRegistrationApp::TEST_extractFeaturePoints()
+{
+	using namespace glm;
+	if (stacks.size() < 2)
+		return;
+
+	refPointsA.setPoints(stacks[0]->extractTransformedPoints(stacks[1], globalThreshold));
+	refPointsB.setPoints(stacks[1]->extractTransformedPoints(stacks[0], globalThreshold));
+
+	std::cout << "[Align] Extracted " << refPointsA.size() << " and\n";
+	std::cout << "[Align]           " << refPointsB.size() << " points.\n";
+
+
+	if (refPointsA.empty() || refPointsB.empty())
+	{
+		std::cout << "[Aling] Either data set is empty, aborting.\n";
+		return;
+	}
+
+
+
+	if (refPointsA.size() > refPointsB.size())
+		refPointsA.trim(&refPointsB);
+	else
+		refPointsB.trim(&refPointsA);
+
+
+
+}
+
 void SpimRegistrationApp::TEST_alignStacks()
 {
 	using namespace glm;
@@ -466,18 +501,11 @@ void SpimRegistrationApp::TEST_alignStacks()
 	if (stacks.size() < 2)
 		return;
 
-	refPointsA.setPoints(stacks[0]->extractTransformedPoints(stacks[1]));
-	refPointsB.setPoints(stacks[1]->extractTransformedPoints(stacks[0]));
-
-	std::cout << "[Align] Extracted " << refPointsA.size() << " and\n";
-	std::cout << "[Align]           " << refPointsB.size() << " points.\n";
-		
-
-	if (refPointsA.size() > refPointsB.size())
-		refPointsA.trim(&refPointsB);
-	else
-		refPointsB.trim(&refPointsA);
-
+	if (refPointsA.empty() || refPointsB.empty())
+	{
+		std::cout << "[Aling] Either data set is empty, aborting.\n";
+		return;
+	}
 
 
 	std::cout << "[Align] Mean distance before alignment: " << refPointsA.calculateMeanDistance(&refPointsB) << std::endl;
@@ -487,8 +515,68 @@ void SpimRegistrationApp::TEST_alignStacks()
 
 	std::cout << delta << std::endl;
 
+	stacks[1]->applyTransform(delta);
+	refPointsB.applyTransform(delta);
 
 
 	std::cout << "[Align] Mean distance after alignment: " << refPointsA.calculateMeanDistance(&refPointsB) << std::endl;
+}
 
+void SpimRegistrationApp::increaseMaxThreshold()
+{
+	globalThreshold.max += 10;
+	std::cout << "[Threshold] Max: " << (int)globalThreshold.max << std::endl;
+}
+
+void SpimRegistrationApp::increaseMinThreshold()
+{
+	globalThreshold.min += 10;
+	std::cout << "[Threshold] Min: " << (int)globalThreshold.min << std::endl;
+}
+
+void SpimRegistrationApp::decreaseMaxThreshold()
+{
+	globalThreshold.max -= 10;
+	std::cout << "[Threshold] Max: " << (int)globalThreshold.max << std::endl;
+}
+
+void SpimRegistrationApp::decreaseMinThreshold()
+{
+	globalThreshold.min -= 10;
+	std::cout << "[Threshold] Min: " << (int)globalThreshold.min << std::endl;
+}
+
+
+void SpimRegistrationApp::autoThreshold()
+{
+	globalThreshold.max = 0;
+	globalThreshold.min = std::numeric_limits<unsigned short>::max();
+
+	for (size_t i = 0; i < stacks.size(); ++i)
+	{
+		Threshold l = stacks[i]->getLimits();
+
+
+		std::cout << "[Contrast] Stack " << i << " contrast: " << (int)l.min << " -> " << (int)l.max << std::endl;
+
+		globalThreshold.max = std::max(globalThreshold.max, l.max);
+		globalThreshold.min = std::min(globalThreshold.min, l.min);
+	}
+
+
+	std::cout << "[Contrast] Set global thresholds to " << (int)globalThreshold.min << " -> " << (int)globalThreshold.max << std::endl;
+}
+
+void SpimRegistrationApp::clearRegistrationPoints()
+{
+	refPointsA.clear();
+	refPointsB.clear();
+	std::cout << "[Registration] Clearing registration points.\n";
+}
+
+void SpimRegistrationApp::toggleAllStacks()
+{
+	bool stat = !stacks[0]->enabled;
+	for (size_t i = 0; i < stacks.size(); ++i)
+		stacks[i]->enabled = stat;
 }

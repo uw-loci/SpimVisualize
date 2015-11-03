@@ -60,16 +60,25 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == 'b')
 		regoApp->toggleBboxes();
 
+
 	if (key == ',')
-		regoApp->decreaseBeadThreshold();
-
+		regoApp->increaseMinThreshold();
 	if (key == '.')
-		regoApp->increaseBeadThreshold();
+		regoApp->increaseMaxThreshold();
+	if (key == '<')
+		regoApp->decreaseMinThreshold();
+	if (key == '>')
+		regoApp->decreaseMaxThreshold();
+	if (key == 'C')
+		regoApp->autoThreshold();
 
 
-	if (key == ' ')
+	if (key == 'e')
+		regoApp->TEST_extractFeaturePoints();
+	if (key == 'r')
 		regoApp->TEST_alignStacks();
-
+	if (key == 'E')
+		regoApp->clearRegistrationPoints();
 
 	
 	if (key == '[')
@@ -108,6 +117,8 @@ static void keyboard(unsigned char key, int x, int y)
 
 	if (key == 'v')
 		regoApp->toggleCurrentStack();
+	if (key == 'V')
+		regoApp->toggleAllStacks();
 
 
 	if (key == '-')

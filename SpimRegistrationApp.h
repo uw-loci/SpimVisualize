@@ -34,7 +34,14 @@ public:
 	void moveStack(const glm::vec2& delta);
 	void rotateCurrentStack(float rotY);
 
+	void toggleAllStacks();
+
+
+
+	void TEST_extractFeaturePoints();
 	void TEST_alignStacks();
+
+	void clearRegistrationPoints();
 
 	void updateMouseMotion(const glm::ivec2& cursor);
 	
@@ -55,9 +62,15 @@ public:
 	inline void toggleGrid() { drawGrid = !drawGrid; }
 	inline void toggleBboxes() { drawBboxes = !drawBboxes; }
 	inline void toggleSlices() { drawSlices = !drawSlices; }
+	
+	void increaseMaxThreshold();
+	void decreaseMaxThreshold();
+	void increaseMinThreshold();
+	void decreaseMinThreshold();
+	void autoThreshold();
 
-	inline void increaseBeadThreshold() { beadThreshold += 10; }
-	inline void decreaseBeadThreshold() { beadThreshold -= 10; }
+
+
 
 private:
 	ILayout*				layout;
@@ -65,6 +78,8 @@ private:
 	std::vector<SpimStack*>	stacks;
 
 	AABB					globalBBox;
+
+	Threshold				globalThreshold;
 
 
 	bool					drawGrid;
@@ -76,9 +91,7 @@ private:
 	// how many planes/slices to draw for the volume
 	unsigned int			sliceCount;
 
-	// thresholding values
-	unsigned short			beadThreshold;
-
+	
 	Shader*					pointShader;
 	Shader*					volumeShader;
 	Shader*					sliceShader;
