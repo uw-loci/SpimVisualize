@@ -39,6 +39,8 @@ public:
 	void toggleAllStacks();
 
 
+	void calculateHistogram();
+
 
 	void TEST_extractFeaturePoints();
 	void TEST_alignStacks();

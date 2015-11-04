@@ -910,3 +910,64 @@ std::vector<glm::vec3> SpimStack::calculateVolumeNormals() const
 
 	return std::move(normals);
 }
+
+
+vector<unsigned int> SpimStack::calculateHistogram() const
+{
+	Threshold t;
+	t.min = 0;
+	t.max = numeric_limits<unsigned short>::max();
+
+	return std::move(calculateHistogram(t));
+}
+
+vector<unsigned int> SpimStack::calculateHistogram(const Threshold& t) const
+{
+
+	unsigned int BIN_COUNT = std::min(t.max - t.min, 100);
+	
+	const unsigned int BIN_SIZE = (int)t.getSpread() / BIN_COUNT;
+
+	assert(BIN_SIZE > 0);
+
+	vector<unsigned int> bins(BIN_COUNT+1, 0);
+	unsigned int belowBin = 0;
+	unsigned int aboveBin = 0;
+
+	const size_t COUNT = width*height*depth;
+	for (size_t i = 0; i < COUNT; ++i)
+	{
+		unsigned short val = volume[i];
+
+		if (val < t.min)
+			belowBin++;
+		else if (val > t.max)
+			aboveBin++;
+		else
+		{
+			val = volume[i] - t.min;
+
+			// calculate correct bin
+			unsigned int bin = (unsigned int)val / BIN_SIZE;
+
+			assert(bin >= 0);
+			assert(bin <= BIN_COUNT);
+			bins[bin]++;
+
+		}
+
+	}
+
+	cout << "[Histo]:\n";
+	cout << "     Below [<" << setw(5) << (int)t.min << "]: " << setw(7) << belowBin << " (" << setprecision(4) << (float)belowBin / COUNT << ")" << endl;
+
+	for (unsigned int i = 0; i < bins.size(); ++i)
+	{
+		cout << setw(3) << i << "[" << setw(5) << i*BIN_SIZE << " -> " << setw(5) << (i + 1)*BIN_SIZE << "]: " << setw(7) << bins[i] << " (" << setprecision(4) << (float)bins[i] / COUNT << ")" << endl;
+	}
+
+	cout << "     Above [>" << setw(5) << (int)t.max << "]: " << setw(7) << aboveBin << " (" << setprecision(4) << (float)aboveBin / COUNT << ")" << endl;
+
+
+	return std::move(bins);
+}

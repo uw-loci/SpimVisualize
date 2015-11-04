@@ -31,6 +31,9 @@ public:
 	// halfs the internal resolution of the dataset
 	void subsample(bool updateTexture=true);
 
+	std::vector<unsigned int> calculateHistogram() const;
+	std::vector<unsigned int> calculateHistogram(const Threshold& t) const;
+
 	
 	// extracts the points in world coords. The w coordinate contains the point's value
 	std::vector<glm::vec4> extractTransformedPoints() const;

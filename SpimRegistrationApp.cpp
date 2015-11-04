@@ -594,3 +594,11 @@ void SpimRegistrationApp::subsampleAllStacks()
 	for (auto it = stacks.begin(); it != stacks.end(); ++it)
 		(*it)->subsample(true);
 }
+
+void SpimRegistrationApp::calculateHistogram()
+{
+	if (stacks.empty())
+		return;
+
+	stacks[0]->calculateHistogram(globalThreshold);
+}
