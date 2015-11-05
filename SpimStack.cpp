@@ -250,10 +250,12 @@ void SpimStack::drawSlices(Shader* s, const glm::vec3& view) const
 
 	
 	s->setUniform("viewDir", aview);
-	
+
 	glPushAttrib(GL_ENABLE_BIT);
 	glDisable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
+
+	float sWeight = 1.f;
 
 	// pick the best slicing based on the current view vector
 	if (aview.x > aview.y)
@@ -261,11 +263,13 @@ void SpimStack::drawSlices(Shader* s, const glm::vec3& view) const
 		if (aview.x > aview.z)
 		{
 			s->setUniform("sliceWeight", 1.f / width);
+			sWeight = 1.f / width;
 			drawXPlanes(view);
 		}
 		else
 		{
 			s->setUniform("sliceWeight", 1.f / depth);
+			sWeight = 1.f / depth;
 			drawZPlanes(view);
 		}
 	}
@@ -274,16 +278,22 @@ void SpimStack::drawSlices(Shader* s, const glm::vec3& view) const
 		if (aview.y > aview.z)
 		{
 			s->setUniform("sliceWeight", 1.f / height);
+			sWeight = 1.f / height;
 			drawYPlanes(view);
 		}
 		else
 		{
 
 			s->setUniform("sliceWeight", 1.f / depth);
+			sWeight = 1.f / depth;
 			drawZPlanes(view);
 		}
 	}
 	
+	/*
+	std::cout << "[Debug] viewDir: " << aview << std::endl;
+	std::cout << "[Debug] sweight: " << sWeight << std::endl;
+	*/
 
 	glPopAttrib();
 

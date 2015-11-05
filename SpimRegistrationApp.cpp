@@ -165,9 +165,12 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 		{
 			if (stacks[i]->enabled)
 			{
+
 				sliceShader->setUniform("color", getRandomColor(i));
 				sliceShader->setMatrix4("transform", stacks[i]->getTransform());
 
+
+				glColor4f(0.f, 0.f, 0.f, 1.f);
 
 				// calculate view vector
 				glm::vec3 view = vp->camera->getViewDirection();
@@ -189,7 +192,7 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
+		
 		volumeShader->bind();
 		volumeShader->setUniform("minThreshold", globalThreshold.min);
 		volumeShader->setUniform("maxThreshold", globalThreshold.max);

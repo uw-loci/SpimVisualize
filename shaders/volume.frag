@@ -1,20 +1,22 @@
 // renders volume slices
 
-#version 130
+#version 140
 
 uniform isampler3D volumeTexture;
 
 
-varying vec3 texcoord;
+in vec3 texcoord;
+
+uniform float sliceWeight; 
 
 uniform vec3 color;
-uniform float sliceWeight = 1.0; 
-
 
 uniform vec3 viewDir;
 
 uniform int minThreshold;
 uniform int maxThreshold;
+
+out vec4 fragColor;
 
 void main()
 {
@@ -32,25 +34,13 @@ void main()
 	vec3 blu = vec3(0.0, 0.0, 1.0);
 
 
-
-/*
-	if (intensity < float(minThreshold) / 65535)
-		discard;
-
-	gl_FragColor = vec4(mix(red, blu, 1.0 - intensity), 1.0);
-
-	float alpha = intensity/sliceWeight;
-*/
+	float alpha = value * max(sliceWeight, 0.1);
 
 
-	float alpha = value * 0.01;// * sliceWeight;
+	vec3 v = viewDir * 2.0;
 
 
-
-	vec3 color = vec3(value);// * viewDir;
-
-	gl_FragColor = vec4(color, alpha);
-
+	fragColor = vec4(color, alpha);
 
 
 }
