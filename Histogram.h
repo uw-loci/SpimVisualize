@@ -2,6 +2,8 @@
 
 #include <vector>
 
+struct Threshold;
+
 struct Histogram
 {
 	std::vector<unsigned int>		bins;

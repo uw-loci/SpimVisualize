@@ -1,4 +1,5 @@
 #include "Histogram.h"
+#include "StackRegistration.h"
 
 #include <cmath>
 #include <algorithm>

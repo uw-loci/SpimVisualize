@@ -32,7 +32,6 @@ public:
 	// halfs the internal resolution of the dataset
 	void subsample(bool updateTexture=true);
 
-	Histogram calculateHistogram() const;
 	Histogram calculateHistogram(const Threshold& t) const;
 
 	

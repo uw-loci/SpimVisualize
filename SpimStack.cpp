@@ -921,3 +921,28 @@ std::vector<glm::vec3> SpimStack::calculateVolumeNormals() const
 
 	return std::move(normals);
 }
+
+
+Histogram SpimStack::calculateHistogram(const Threshold& t) const
+{
+	Histogram h;
+	h.bins.resize(t.max - t.min + 1);
+	h.lowest = t.min;
+	h.highest = t.max;
+	h.binSize = 1;
+
+	for (unsigned int i = 0; i < width*height*depth; ++i)
+	{
+		unsigned short v = volume[i];
+		if (v >= t.min && v <= t.max)
+		{
+			h.bins[v - t.min]++;
+		}
+
+	}
+
+	h.max = *std::max_element(h.bins.begin(), h.bins.end());
+	h.max = *std::min_element(h.bins.begin(), h.bins.end());
+
+	return std::move(h);
+}

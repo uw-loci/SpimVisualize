@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <string>
+#include <map>
 
 #include "AABB.h"
 #include "StackRegistration.h"
@@ -90,6 +91,7 @@ private:
 	std::string				configPath;
 	
 	ILayout*				layout;
+	std::map<std::string, ILayout*>	prevLayouts;
 
 	std::vector<SpimStack*>	stacks;
 

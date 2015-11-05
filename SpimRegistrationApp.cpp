@@ -19,6 +19,8 @@ drawGrid(true), drawBboxes(false), drawSlices(false), currentStack(-1), sliceCou
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
 
+	prevLayouts["Perspective"] = layout;
+
 	globalThreshold.min = 100;
 	globalThreshold.max = 130; // std::numeric_limits<unsigned short>::max();
 
@@ -34,7 +36,8 @@ SpimRegistrationApp::~SpimRegistrationApp()
 	for (size_t i = 0; i < stacks.size(); ++i)
 		delete stacks[i];
 
-	delete layout;
+	for (auto l = prevLayouts.begin(); l != prevLayouts.end(); ++l)
+		delete l->second;
 }
 
 void SpimRegistrationApp::reloadShaders()
@@ -347,13 +350,15 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 		glEnable(GL_DEPTH_TEST);
 	}
 
-	
+
+
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_COLOR_ARRAY);
+
 	if (!refPointsA.empty())
 	{
 		//std::cout << "[Debug] Drawing " << TEST_points.size() << " points.\n";
 
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glEnableClientState(GL_COLOR_ARRAY);
 
 		// draw points
 		glColor3f(1.f, 0.f, 0.f);
@@ -363,10 +368,13 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 		refPointsB.draw();
 		*/
 
-		glDisableClientState(GL_VERTEX_ARRAY);
-		glEnableClientState(GL_COLOR_ARRAY);
 	}
-	
+
+	if (!refPointsB.empty())
+		refPointsB.draw();
+
+	glDisableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_COLOR_ARRAY);
 }
 
 glm::vec3 SpimRegistrationApp::getRandomColor(int n)
@@ -405,16 +413,33 @@ void SpimRegistrationApp::resize(const glm::ivec2& newSize)
 void SpimRegistrationApp::setPerspectiveLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords)
 {
 	std::cout << "[Layout] Creating fullscreen perspective layout ... \n";
-	delete layout;
-	layout = new PerspectiveFullLayout(res);
+	
+	if (prevLayouts["Perspective"])
+		layout = prevLayouts["Perspective"];
+	else
+	{
+		layout = new PerspectiveFullLayout(res);
+		prevLayouts["Perspective"] = layout;
+	}
+
+
+
+
 	layout->updateMouseMove(mouseCoords);
 }
 
 void SpimRegistrationApp::setTopviewLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords)
 {
 	std::cout << "[Layout] Creating fullscreen top-view layout ... \n";
-	delete layout;
-	layout = new TopViewFullLayout(res);;
+
+	if (prevLayouts["TopView"])
+		layout = prevLayouts["TopView"];
+	else
+	{
+		layout = new TopViewFullLayout(res);
+		prevLayouts["TopView"] = layout;
+	}
+
 	layout->updateMouseMove(mouseCoords);
 }
 
@@ -422,8 +447,14 @@ void SpimRegistrationApp::setTopviewLayout(const glm::ivec2& res, const glm::ive
 void SpimRegistrationApp::setThreeViewLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords)
 {
 	std::cout << "[Layout] Creating four-view layout ... \n";
-	delete layout;
-	layout = new FourViewLayout(res);
+	if (prevLayouts["FourView"])
+		layout = prevLayouts["FourView"];
+	else
+	{
+		layout = new FourViewLayout(res);
+		prevLayouts["FourView"] = layout;
+	}
+
 	layout->updateMouseMove(mouseCoords);
 }
 
@@ -431,8 +462,14 @@ void SpimRegistrationApp::setThreeViewLayout(const glm::ivec2& res, const glm::i
 void SpimRegistrationApp::setContrastEditorLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords)
 {
 	std::cout << "[Layout] Creating contrast editor layout ... \n";
-	delete layout;
-	layout = new ContrastEditLayout(res);
+	if (prevLayouts["ContrastEditor"])
+		layout = prevLayouts["ContrastEditor"];
+	else
+	{
+		layout = new ContrastEditLayout(res);
+		prevLayouts["ContrastEditor"] = layout;
+	}
+
 	layout->updateMouseMove(mouseCoords);
 }
 
@@ -567,6 +604,7 @@ void SpimRegistrationApp::TEST_extractFeaturePoints()
 {
 
 	stacks[0]->extractTransformedFeaturePoints(globalThreshold, refPointsA);
+	stacks[1]->extractTransformedFeaturePoints(globalThreshold, refPointsB);
 
 	/*
 	using namespace glm;
@@ -695,10 +733,8 @@ void SpimRegistrationApp::calculateHistogram()
 	if (stacks.empty())
 		return;
 
-	histogram.bins.push_back(0);
-	
-
 	dataLimits = stacks[0]->getLimits();
+	histogram = stacks[0]->calculateHistogram(globalThreshold);
 }
 
 void SpimRegistrationApp::drawContrastEditor(const Viewport* vp)
@@ -745,10 +781,31 @@ void SpimRegistrationApp::drawContrastEditor(const Viewport* vp)
 	
 	glEnd();
 
-
-
-
+	
 	glLineWidth(1.f);
+
+
+	// draw histogram
+	if (!histogram.empty())
+	{
+		float dx = 1.f / histogram.bins.size();
+		float dy = 1.f / histogram.max;
+
+		glBegin(GL_LINES);
+		glColor3f(0.7f, 0.7f, 0.7f);
+
+		for (int i = 0; i < histogram.bins.size(); ++i)
+		{
+			glVertex2f(dx*i, 0.f);
+			glVertex2f(dx*i, dy*log((float)histogram.bins[i]));
+
+
+		}
+
+		glEnd();
+
+	}
+	
 
 
 	/*
