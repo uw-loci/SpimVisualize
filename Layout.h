@@ -19,6 +19,15 @@ struct Viewport : boost::noncopyable
 	ICamera*		camera;
 	bool			highlighted;
 
+
+	inline glm::vec2 getRelativeCoords(const glm::ivec2& coords) const
+	{
+		using namespace glm;
+		const ivec2 rc = coords - position;
+		return vec2(rc) / vec2(size);
+	}
+
+
 	inline bool isInside(const glm::ivec2& cursor) const
 	{
 		using namespace glm;

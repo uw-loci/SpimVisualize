@@ -13,6 +13,7 @@
   <ItemGroup>
     <ClCompile Include="AABB.cpp" />
     <ClCompile Include="Framebuffer.cpp" />
+    <ClCompile Include="Histogram.cpp" />
     <ClCompile Include="Layout.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="OrbitCamera.cpp" />
@@ -33,6 +34,7 @@
   <ItemGroup>
     <ClInclude Include="AABB.h" />
     <ClInclude Include="Framebuffer.h" />
+    <ClInclude Include="Histogram.h" />
     <ClInclude Include="Layout.h" />
     <ClInclude Include="nanoflann.hpp" />
     <ClInclude Include="OrbitCamera.h" />

@@ -193,8 +193,8 @@ ContrastEditLayout::ContrastEditLayout(const glm::ivec2& res)
 	views[0].color = vec3(1);
 
 	views[1].name = Viewport::CONTRAST_EDITOR;
-	views[1].camera = new OrthoCamera(glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f, 1.f, 0.f), 10);
-	views[1].color = vec3(0, 1, 0);
+	views[1].camera = new UnitCamera; // OrthoCamera(glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f, 1.f, 0.f), 1.1f);
+	views[1].color = vec3(1, 1, 0);
 		
 	OrbitCamera* cam = dynamic_cast<OrbitCamera*>(views[0].camera);
 	cam->far = CAMERA_DISTANCE * 4.0;
@@ -238,24 +238,24 @@ void ContrastEditLayout::resize(const glm::ivec2& size)
 	using namespace glm;
 
 	const float ASPECT = ((float)size.x / 2.f) / size.y;
-	const ivec2 VIEWPORT_SIZE(size.x / 2, size.y);
+
+
+	int top = size.y * 0.1;
 
 	// setup the 2 views
 	views[0].position = ivec2(0, 0);
-	views[1].position = ivec2(size.x / 2, 0);
-	
+	views[0].size = ivec2(size.x, size.y - top);
+	views[0].camera->aspect = views[0].getAspect();
 
-	for (int i = 0; i < 2; ++i)
-	{
-		views[i].size = VIEWPORT_SIZE;
-		views[i].camera->aspect = ASPECT;
-	}
+	views[1].position = ivec2(0, size.y - top);
+	views[1].size = ivec2(size.x, top);
+	views[1].camera->aspect = views[1].getAspect();
 }
 
 
 void ContrastEditLayout::panActiveViewport(const vec2& delta)
 {
 	Viewport* vp = this->getActiveViewport();
-	if (vp && vp->name != Viewport::CONTRAST_EDITOR)
+	if (vp)// && vp->name != Viewport::CONTRAST_EDITOR)
 		vp->camera->pan(delta.x * vp->getAspect(), delta.y);
 }

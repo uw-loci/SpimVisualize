@@ -94,8 +94,32 @@ public:
 
 	float			zoomFactor;
 
-private:
+protected:
 	glm::vec3		viewDirection;
 	
+
+};
+
+
+// an orthographic camera with projection in [0..1] in the XY plane
+class UnitCamera : public ICamera
+{
+public:
+	UnitCamera();
+
+	virtual void setup() const;
+	virtual void getMVP(glm::mat4& mvp) const;
+	virtual void getMatrices(glm::mat4& proj, glm::mat4& view) const;
+
+	virtual void zoom(float d) {};
+	virtual void rotate(float dt, float dp) {};
+	virtual void pan(float dx, float dy) { target += glm::vec3(dx, dy, 0.f); };
+
+	virtual glm::vec3 calculatePlanarMovement(const glm::vec2& delta) const { return glm::vec3(delta, 0.f); }
+
+	inline glm::vec3 getPosition() const { return target; };
+	inline glm::vec3 getViewDirection() const { return glm::vec3(0,0,-1.f); }
+
+
 
 };

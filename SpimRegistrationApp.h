@@ -5,6 +5,7 @@
 
 #include "AABB.h"
 #include "StackRegistration.h"
+#include "Histogram.h"
 
 class Shader;
 class ILayout;
@@ -36,7 +37,10 @@ public:
 	void moveStack(const glm::vec2& delta);
 	void rotateCurrentStack(float rotY);
 
-	void changeContrast(const glm::vec2& delta);
+	void changeContrast(const glm::ivec2& cursor);
+	void setDataLimits();
+	void resetDataLimits();
+
 
 	void toggleAllStacks();
 
@@ -114,8 +118,8 @@ private:
 	SpimRegistrationApp(const SpimRegistrationApp&);
 
 
-	std::vector<unsigned int>	histogram;
-	unsigned int				histogramMax;
+	Threshold				dataLimits;
+	Histogram				histogram;
 
 
 	void drawContrastEditor(const Viewport* vp);

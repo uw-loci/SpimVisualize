@@ -188,3 +188,38 @@ glm::vec3 OrthoCamera::calculatePlanarMovement(const glm::vec2& delta) const
 
 	return right * delta.x + up * delta.y;
 }
+
+UnitCamera::UnitCamera()
+{
+	this->target = vec3(0.f);
+	this->up = vec3(0, 1, 0);
+	this->near = 0.f;
+	this->far = 1.f;
+}
+
+void UnitCamera::setup() const
+{
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0, 1, 0, 1, 0.f, 1.f);
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	//gluLookAt(pos.x, pos.y, pos.z, target.x, target.y, target.z, up.x, up.y, up.z);
+	glTranslatef(-target.x, -target.y, -target.z);
+}
+
+void UnitCamera::getMatrices(glm::mat4& proj, glm::mat4& view) const
+{
+	proj = ortho(0.f, 1.f, 0.f, 1.f, near, far);
+	view = translate(-target);
+}
+
+void UnitCamera::getMVP(glm::mat4& mvp) const
+{
+	mat4 proj = ortho(0.f, 1.f, 0.f, 1.f, 0.f, 1.f);
+	mat4 view = translate(-target);
+
+	mvp = proj * view;
+}
+

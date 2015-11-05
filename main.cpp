@@ -142,6 +142,11 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == 'd')
 		regoApp->panCamera(glm::vec2(10, 0));
 
+
+	if (key == 'm')
+		regoApp->setDataLimits();
+	if (key == 'M')
+		regoApp->resetDataLimits();
 }
 
 
@@ -160,6 +165,8 @@ static void motion(int x, int y)
 	mouse.coordinates.x = x;
 	mouse.coordinates.y = y;
 	
+
+	int h = glutGet(GLUT_WINDOW_HEIGHT);
 	
 	if (mouse.button[1])
 		regoApp->panCamera(glm::vec2(dx, dy));
@@ -174,12 +181,11 @@ static void motion(int x, int y)
 		regoApp->moveStack(glm::vec2(dx, dy));
 
 		// change contrast in the editor
-		regoApp->changeContrast(glm::vec2(dx, dy));
+		regoApp->changeContrast(glm::ivec2(x, h - y));
 
 
 	}
 
-	int h = glutGet(GLUT_WINDOW_HEIGHT);
 	regoApp->updateMouseMotion(glm::ivec2(x, h - y));
 }
 

@@ -11,6 +11,7 @@ struct AABB;
 class Shader;
 class ReferencePoints;
 struct Threshold;
+struct Histogram;
 
 // a single stack of SPIM images
 class SpimStack : boost::noncopyable
@@ -31,8 +32,8 @@ public:
 	// halfs the internal resolution of the dataset
 	void subsample(bool updateTexture=true);
 
-	std::vector<unsigned int> calculateHistogram() const;
-	std::vector<unsigned int> calculateHistogram(const Threshold& t) const;
+	Histogram calculateHistogram() const;
+	Histogram calculateHistogram(const Threshold& t) const;
 
 	
 	// extracts the points in world coords. The w coordinate contains the point's value

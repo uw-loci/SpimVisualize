@@ -517,11 +517,47 @@ void SpimRegistrationApp::moveStack(const glm::vec2& delta)
 	}
 }
 
-void SpimRegistrationApp::changeContrast(const glm::vec2& delta)
+void SpimRegistrationApp::changeContrast(const glm::ivec2& cursor)
 {
 	Viewport* vp = layout->getActiveViewport();
 	if (vp && vp->name == Viewport::CONTRAST_EDITOR)
 	{
+		// find closest contrast slider
+		
+		glm::vec2 coords = vp->getRelativeCoords(cursor);
+
+		if (coords.x < 0)
+			coords.x = 0.f;
+		if (coords.x > 1.f)
+			coords.x = 1.f;
+
+		
+
+		const float leftLimit = dataLimits.min;
+		const float rightLimit = dataLimits.max;
+		
+		float minBar = globalThreshold.min / rightLimit;
+		float maxBar = globalThreshold.max / rightLimit;
+		
+		if (abs(coords.x - minBar) < abs(coords.x - maxBar))
+		{
+			// min bar is closer to cursor -- move this
+			unsigned short val = (unsigned short)(dataLimits.max*coords.x);
+			globalThreshold.min = val;
+		
+
+			std::cout << "[Contrast] min val:" << val << " (" << minBar << ")\n";
+		}
+		else
+		{
+			// max bar is closer to cursor -- move this
+			unsigned short val = (unsigned short)(dataLimits.max*coords.x);
+			globalThreshold.max = val;
+
+			std::cout << "[Contrast] max val:" << val << " (" << maxBar << ")\n";
+		}
+		
+
 
 	}
 }
@@ -659,10 +695,10 @@ void SpimRegistrationApp::calculateHistogram()
 	if (stacks.empty())
 		return;
 
-	histogram = stacks[0]->calculateHistogram(globalThreshold);
-	histogramMax = *std::max_element(histogram.begin(), histogram.end());
+	histogram.bins.push_back(0);
+	
 
-	std::cout << "[Histo] Max value: " << histogramMax << std::endl;
+	dataLimits = stacks[0]->getLimits();
 }
 
 void SpimRegistrationApp::drawContrastEditor(const Viewport* vp)
@@ -670,54 +706,93 @@ void SpimRegistrationApp::drawContrastEditor(const Viewport* vp)
 	if (histogram.empty())
 	{
 		calculateHistogram();
-
-		/*
-		OrthoCamera* cam = dynamic_cast<OrthoCamera*>(vp->camera);
-		if (cam)
-			cam->zoomFactor = histogram.size() / 2.f;
-		*/
 	}
 
-	glMatrixMode(GL_PROJECTION);
-	glPushMatrix();
-	glLoadIdentity();
-	const float height = log((float)histogramMax);
-	glOrtho(0, histogram.size(), 0, height, -1, 1);
-	glScalef(0.8f, 0.8f, 0.8f);
+	/*
+	glColor3f(0.7f, 0.7f, 0.7f);
+	glBegin(GL_QUADS);
+	glVertex2i(0, 0);
+	glVertex2i(1, 0);
+	glVertex2i(1, 1);
+	glVertex2i(0, 1);
+	glEnd();
+	*/
 
-	glMatrixMode(GL_MODELVIEW);
-	glPushMatrix();
-	glLoadIdentity();
+	glColor3f(1,1,1);
+	glBegin(GL_LINE_LOOP);
+	glVertex2i(0, 0);
+	glVertex2i(1, 0);
+	glVertex2i(1, 1);
+	glVertex2i(0, 1);
+	glEnd();
 
 
+
+	const float leftLimit = 0.f;
+	const float rightLimit = dataLimits.max;
+
+
+	glLineWidth(2.f);
+	glBegin(GL_LINES);
+	glColor3f(1, 1, 0);
+	glVertex2f((float)globalThreshold.min / rightLimit, 0);
+	glVertex2f((float)globalThreshold.min / rightLimit, 1);
+
+	glColor3f(1, 0.5, 0);
+	glVertex2f((float)globalThreshold.max / rightLimit, 0);
+	glVertex2f((float)globalThreshold.max / rightLimit, 1);
+	
+	
+	glEnd();
+
+
+
+
+	glLineWidth(1.f);
+
+
+	/*
 	glBegin(GL_LINES);
 		
 	glColor3f(0.7f, 0.7f, 0.7f);
+
 	glVertex2i(0, 0);
-	glVertex2i(histogram.size(), 0);
+	glVertex2i(histogram.bins.size(), 0);
 
 	glColor3f(1.f, 1.f, 1.f);
-	for (unsigned int i = 0; i < histogram.size(); ++i)
+	for (unsigned int i = 0; i < histogram.bins.size(); ++i)
 	{
-		glVertex3i(i, 0, 0);
-		glVertex3f(i, log((float)histogram[i]), 0);
+		unsigned int x = i * histogram.binSize * histogram.lowest;
+
+		glVertex3i(x, 0, 0);
+		glVertex3f(x, log((float)histogram.bins[i]), 0);
 	}
 	
 	glColor3f(1, 1, 0);
 	glVertex3i(globalThreshold.min, 0, 0);
-	glVertex3i(globalThreshold.min, height, 0);
+	glVertex3i(globalThreshold.min, 1, 0);
 
 	glColor3f(1, 0.5, 0);
 	glVertex3i(globalThreshold.max, 0, 0);
-	glVertex3i(globalThreshold.max, height, 0);
+	glVertex3i(globalThreshold.max, 1, 0);
 
 	glEnd();
-
-
+	*/
+	/*
 	glMatrixMode(GL_PROJECTION);
 	glPopMatrix();
 	glMatrixMode(GL_MODELVIEW);
 	glPopMatrix();
+	*/
 
+}
 
+void SpimRegistrationApp::setDataLimits()
+{
+	dataLimits = globalThreshold;
+}
+
+void SpimRegistrationApp::resetDataLimits()
+{
+	dataLimits = stacks[0]->getLimits();
 }
