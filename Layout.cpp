@@ -4,6 +4,9 @@
 
 #include <GL/glew.h>
 
+#include <fstream>
+#include <cassert>
+
 
 using namespace std;
 using namespace glm;
@@ -73,6 +76,12 @@ void SingleViewLayout::resize(const ivec2& size)
 	viewport.position = ivec2(0);
 	viewport.size = size;
 	viewport.camera->aspect = (float)size.x / size.y;
+}
+
+void SingleViewLayout::panActiveViewport(const vec2& delta)
+{
+	if (viewport.highlighted)
+		viewport.camera->pan(delta.x * viewport.getAspect(), delta.y);
 }
 
 TopViewFullLayout::TopViewFullLayout(const ivec2& resolution) : SingleViewLayout(resolution)
@@ -160,6 +169,13 @@ void FourViewLayout::updateMouseMove(const ivec2& m)
 
 }
 
+void FourViewLayout::panActiveViewport(const vec2& delta)
+{
+	Viewport* vp = this->getActiveViewport();
+	if (vp)
+		vp->camera->pan(delta.x * vp->getAspect(), delta.y);
+}
+
 Viewport* FourViewLayout::getActiveViewport()
 {
 	for (int i = 0; i < 4; ++i)
@@ -167,4 +183,79 @@ Viewport* FourViewLayout::getActiveViewport()
 			return &views[i];
 
 	return nullptr;
+}
+
+ContrastEditLayout::ContrastEditLayout(const glm::ivec2& res)
+{
+
+	views[0].name = Viewport::PERSPECTIVE;
+	views[0].camera = new OrbitCamera;
+	views[0].color = vec3(1);
+
+	views[1].name = Viewport::CONTRAST_EDITOR;
+	views[1].camera = new OrthoCamera(glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f, 1.f, 0.f), 10);
+	views[1].color = vec3(0, 1, 0);
+		
+	OrbitCamera* cam = dynamic_cast<OrbitCamera*>(views[0].camera);
+	cam->far = CAMERA_DISTANCE * 4.0;
+	cam->near = cam->far / 100.0;
+	cam->radius = (CAMERA_DISTANCE * 1.5);
+	cam->target = CAMERA_TARGET;
+
+	
+	ContrastEditLayout::resize(res);
+}
+
+ContrastEditLayout::~ContrastEditLayout()
+{
+	delete views[0].camera;
+	delete views[1].camera;
+}
+
+
+void ContrastEditLayout::updateMouseMove(const ivec2& m)
+{
+	for (int i = 0; i < 2; ++i)
+		if (views[i].isInside(m))
+			views[i].highlighted = true;
+		else
+			views[i].highlighted = false;
+
+}
+
+Viewport* ContrastEditLayout::getActiveViewport()
+{
+	if (views[0].highlighted)
+		return &views[0];
+	else if (views[1].highlighted)
+		return &views[1];
+	else
+		return nullptr;
+}
+
+void ContrastEditLayout::resize(const glm::ivec2& size)
+{
+	using namespace glm;
+
+	const float ASPECT = ((float)size.x / 2.f) / size.y;
+	const ivec2 VIEWPORT_SIZE(size.x / 2, size.y);
+
+	// setup the 2 views
+	views[0].position = ivec2(0, 0);
+	views[1].position = ivec2(size.x / 2, 0);
+	
+
+	for (int i = 0; i < 2; ++i)
+	{
+		views[i].size = VIEWPORT_SIZE;
+		views[i].camera->aspect = ASPECT;
+	}
+}
+
+
+void ContrastEditLayout::panActiveViewport(const vec2& delta)
+{
+	Viewport* vp = this->getActiveViewport();
+	if (vp && vp->name != Viewport::CONTRAST_EDITOR)
+		vp->camera->pan(delta.x * vp->getAspect(), delta.y);
 }

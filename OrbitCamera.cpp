@@ -130,7 +130,7 @@ void OrbitCamera::jitter(float v)
 }
 
 
-OrthoCamera::OrthoCamera(const glm::vec3& viewDir, const glm::vec3& up) : viewDirection(normalize(viewDir)), zoomFactor(1000.f)
+OrthoCamera::OrthoCamera(const glm::vec3& viewDir, const glm::vec3& up, float z) : viewDirection(normalize(viewDir)), zoomFactor(z)
 {
 	this->up = up;
 	this->target = vec3(0.f);

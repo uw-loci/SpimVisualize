@@ -63,6 +63,10 @@ public:
 
 	virtual glm::vec3 calculatePlanarMovement(const glm::vec2& delta) const;
 
+
+	inline float getTheta() const { return theta; }
+	inline float getPhi() const { return phi; }
+
 private:
 	float	theta, phi;
 
@@ -73,7 +77,7 @@ private:
 class OrthoCamera: public ICamera
 {
 public:
-	OrthoCamera(const glm::vec3& viewDir, const glm::vec3& up);
+	OrthoCamera(const glm::vec3& viewDir, const glm::vec3& up, float z=1000.f);
 	virtual void setup() const;
 
 	virtual void getMVP(glm::mat4& mvp) const;
@@ -88,9 +92,10 @@ public:
 	inline glm::vec3 getPosition() const { return target - viewDirection; } ;
 	inline glm::vec3 getViewDirection() const {	return viewDirection;}
 
+	float			zoomFactor;
+
 private:
 	glm::vec3		viewDirection;
-	float			zoomFactor;
 	
 
 };

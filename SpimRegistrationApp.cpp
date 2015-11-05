@@ -8,12 +8,13 @@
 #include <algorithm>
 #include <iostream>
 #include <GL/glew.h>
+#include <fstream>
 
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/io.hpp>
 
 SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(0), sliceShader(0), volumeShader(0), layout(0), 
-drawGrid(true), drawBboxes(false), drawSlices(false), currentStack(-1), sliceCount(150)
+drawGrid(true), drawBboxes(false), drawSlices(false), currentStack(-1), sliceCount(150), configPath("./")
 {
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
@@ -56,7 +57,11 @@ void SpimRegistrationApp::drawScene()
 		const Viewport* vp = layout->getView(i);
 		vp->setup();
 
-		drawScene(vp);
+
+		if (vp->name == Viewport::CONTRAST_EDITOR)
+			drawContrastEditor(vp);
+		else
+			drawScene(vp);
 	}
 
 }
@@ -78,6 +83,40 @@ void SpimRegistrationApp::loadStackTransformations()
 		s->loadTransform(filename);
 	});
 }
+
+void SpimRegistrationApp::saveContrastSettings() const
+{
+	std::string filename(configPath + "contrast.txt");
+	std::ofstream file(filename);
+	assert(file.is_open());
+
+	std::cout << "[File] Saving contrast settings to \"" << filename << "\"\n";
+
+	file << "min: " << (int)globalThreshold.min << std::endl;
+	file << "max: " << (int)globalThreshold.max << std::endl;
+}
+
+void SpimRegistrationApp::loadContrastSettings()
+{
+	std::string filename(configPath + "contrast.txt");
+	std::ifstream file(filename);
+
+	// fail gracefully
+	if (!file.is_open())
+	{
+		std::cout << "[Warning] Unable to load contrast settings from \"" << filename << "\", skipping.\n";
+		return;
+	}
+	std::cout << "[File] Loading contrast settings from \"" << filename << "\"\n";
+
+	std::string tmp;;
+	file >> tmp >> globalThreshold.min;
+	file >> tmp >> globalThreshold.max;
+
+	std::cout << "[Contrast] Global threshold: " << (int)globalThreshold.min << "->" << (int)globalThreshold.max << std::endl;
+}
+
+
 
 void SpimRegistrationApp::addSpimStack(const std::string& filename)
 {
@@ -146,6 +185,8 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 			glEnd();
 		}
 	}
+
+
 
 	if (drawSlices)
 	{
@@ -387,6 +428,14 @@ void SpimRegistrationApp::setThreeViewLayout(const glm::ivec2& res, const glm::i
 }
 
 
+void SpimRegistrationApp::setContrastEditorLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords)
+{
+	std::cout << "[Layout] Creating contrast editor layout ... \n";
+	delete layout;
+	layout = new ContrastEditLayout(res);
+	layout->updateMouseMove(mouseCoords);
+}
+
 void SpimRegistrationApp::centerCamera()
 {
 	Viewport* vp = layout->getActiveViewport();
@@ -411,10 +460,7 @@ void SpimRegistrationApp::zoomCamera(float z)
 
 void SpimRegistrationApp::panCamera(const glm::vec2& delta)
 {
-
-	Viewport* vp = layout->getActiveViewport();
-	if (vp)
-		vp->camera->pan(delta.x * vp->getAspect(), delta.y);
+	layout->panActiveViewport(delta);
 }
 
 void SpimRegistrationApp::rotateCamera(const glm::vec2& delta)
@@ -458,6 +504,7 @@ void SpimRegistrationApp::rotateCurrentStack(float rotY)
 }
 
 
+
 void SpimRegistrationApp::moveStack(const glm::vec2& delta)
 {
 	if (!currentStackValid())
@@ -467,6 +514,15 @@ void SpimRegistrationApp::moveStack(const glm::vec2& delta)
 	if (vp && vp->name != Viewport::PERSPECTIVE)
 	{
 		stacks[currentStack]->move(vp->camera->calculatePlanarMovement(delta));
+	}
+}
+
+void SpimRegistrationApp::changeContrast(const glm::vec2& delta)
+{
+	Viewport* vp = layout->getActiveViewport();
+	if (vp && vp->name == Viewport::CONTRAST_EDITOR)
+	{
+
 	}
 }
 
@@ -603,5 +659,65 @@ void SpimRegistrationApp::calculateHistogram()
 	if (stacks.empty())
 		return;
 
-	stacks[0]->calculateHistogram(globalThreshold);
+	histogram = stacks[0]->calculateHistogram(globalThreshold);
+	histogramMax = *std::max_element(histogram.begin(), histogram.end());
+
+	std::cout << "[Histo] Max value: " << histogramMax << std::endl;
+}
+
+void SpimRegistrationApp::drawContrastEditor(const Viewport* vp)
+{
+	if (histogram.empty())
+	{
+		calculateHistogram();
+
+		/*
+		OrthoCamera* cam = dynamic_cast<OrthoCamera*>(vp->camera);
+		if (cam)
+			cam->zoomFactor = histogram.size() / 2.f;
+		*/
+	}
+
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glLoadIdentity();
+	const float height = log((float)histogramMax);
+	glOrtho(0, histogram.size(), 0, height, -1, 1);
+	glScalef(0.8f, 0.8f, 0.8f);
+
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+
+
+	glBegin(GL_LINES);
+		
+	glColor3f(0.7f, 0.7f, 0.7f);
+	glVertex2i(0, 0);
+	glVertex2i(histogram.size(), 0);
+
+	glColor3f(1.f, 1.f, 1.f);
+	for (unsigned int i = 0; i < histogram.size(); ++i)
+	{
+		glVertex3i(i, 0, 0);
+		glVertex3f(i, log((float)histogram[i]), 0);
+	}
+	
+	glColor3f(1, 1, 0);
+	glVertex3i(globalThreshold.min, 0, 0);
+	glVertex3i(globalThreshold.min, height, 0);
+
+	glColor3f(1, 0.5, 0);
+	glVertex3i(globalThreshold.max, 0, 0);
+	glVertex3i(globalThreshold.max, height, 0);
+
+	glEnd();
+
+
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glMatrixMode(GL_MODELVIEW);
+	glPopMatrix();
+
+
 }

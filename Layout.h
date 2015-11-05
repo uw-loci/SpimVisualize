@@ -2,17 +2,19 @@
 
 #include <glm/glm.hpp>
 
+#include <boost/utility.hpp>
+
 class ICamera;
 struct AABB;
 
-struct Viewport
+struct Viewport : boost::noncopyable
 {
 	// window coordinates
 	glm::ivec2		position, size;
 
 	glm::vec3		color;
 
-	enum ViewportName { ORTHO_X = 0, ORTHO_Y, ORTHO_Z, PERSPECTIVE = 3 } name;
+	enum ViewportName { ORTHO_X = 0, ORTHO_Y, ORTHO_Z, PERSPECTIVE, CONTRAST_EDITOR } name;
 
 	ICamera*		camera;
 	bool			highlighted;
@@ -34,7 +36,7 @@ struct Viewport
 };
 
 
-class ILayout
+class ILayout : boost::noncopyable
 {
 public:
 	virtual ~ILayout() {}
@@ -48,6 +50,13 @@ public:
 
 	virtual size_t getViewCount() const = 0;
 	virtual Viewport* getView(unsigned int n) = 0;
+
+	virtual void panActiveViewport(const glm::vec2& delta) = 0;
+
+	/*
+	virtual void saveState(const std::string& filename) const = 0;
+	virtual void loadState(const std::string& filename) = 0;
+	*/
 };
 
 
@@ -67,6 +76,8 @@ public:
 	inline Viewport* getView(unsigned int n) { return &views[n]; }
 
 
+	virtual void panActiveViewport(const glm::vec2& delta);
+
 private:
 	Viewport		views[4];
 };
@@ -84,6 +95,10 @@ public:
 
 	inline size_t getViewCount() const { return 1; }
 	inline Viewport* getView(unsigned int n) { return &viewport; }
+
+
+	virtual void panActiveViewport(const glm::vec2& delta);
+
 
 protected:
 	Viewport			viewport;
@@ -107,4 +122,24 @@ public:
 	inline ICamera* getPerspectiveCamera() { return viewport.camera; }
 };
 
+class ContrastEditLayout : public ILayout
+{
+public:
+	ContrastEditLayout(const glm::ivec2& resolution);
+	virtual ~ContrastEditLayout();
 
+	virtual Viewport* getActiveViewport();
+	virtual void updateMouseMove(const glm::ivec2& coords);
+
+	virtual void resize(const glm::ivec2& size);
+
+	virtual ICamera* getPerspectiveCamera() { return views[0].camera; }
+	inline size_t getViewCount() const { return 2; };
+	inline Viewport* getView(unsigned int n) { return &views[n]; }
+	
+
+	virtual void panActiveViewport(const glm::vec2& delta);
+
+protected:
+	Viewport		views[2];
+};

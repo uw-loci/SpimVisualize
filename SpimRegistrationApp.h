@@ -36,6 +36,8 @@ public:
 	void moveStack(const glm::vec2& delta);
 	void rotateCurrentStack(float rotY);
 
+	void changeContrast(const glm::vec2& delta);
+
 	void toggleAllStacks();
 
 
@@ -53,7 +55,8 @@ public:
 	void setPerspectiveLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
 	void setTopviewLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
 	void setThreeViewLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
-	
+	void setContrastEditorLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
+
 	void rotateCamera(const glm::vec2& delta);
 	void zoomCamera(float dt);
 	void panCamera(const glm::vec2& delta);
@@ -63,6 +66,9 @@ public:
 	void saveStackTransformations() const;
 	void loadStackTransformations();
 	
+	void saveContrastSettings() const;
+	void loadContrastSettings();
+
 	inline void toggleGrid() { drawGrid = !drawGrid; }
 	inline void toggleBboxes() { drawBboxes = !drawBboxes; }
 	inline void toggleSlices() { drawSlices = !drawSlices; }
@@ -74,9 +80,11 @@ public:
 	void autoThreshold();
 
 
-
+	inline void setConfigPath(const std::string& p) { configPath = p; }
 
 private:
+	std::string				configPath;
+	
 	ILayout*				layout;
 
 	std::vector<SpimStack*>	stacks;
@@ -105,8 +113,16 @@ private:
 
 	SpimRegistrationApp(const SpimRegistrationApp&);
 
+
+	std::vector<unsigned int>	histogram;
+	unsigned int				histogramMax;
+
+
+	void drawContrastEditor(const Viewport* vp);
 	void drawScene(const Viewport* vp);
 	static glm::vec3 getRandomColor(int n);
 
 	inline bool currentStackValid() const { return currentStack > -1 && currentStack < stacks.size();  }
+
+
 };

@@ -159,8 +159,7 @@ static void motion(int x, int y)
 
 	mouse.coordinates.x = x;
 	mouse.coordinates.y = y;
-
-
+	
 	
 	if (mouse.button[1])
 		regoApp->panCamera(glm::vec2(dx, dy));
@@ -173,6 +172,10 @@ static void motion(int x, int y)
 		
 		// stack movement in an ortho window
 		regoApp->moveStack(glm::vec2(dx, dy));
+
+		// change contrast in the editor
+		regoApp->changeContrast(glm::vec2(dx, dy));
+
 
 	}
 
@@ -201,6 +204,8 @@ static void special(int key, int x, int y)
 	if (key == GLUT_KEY_F3)
 		regoApp->setThreeViewLayout(winRes, mouse.coordinates);
 	
+	if (key == GLUT_KEY_F4)
+		regoApp->setContrastEditorLayout(winRes, mouse.coordinates);
 
 	if (key == GLUT_KEY_DOWN)
 	{
@@ -236,6 +241,16 @@ static void reshape(int w, int h)
 	regoApp->resize(glm::ivec2(w, h));
 }
 
+static void cleanup()
+{
+
+	regoApp->saveStackTransformations();
+	regoApp->saveContrastSettings();
+
+
+	delete regoApp;
+}
+
 int main(int argc, const char** argv)
 {
 
@@ -269,6 +284,7 @@ int main(int argc, const char** argv)
 			
 
 	regoApp = new SpimRegistrationApp(glm::ivec2(1024,768));
+	regoApp->setConfigPath("e:/regoApp/");
 
 	try
 	{
@@ -284,8 +300,9 @@ int main(int argc, const char** argv)
 			regoApp->addSpimStack(filename);
 		}
 
+		regoApp->centerCamera();
 		regoApp->loadStackTransformations();
-
+		regoApp->loadContrastSettings();
 
 
 	}
@@ -298,7 +315,7 @@ int main(int argc, const char** argv)
 		std::cerr << "[Error] " << e << std::endl;
 	}
 
-	
+	atexit(cleanup);
 
 	glutMainLoop();
 
