@@ -954,31 +954,93 @@ Histogram SpimStack::calculateHistogram(const Threshold& t) const
 vector<Hourglass> SpimStack::detectHourglasses() const
 {
 	using namespace cv;
+	
 
-	vector<Vec3f> allCircles;
+	// combine the circles on different planes to hourglasses
+	vector<Hourglass> result;
 
 
 	// convert each plane of the volume into an opencv matrix
 	for (unsigned int i = 0; i < depth; ++i)
 	{
 		Mat plane = getImagePlane(i);
+		Mat plane8bit;
 
+		// convert image to 8bit gray
+		plane.convertTo(plane8bit, CV_8U);
 
-		GaussianBlur(plane, plane, Size(9, 9), 2, 2);
+		GaussianBlur(plane8bit, plane8bit, Size(9, 9), 2, 2);
 		vector<Vec3f> circles;
 
-		HoughCircles(plane, circles, CV_HOUGH_GRADIENT, 1, plane.rows / 8, 200, 100, 0, 0);
+		
+		HoughCircles(plane8bit, circles, CV_HOUGH_GRADIENT, 1, plane8bit.rows / 8, 10, 5, 0, 0);
 	
 		cout << "[Beads] Detected " << circles.size() << " circles in plane " << i << endl;
 
-		allCircles.insert(allCircles.end(), circles.begin(), circles.end());
+
+		char filename[256];
+		sprintf(filename, "e:/temp/circles_%d.png", i);
+		
+
+		Mat imgOut;
+		cvtColor(plane8bit, imgOut, CV_GRAY2RGB);
+		
+		for (size_t i = 0; i < circles.size(); ++i)
+		{
+			Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+			int radius = cvRound(circles[i][2]);
+			// circle center
+			circle(imgOut, center, 3, Scalar(0, 255, 0), -1, 8, 0);
+			// circle outline
+			circle(imgOut, center, radius, Scalar(0, 0, 255), 3, 8, 0);
+
+		}	
+		
+		
+		imwrite(filename, imgOut);
+
+
+
+		cout << "[Beads] Assigning circles to hourglasses ... ";
+		for (size_t c = 0; c < circles.size(); ++c)
+		{
+			const vec2 axis(circles[c][0], circles[c][1]);
+			const float radius = circles[c][2];
+
+
+			if (result.empty())
+			{
+				Hourglass h;
+				h.centerAxis = axis;
+				h.circles.push_back(vec2(i, radius));
+			}
+			else
+			{
+				size_t bestFit = 0;
+				float maxDist = numeric_limits<float>::max();
+				// find a fitting hourglass shape if it exists
+				for (size_t h = 0; h < result.size(); ++h)
+				{
+					vec2 d = axis - result[h].centerAxis;
+					float d2 = dot(d, d);
+					if (d2 < maxDist)
+					{
+						bestFit = h;
+						maxDist = d2;
+					}
+				}
+
+				Hourglass& h = result[bestFit];
+				h.circles.push_back(vec2(i, radius));
+			}
+
+
+		}
+		cout << "done.\n";
+
 	}
-	
 
-	// combine the circles on different planes to hourglasses
-
-	vector<Hourglass> result;
-	
+	cout << "[Beads] Found " << result.size() << " hourglasses.\n";
 
 
 
