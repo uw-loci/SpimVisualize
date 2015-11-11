@@ -145,12 +145,12 @@ void AABB::draw() const
 	};
 
 
-	glEnableClientState(GL_VERTEX_ARRAY);
+	//glEnableClientState(GL_VERTEX_ARRAY);
 	glVertexPointer(4, GL_FLOAT, 0, value_ptr(vertices[0]));
 
 	glDrawElements(GL_LINES, 24, GL_UNSIGNED_BYTE, indices);
 
-	glDisableClientState(GL_VERTEX_ARRAY);
+	//glDisableClientState(GL_VERTEX_ARRAY);
 
 }
 #endif // NO_GRAPHICS

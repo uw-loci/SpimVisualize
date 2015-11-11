@@ -3,11 +3,13 @@
 #include "Shader.h"
 #include "StackRegistration.h"
 #include "Histogram.h"
+#include "BeadDetection.h"
 
 #include <iostream>
 #include <cstring>
 #include <algorithm>
 #include <fstream>
+#include <cstdio>
 
 #include <boost/smart_ptr.hpp>
 
@@ -19,7 +21,6 @@
 #include <FreeImage.h>
 #include <GL/glew.h>
 
-
 #include <pcl/common/common.h>
 #include <pcl/point_types.h>
 #include <pcl/features/feature.h>
@@ -29,6 +30,9 @@
 #include <pcl/search/kdtree.h>
 
 #include <extrema.h>
+
+#include <opencv2/imgproc.hpp>
+
 
 /*
 #include <pcl/registration/icp.h>
@@ -945,4 +949,63 @@ Histogram SpimStack::calculateHistogram(const Threshold& t) const
 	h.max = *std::min_element(h.bins.begin(), h.bins.end());
 
 	return std::move(h);
+}
+
+vector<Hourglass> SpimStack::detectHourglasses() const
+{
+	using namespace cv;
+
+	vector<Vec3f> allCircles;
+
+
+	// convert each plane of the volume into an opencv matrix
+	for (unsigned int i = 0; i < depth; ++i)
+	{
+		Mat plane = getImagePlane(i);
+
+
+		GaussianBlur(plane, plane, Size(9, 9), 2, 2);
+		vector<Vec3f> circles;
+
+		HoughCircles(plane, circles, CV_HOUGH_GRADIENT, 1, plane.rows / 8, 200, 100, 0, 0);
+	
+		cout << "[Beads] Detected " << circles.size() << " circles in plane " << i << endl;
+
+		allCircles.insert(allCircles.end(), circles.begin(), circles.end());
+	}
+	
+
+	// combine the circles on different planes to hourglasses
+
+	vector<Hourglass> result;
+	
+
+
+
+
+
+	return std::move(result);
+
+}
+
+cv::Mat SpimStack::getImagePlane(unsigned int z) const
+{
+	using namespace cv;
+
+	assert(z < depth);
+
+	Mat result(width, height, CV_16U, Scalar(0));
+	for (unsigned int x = 0; x < width; ++x)
+	{
+		for (unsigned int y = 0; y < height; ++y)
+		{
+			const unsigned int index = x + y*width + z*width*height;
+			unsigned short val = volume[index];
+			
+			result.at<unsigned short>(x,y) = val;
+		}
+	}
+	
+
+	return std::move(result);
 }

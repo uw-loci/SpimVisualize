@@ -30,7 +30,7 @@ public:
 
 		
 	// aligns to
-	float align(const ReferencePoints* reference, glm::mat4& deltaTransform);
+	void align(const ReferencePoints* reference, glm::mat4& deltaTransform);
 
 	inline bool empty() const { return points.empty(); }
 	inline size_t size() const { return points.size(); }

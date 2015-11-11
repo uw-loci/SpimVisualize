@@ -4,14 +4,25 @@
 #include <stdexcept>
 #include <iostream>
 
-#include <opencv2/core.hpp>
-#include <opencv2/calib3d.hpp>
-
-
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
-#include <pcl/registration/transformation_estimation_svd.h>
 
+
+
+#include <pcl/point_representation.h>
+#include <pcl/search/kdtree.h>
+#include <pcl/search/flann_search.h>
+#include <pcl/registration/transformation_estimation_svd.h>
+#include <pcl/registration/transformation_estimation_svd_scale.h>
+
+
+/*
+//convenient typedefs
+typedef pcl::PointXYZI PointT;
+typedef pcl::PointCloud<PointT> PointCloud;
+typedef pcl::PointNormal PointNormalT;
+typedef pcl::PointCloud<PointNormalT> PointCloudWithNormals;
+*/
 
 #include <glm/gtx/io.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -108,19 +119,23 @@ void ReferencePoints::trim(const ReferencePoints* smaller)
 	std::cout << "[Align] Done reshuffling points. Trimmed " << temp.size() - points.size() << " points.\n";
 
 }
-static inline cv::Point3f makePt(const glm::vec4& v)
-{
-	return cv::Point3f(v.x, v.y, v.z);
-}
 
-static inline vector<cv::Point3f> makeCVCloud(const vector<vec4>& points)
+glm::mat4 EigenMatToGLM(const Eigen::Matrix4f& m)
 {
-	vector<cv::Point3f> result(points.size());
-	for (size_t i = 0; i < points.size(); ++i)
-		result[i] = makePt(points[i]);
-	
+	mat4 result;
+
+	for (int i = 0; i < 4; ++i)
+	{
+		auto r = m.row(i);
+
+		for (int j = 0; j < 4; ++j)
+		{
+			result[j][i] = r[j];
+		}
+	}
 	return move(result);
 }
+
 
 static inline pcl::PointXYZI makePclPt(const glm::vec4& pt)
 {
@@ -131,13 +146,15 @@ static inline pcl::PointXYZI makePclPt(const glm::vec4& pt)
 	return std::move(result);
 }
 
-static inline vector<pcl::PointXYZI> makePCLCloud(const vector<vec4>& points)
+static inline pcl::PointCloud<pcl::PointXYZI>::Ptr makePCLCloud(const vector<vec4>& points)
 {
-	vector<pcl::PointXYZI> result(points.size());
-	for (size_t i = 0; i < points.size(); ++i)
-		result[i] = makePclPt(points[i]);
+	pcl::PointCloud<pcl::PointXYZI>::Ptr result(new pcl::PointCloud<pcl::PointXYZI>);
+	result->reserve(points.size());
 
-	return std::move(result);
+	for (size_t i = 0; i < points.size(); ++i)
+		result->push_back(makePclPt(points[i]));
+
+	return result;
 }
 
 
@@ -174,77 +191,44 @@ void ReferencePoints::draw() const
 
 }
 
-float ReferencePoints::align(const ReferencePoints* reference, mat4& delta)
+void ReferencePoints::align(const ReferencePoints* target, mat4& delta)
 {
 	using namespace pcl;
-
-	vector<PointXYZI> refCloud = makePCLCloud(reference->points);
-	vector<PointXYZI> tgtCloud = makePCLCloud(this->points);
-
-	try
-	{
-
-
-	}
-	catch (cv::Exception& e)
-	{
-		std::cout << "[Debug] OpenCV error: " << e.what() << std::endl;
-		return 0.f;
-	}
-
 	
-}
 
-/*
-float ReferencePoints::align(const ReferencePoints* reference, mat4& delta)
-{
-	assert(points.size() == reference->points.size());
+	// 1) create kdtree -- steal code from trim
+	pcl::KdTreeFLANN<PointXYZI> kdTree;
+	kdTree.setInputCloud(makePCLCloud(this->points));
+	kdTree.setEpsilon(0.5);
+	
 
-	// convert clouds to opencv
-	vector<cv::Point3f> refCloud = makeCVCloud(reference->points);
-	vector<cv::Point3f> tgtCloud = makeCVCloud(this->points);
-	assert(tgtCloud.size() == refCloud.size());
 
-	try
+
+	// 2) reshuffle/asign correspondences
+
+	// 3) run ransac to find a good transformation
+	const unsigned int RANSAC_ITERATIONS = 20;
+
+	struct RansacResult
 	{
+		mat4		transform;
+		float		meanError;
+	};
 
-		cv::Mat transformEstimate(3, 4, CV_64F);
-		vector<uchar> inliers;
-
-		double ransacThreshold = 1.0;
-		double confidence = 0.95;
-		cv::estimateAffine3D(tgtCloud, refCloud, transformEstimate, inliers, ransacThreshold, confidence);
-
-		// count inliers:
-		unsigned int icount = count_if(inliers.begin(), inliers.end(), [](uchar c) { return c > 0; });
-		std::cout << "[Debug] Inliers: " << icount << " (" << (float)icount / tgtCloud.size() << ")\n";
-
-		// transform points
-		mat4 deltaTransform = mat4(1.f);
-		for (int i = 0; i < 3; ++i)
-		{
-			for (int j = 0; j < 4; ++j)
-			{
-				deltaTransform[j][i] = transformEstimate.at<double>(i, j);
-				//std::cout << "[Debug] [" << i << "," << j << "]: " << transformEstimate.at<double>(i, j) << std::endl;
-			}
-		}
-
-		std::cout << "[Debug] Transform (glm): " << deltaTransform << std::endl;
-		delta = deltaTransform;
-
-		this->applyTransform(deltaTransform);
-	}
-	catch (cv::Exception& e)
+	registration::TransformationEstimationSVD<PointXYZI, PointXYZI, float> estimation;
+	
+	for (unsigned int ransacIt = 0; ransacIt < RANSAC_ITERATIONS; ++ransacIt)
 	{
-		std::cout << "[Debug] OpenCV error: " << e.what() << std::endl;
-		return 0.f;
+		
+
+
+
 	}
 
 
-}
 
-*/
+
+}
 
 void ReferencePoints::applyTransform(const mat4& m)
 {

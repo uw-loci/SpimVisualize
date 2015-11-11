@@ -4,6 +4,8 @@
 #include <string>
 #include <map>
 
+#include <boost/utility.hpp>
+
 #include "AABB.h"
 #include "StackRegistration.h"
 #include "Histogram.h"
@@ -13,8 +15,9 @@ class ILayout;
 class SpimStack;
 class Viewport;
 class ReferencePoints;
+struct Hourglass;
 
-class SpimRegistrationApp
+class SpimRegistrationApp : boost::noncopyable
 {
 public:
 	SpimRegistrationApp(const glm::ivec2& resolution);
@@ -51,6 +54,7 @@ public:
 
 	void TEST_extractFeaturePoints();
 	void TEST_alignStacks();
+	void TEST_detectBeads();
 
 	void clearRegistrationPoints();
 
@@ -84,6 +88,7 @@ public:
 	void decreaseMinThreshold();
 	void autoThreshold();
 
+	
 
 	inline void setConfigPath(const std::string& p) { configPath = p; }
 
@@ -117,7 +122,9 @@ private:
 	ReferencePoints			refPointsA, refPointsB;
 
 
-	SpimRegistrationApp(const SpimRegistrationApp&);
+	// Bead detection
+	std::vector<Hourglass>	psfBeads;
+
 
 
 	Threshold				dataLimits;

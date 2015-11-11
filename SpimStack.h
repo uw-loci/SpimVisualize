@@ -7,11 +7,14 @@
 
 #include <boost/utility.hpp>
 
+#include <opencv2/core/mat.hpp>
+
 struct AABB;
 class Shader;
 class ReferencePoints;
 struct Threshold;
 struct Histogram;
+struct Hourglass;
 
 // a single stack of SPIM images
 class SpimStack : boost::noncopyable
@@ -65,6 +68,9 @@ public:
 
 	inline const std::string& getFilename() const { return filename;  }
 
+	std::vector<Hourglass> detectHourglasses() const;
+
+
 private:
 	glm::vec3			dimensions;
 
@@ -94,6 +100,8 @@ private:
 	void drawYPlanes(const glm::vec3& view) const;
 
 	std::vector<glm::vec3> calculateVolumeNormals() const;
+
+	cv::Mat getImagePlane(unsigned int z) const;
 
 };
 

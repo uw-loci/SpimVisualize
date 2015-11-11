@@ -4,6 +4,7 @@
 #include "Shader.h"
 #include "SpimStack.h"
 #include "OrbitCamera.h"
+#include "BeadDetection.h"
 
 #include <algorithm>
 #include <iostream>
@@ -12,6 +13,7 @@
 
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/io.hpp>
+
 
 SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(0), sliceShader(0), volumeShader(0), layout(0), 
 drawGrid(true), drawBboxes(false), drawSlices(false), currentStack(-1), sliceCount(150), configPath("./")
@@ -328,6 +330,13 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 		glDisable(GL_DEPTH_TEST);
 		glDepthMask(GL_FALSE);
 
+		glActiveTexture(GL_TEXTURE0);
+		glDisable(GL_BLEND);
+
+		glEnableClientState(GL_VERTEX_ARRAY);
+		glDisableClientState(GL_COLOR_ARRAY);
+
+
 		for (size_t i = 0; i < stacks.size(); ++i)
 		{
 			if (stacks[i]->enabled)
@@ -346,6 +355,18 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 			}
 		}
 		
+		if (!psfBeads.empty())
+		{
+			for (size_t i = 0; i < psfBeads.size(); ++i)
+			{
+				psfBeads[i].draw();
+			}
+
+		}
+
+
+
+		glDisableClientState(GL_VERTEX_ARRAY);
 		glDepthMask(GL_TRUE);
 		glEnable(GL_DEPTH_TEST);
 	}
@@ -606,6 +627,16 @@ void SpimRegistrationApp::TEST_extractFeaturePoints()
 	stacks[0]->extractTransformedFeaturePoints(globalThreshold, refPointsA);
 	stacks[1]->extractTransformedFeaturePoints(globalThreshold, refPointsB);
 
+
+
+
+
+
+
+
+
+
+
 	/*
 	using namespace glm;
 	if (stacks.size() < 2)
@@ -637,6 +668,11 @@ void SpimRegistrationApp::TEST_extractFeaturePoints()
 
 void SpimRegistrationApp::TEST_alignStacks()
 {
+	
+
+
+
+	/*
 	using namespace glm;
 
 	if (stacks.size() < 2)
@@ -661,6 +697,7 @@ void SpimRegistrationApp::TEST_alignStacks()
 
 
 	std::cout << "[Align] Mean distance after alignment: " << refPointsA.calculateMeanDistance(&refPointsB) << std::endl;
+	*/
 }
 
 void SpimRegistrationApp::increaseMaxThreshold()
@@ -852,4 +889,10 @@ void SpimRegistrationApp::setDataLimits()
 void SpimRegistrationApp::resetDataLimits()
 {
 	dataLimits = stacks[0]->getLimits();
+}
+
+void SpimRegistrationApp::TEST_detectBeads()
+{
+	assert(!stacks.empty());
+	stacks[0]->detectHourglasses();
 }
