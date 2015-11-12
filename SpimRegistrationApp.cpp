@@ -144,22 +144,18 @@ void SpimRegistrationApp::addSpimStack(const std::string& filename)
 
 void SpimRegistrationApp::drawScene(const Viewport* vp)
 {
-	glm::mat4 mvp;// = vp.proj * vp.view;
-	vp->camera->getMVP(mvp);
-
 
 	if (drawGrid)
 		drawGroundGrid(vp);
-
-
+	
 
 	if (drawSlices)
 	{
-		drawAxisAlignedSlices(vp, sliceShader, mvp);
+		drawAxisAlignedSlices(vp, sliceShader);
 	}
 	else
 	{
-		drawViewplaneSlices(vp, volumeShader, mvp);
+		drawViewplaneSlices(vp, volumeShader);
 	}
 
 	if (drawBboxes)
@@ -225,6 +221,7 @@ void SpimRegistrationApp::drawVolumeAlignment(const Viewport* vp)
 		return;
 
 	drawGroundGrid(vp);
+
 
 
 	if (drawBboxes)
@@ -840,8 +837,12 @@ void SpimRegistrationApp::drawGroundGrid(const Viewport* vp) const
 
 }
 
-void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* shader, const glm::mat4& mvp) const
+void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* shader) const
 {
+	glm::mat4 mvp;// = vp.proj * vp.view;
+	vp->camera->getMVP(mvp);
+
+
 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -938,8 +939,11 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 
 }
 
-void SpimRegistrationApp::drawAxisAlignedSlices(const Viewport* vp, const Shader* shader, const glm::mat4& mvp) const
+void SpimRegistrationApp::drawAxisAlignedSlices(const Viewport* vp, const Shader* shader) const
 {
+	glm::mat4 mvp;// = vp.proj * vp.view;
+	vp->camera->getMVP(mvp);
+
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 

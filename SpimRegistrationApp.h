@@ -144,8 +144,8 @@ private:
 	void drawGroundGrid(const Viewport* vp) const;
 	void drawBoundingBoxes() const;
 
-	void drawAxisAlignedSlices(const Viewport* vp, const Shader* shader, const glm::mat4& mvp) const;
-	void drawViewplaneSlices(const Viewport* vp, const Shader* shader, const glm::mat4& mvp) const;
+	void drawAxisAlignedSlices(const Viewport* vp, const Shader* shader) const;
+	void drawViewplaneSlices(const Viewport* vp, const Shader* shader) const;
 
 	static glm::vec3 getRandomColor(int n);
 
