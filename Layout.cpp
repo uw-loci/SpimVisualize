@@ -264,15 +264,22 @@ void ContrastEditLayout::panActiveViewport(const vec2& delta)
 AlignVolumesLayout::AlignVolumesLayout(const ivec2& res)
 {
 
+	/*
 	views[0].name = Viewport::PERSPECTIVE;
 	views[0].camera = new OrbitCamera;
 	views[0].color = vec3(1);
+	*/
+
+	views[0].name = Viewport::ORTHO_Y;
+	views[0].camera = new OrthoCamera(glm::vec3(0.f, -1, 0), glm::vec3(1.f, 0.f, 0.f));
+	views[0].color = vec3(0, 1, 0);
+
 
 	views[1].name = Viewport::PERSPECTIVE_ALIGNMENT;
-	views[1].camera = views[0].camera;// new UnitCamera; // OrthoCamera(glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f, 1.f, 0.f), 1.1f);
+	views[1].camera = new OrbitCamera; // OrthoCamera(glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f, 1.f, 0.f), 1.1f);
 	views[1].color = vec3(1, 0, 0);
 
-	OrbitCamera* cam = dynamic_cast<OrbitCamera*>(views[0].camera);
+	OrbitCamera* cam = dynamic_cast<OrbitCamera*>(views[1].camera);
 	cam->far = CAMERA_DISTANCE * 4.0;
 	cam->near = cam->far / 100.0;
 	cam->radius = (CAMERA_DISTANCE * 1.5);
@@ -285,7 +292,7 @@ AlignVolumesLayout::AlignVolumesLayout(const ivec2& res)
 AlignVolumesLayout::~AlignVolumesLayout()
 {
 	delete views[0].camera;
-	//delete views[1].camera;
+	delete views[1].camera;
 }
 
 
@@ -329,5 +336,6 @@ void AlignVolumesLayout::resize(const glm::ivec2& size)
 void AlignVolumesLayout::panActiveViewport(const vec2& delta)
 {
 	Viewport* vp = this->getActiveViewport();
+	if (vp)
 		vp->camera->pan(delta.x * vp->getAspect(), delta.y);
 }

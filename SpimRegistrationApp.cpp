@@ -194,8 +194,33 @@ void SpimRegistrationApp::drawVolumeAlignment(const Viewport* vp)
 
 	static bool queryReady = true;
 	
-	//drawViewplaneSlices(vp, volumeDifferenceShader);
-	raycastVolumes(vp, volumeRaycaster);
+	if (queryReady)
+		glBeginQuery(GL_SAMPLES_PASSED, samplesPassedQuery);
+
+	drawViewplaneSlices(vp, volumeDifferenceShader);
+	
+	glEndQuery(GL_SAMPLES_PASSED);
+	
+
+
+	GLint queryStatus = GL_FALSE;
+	while (queryStatus == GL_FALSE)
+	{
+		glGetQueryObjectiv(samplesPassedQuery, GL_QUERY_RESULT_AVAILABLE, &queryStatus);
+	}
+
+
+	GLuint64 samplesPassed = 0;
+	glGetQueryObjectui64v(samplesPassedQuery, GL_QUERY_RESULT, &samplesPassed);
+	std::cout << "[Debug] Samples passed: " << samplesPassed << std::endl;
+	queryReady = true;
+
+	
+	
+	
+	
+	
+	//raycastVolumes(vp, volumeRaycaster);
 
 
 
