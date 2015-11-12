@@ -133,6 +133,9 @@ private:
 	std::vector<Hourglass>	psfBeads;
 
 
+	// volume-based alignment
+	unsigned int			samplesPassedQuery;
+
 
 	Threshold				dataLimits;
 	Histogram				histogram;

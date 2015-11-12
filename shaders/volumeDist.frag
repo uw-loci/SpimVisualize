@@ -16,10 +16,6 @@ uniform Volume volume[VOLUMES];
 uniform float sliceCount = 100;
 uniform float sliceWeight;
 
-uniform int minThreshold;
-uniform int maxThreshold;
-
-
 in vec4 vertex;
 out vec4 fragColor;
 
@@ -27,11 +23,14 @@ void main()
 {
 	vec3 color;
 
-	// total intensity of the all visible volume texels at that fragment
-	int intensity = 0;
 
-	// weight of all visible volume texels at that fragment
-	int weight = 0;
+	// count of the number volumes this pixel is contained int
+	int count = 0;
+
+
+	// total sum of all points
+	float sum = 0.0;
+
 	for (int i = 0; i < VOLUMES; ++i)
 	{
 		if (!volume[i].enabled)
@@ -43,7 +42,7 @@ void main()
 		vec3 worldPosition = v.xyz;
 
 
-		vec3 texcoord = worldPosition - volume[i].bboxMin; // vec3(1344.0, 1024.0, 101.0);
+		vec3 texcoord = worldPosition - volume[i].bboxMin; 
 		texcoord /= (volume[i].bboxMax - volume[i].bboxMin);
 	
 		int t = texture(volume[i].texture, texcoord).r;
@@ -53,43 +52,31 @@ void main()
 			worldPosition.y > volume[i].bboxMin.y && worldPosition.y < volume[i].bboxMax.y &&
 			worldPosition.z > volume[i].bboxMin.z && worldPosition.z < volume[i].bboxMax.z) 
 		{
-			intensity += t; 
-			//color += worldPosition;
-			weight++;
+			++count;
 
-
-
-
-
-			vec3 localColor = vec3(1.0, 0.0, 0.0);
-			if (i == 1)
-				localColor = vec3(0.0, 1.0, 0.0);
-		
-			color += localColor * intensity;
+			sum += float(t) / VOLUMES;
 
 		}
 
 
 	}
 
+	if (count == VOLUMES && sum > 120.0)
+	{
+		vec3 red = vec3(1.0, 0.0, 0.0);
+		vec3 green = vec3(0.0, 1.0, 0.0);
 
-	intensity /= weight;
+		color = mix(green, red, sum/200.0);
 
-	//color *= intensity;
 
-	/*
-	vec3 color = normalize(vec3(float(intensity)));
+	}
+	else
+		discard;
 
-	if (intensity > maxThreshold)
-		vec3 color = vec3(0.0, 1.0, 0.0);
-	if (intensity < minThreshold)
-		vec3 color = vec3(1.0, 0.0, 0.0);
-	*/
 
-	float alpha = 1.0 / sliceCount;
 
-	float density = float(intensity - minThreshold) / float(maxThreshold - minThreshold);
-	alpha *= density;
-	
-	fragColor = vec4(color, alpha);
+	float alpha = 1.0 / sliceCount;	
+	fragColor = vec4(color, sliceCount);
+
+
 }

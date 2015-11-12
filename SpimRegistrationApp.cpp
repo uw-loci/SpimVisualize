@@ -16,7 +16,7 @@
 
 
 SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(0), sliceShader(0), volumeShader(0), layout(0), 
-drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), currentStack(-1), sliceCount(600), configPath("./"), cameraMoving(false)
+drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), currentStack(-1), sliceCount(400), configPath("./"), cameraMoving(false)
 {
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
@@ -27,6 +27,8 @@ drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(fal
 	globalThreshold.max = 130; // std::numeric_limits<unsigned short>::max();
 
 	reloadShaders();
+
+	glGenQueries(1, &samplesPassedQuery);
 }
 
 SpimRegistrationApp::~SpimRegistrationApp()
@@ -35,6 +37,8 @@ SpimRegistrationApp::~SpimRegistrationApp()
 	delete sliceShader;
 	delete volumeShader;
 	delete volumeDifferenceShader;
+
+	glDeleteQueries(1, &samplesPassedQuery);
 
 	for (size_t i = 0; i < stacks.size(); ++i)
 		delete stacks[i];
@@ -183,7 +187,32 @@ void SpimRegistrationApp::drawVolumeAlignment(const Viewport* vp)
 	if (drawGrid)
 		drawGroundGrid(vp);
 
+
+	static bool queryReady = true;
+	
+	if (queryReady)
+		glBeginQuery(GL_ANY_SAMPLES_PASSED, samplesPassedQuery);
+
 	drawViewplaneSlices(vp, volumeDifferenceShader);
+
+	if (queryReady)
+	{
+		glEndQuery(samplesPassedQuery);
+		queryReady = false;
+	}
+
+
+	GLint params = GL_FALSE;
+	glGetQueryObjectiv(samplesPassedQuery, GL_QUERY_RESULT_AVAILABLE, &params);
+
+	if (params == GL_TRUE)
+	{
+		glGetQueryObjectiv(samplesPassedQuery, GL_QUERY_RESULT, &params);
+
+		std::cout << "[Debug] MSamples passed: " << params / 1000000<< std::endl;
+		queryReady = true;
+	}
+
 	
 	if (drawBboxes)
 		drawBoundingBoxes();
@@ -873,16 +902,16 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 	}
 
 
-	// draw all slices
-	glBegin(GL_QUADS);
 
 	unsigned int slices = sliceCount;
 	if (cameraMoving)
-		slices = 100;
+		slices = sliceCount / 10;
 
 	shader->setUniform("sliceCount", (float)slices);
 
 
+	// draw all slices
+	glBegin(GL_QUADS);	
 	for (int z = 0; z < slices; ++z)
 	{
 		// render back-to-front

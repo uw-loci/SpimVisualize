@@ -13,7 +13,7 @@ struct Volume
 #define VOLUMES 2
 uniform Volume volume[VOLUMES];
 
-uniform float sliceCount = 100;
+uniform float sliceCount;
 uniform float sliceWeight;
 
 uniform int minThreshold;
@@ -86,7 +86,7 @@ void main()
 		vec3 color = vec3(1.0, 0.0, 0.0);
 	*/
 
-	float alpha = 1.0 / sliceCount;
+	float alpha = 4.0 / sliceCount;
 
 	float density = float(intensity - minThreshold) / float(maxThreshold - minThreshold);
 	alpha *= density;
