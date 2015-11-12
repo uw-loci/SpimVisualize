@@ -152,3 +152,29 @@ public:
 protected:
 	Viewport		views[2];
 };
+
+
+class AlignVolumesLayout : public ILayout
+{
+public:
+	AlignVolumesLayout(const glm::ivec2& resolution);
+	virtual ~AlignVolumesLayout();
+
+
+	virtual Viewport* getActiveViewport();
+	virtual void updateMouseMove(const glm::ivec2& coords);
+
+	virtual void resize(const glm::ivec2& size);
+
+	virtual ICamera* getPerspectiveCamera() { return views[0].camera; }
+	inline size_t getViewCount() const { return 2; };
+	inline Viewport* getView(unsigned int n) { return &views[n]; }
+
+
+	virtual void panActiveViewport(const glm::vec2& delta);
+
+
+
+protected:
+	Viewport		views[2];
+};

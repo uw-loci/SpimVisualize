@@ -65,11 +65,14 @@ public:
 	void setTopviewLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
 	void setThreeViewLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
 	void setContrastEditorLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
+	void setAlignVolumeLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
 
 	void rotateCamera(const glm::vec2& delta);
 	void zoomCamera(float dt);
 	void panCamera(const glm::vec2& delta);
 	void centerCamera();
+
+	inline void setCameraMoving(bool m) { cameraMoving = m; }
 
 
 	void saveStackTransformations() const;
@@ -104,6 +107,8 @@ private:
 
 	Threshold				globalThreshold;
 
+	bool					cameraMoving;
+
 
 	bool					drawGrid;
 	bool					drawBboxes;
@@ -113,11 +118,12 @@ private:
 
 	// how many planes/slices to draw for the volume
 	unsigned int			sliceCount;
-
 	
 	Shader*					pointShader;
 	Shader*					volumeShader;
 	Shader*					sliceShader;
+
+	Shader*					volumeDifferenceShader;
 	
 	ReferencePoints			refPointsA, refPointsB;
 

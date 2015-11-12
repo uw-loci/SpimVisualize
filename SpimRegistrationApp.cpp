@@ -16,7 +16,7 @@
 
 
 SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(0), sliceShader(0), volumeShader(0), layout(0), 
-drawGrid(true), drawBboxes(false), drawSlices(false), currentStack(-1), sliceCount(150), configPath("./")
+drawGrid(true), drawBboxes(false), drawSlices(false), currentStack(-1), sliceCount(600), configPath("./"), cameraMoving(false)
 {
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
@@ -34,7 +34,8 @@ SpimRegistrationApp::~SpimRegistrationApp()
 	delete pointShader;
 	delete sliceShader;
 	delete volumeShader;
-	
+	delete volumeDifferenceShader;
+
 	for (size_t i = 0; i < stacks.size(); ++i)
 		delete stacks[i];
 
@@ -52,6 +53,9 @@ void SpimRegistrationApp::reloadShaders()
 
 	delete volumeShader;
 	volumeShader = new Shader("shaders/volume2.vert", "shaders/volume2.frag");
+
+	delete volumeDifferenceShader;
+	volumeDifferenceShader = new Shader("shaders/volumeDist.vert", "shaders/volumeDist.frag");
 }
 
 
@@ -242,9 +246,7 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 		volumeShader->bind();
 		volumeShader->setUniform("minThreshold", globalThreshold.min);
 		volumeShader->setUniform("maxThreshold", globalThreshold.max);
-		volumeShader->setUniform("sliceCount", (float)sliceCount);
-
-
+		
 		const glm::vec3 camPos = vp->camera->getPosition();
 		const glm::vec3 viewDir = glm::normalize(vp->camera->target - camPos);
 
@@ -305,10 +307,18 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 
 		// draw all slices
 		glBegin(GL_QUADS);
-		for (int z = 0; z < sliceCount; ++z)
+
+		unsigned int slices = sliceCount;
+		if (cameraMoving)
+			slices = 100;
+
+		volumeShader->setUniform("sliceCount", (float)slices);
+
+
+		for (int z = 0; z < slices; ++z)
 		{
 			// render back-to-front
-			float zf = glm::mix(maxPVal.z, minPVal.z, (float)z / sliceCount);
+			float zf = glm::mix(maxPVal.z, minPVal.z, (float)z / slices);
 
 			glVertex3f(minPVal.x, maxPVal.y, zf);
 			glVertex3f(minPVal.x, minPVal.y, zf);
@@ -449,6 +459,18 @@ void SpimRegistrationApp::setPerspectiveLayout(const glm::ivec2& res, const glm:
 	layout->updateMouseMove(mouseCoords);
 }
 
+void SpimRegistrationApp::setAlignVolumeLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords)
+{
+	std::cout << "[Layout] Creating volume aligning layout ... \n";
+	if (prevLayouts["Align Volumes"])
+		layout = prevLayouts["Align Volumes"];
+	else
+	{
+		layout = new AlignVolumesLayout(res);
+		prevLayouts["Align Volumes"] = layout;
+	}
+}
+
 void SpimRegistrationApp::setTopviewLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords)
 {
 	std::cout << "[Layout] Creating fullscreen top-view layout ... \n";
@@ -514,11 +536,16 @@ void SpimRegistrationApp::zoomCamera(float z)
 
 	if (vp)
 		vp->camera->zoom(z);
+
+	setCameraMoving(true);
+
 }
 
 void SpimRegistrationApp::panCamera(const glm::vec2& delta)
 {
 	layout->panActiveViewport(delta);
+	setCameraMoving(true);
+
 }
 
 void SpimRegistrationApp::rotateCamera(const glm::vec2& delta)
@@ -526,6 +553,9 @@ void SpimRegistrationApp::rotateCamera(const glm::vec2& delta)
 	Viewport* vp = layout->getActiveViewport();
 	if (vp && vp->name == Viewport::PERSPECTIVE)
 		vp->camera->rotate(delta.x, delta.y);
+
+	setCameraMoving(true);
+
 }
 
 

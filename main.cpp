@@ -43,6 +43,8 @@ static void idle()
 	float dt = (float)(time - oldTime) / 1000.f;
 	oldTime = time;
 	
+	regoApp->setCameraMoving(false);
+
 	glutPostRedisplay();
 }
 
@@ -214,6 +216,9 @@ static void special(int key, int x, int y)
 		regoApp->setThreeViewLayout(winRes, mouse.coordinates);
 	
 	if (key == GLUT_KEY_F4)
+		regoApp->setAlignVolumeLayout(winRes, mouse.coordinates);
+
+	if (key == GLUT_KEY_F5)
 		regoApp->setContrastEditorLayout(winRes, mouse.coordinates);
 
 	if (key == GLUT_KEY_DOWN)

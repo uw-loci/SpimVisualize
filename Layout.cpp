@@ -259,3 +259,75 @@ void ContrastEditLayout::panActiveViewport(const vec2& delta)
 	if (vp)// && vp->name != Viewport::CONTRAST_EDITOR)
 		vp->camera->pan(delta.x * vp->getAspect(), delta.y);
 }
+
+
+AlignVolumesLayout::AlignVolumesLayout(const ivec2& res)
+{
+
+	views[0].name = Viewport::PERSPECTIVE;
+	views[0].camera = new OrbitCamera;
+	views[0].color = vec3(1);
+
+	views[1].name = Viewport::ORTHO_X;
+	views[1].camera = new UnitCamera; // OrthoCamera(glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f, 1.f, 0.f), 1.1f);
+	views[1].color = vec3(1, 1, 0);
+
+	OrbitCamera* cam = dynamic_cast<OrbitCamera*>(views[0].camera);
+	cam->far = CAMERA_DISTANCE * 4.0;
+	cam->near = cam->far / 100.0;
+	cam->radius = (CAMERA_DISTANCE * 1.5);
+	cam->target = CAMERA_TARGET;
+
+
+	AlignVolumesLayout::resize(res);
+}
+
+AlignVolumesLayout::~AlignVolumesLayout()
+{
+	delete views[0].camera;
+	delete views[1].camera;
+}
+
+
+void AlignVolumesLayout::updateMouseMove(const ivec2& m)
+{
+	for (int i = 0; i < 2; ++i)
+		if (views[i].isInside(m))
+			views[i].highlighted = true;
+		else
+			views[i].highlighted = false;
+
+}
+
+Viewport* AlignVolumesLayout::getActiveViewport()
+{
+	if (views[0].highlighted)
+		return &views[0];
+	else if (views[1].highlighted)
+		return &views[1];
+	else
+		return nullptr;
+}
+
+void AlignVolumesLayout::resize(const glm::ivec2& size)
+{
+	using namespace glm;
+
+	const float ASPECT = ((float)size.x / 2.f) / size.y;
+
+	// setup the 2 views
+	views[0].position = ivec2(0, 0);
+	views[0].size = ivec2(size.x/2, size.y);
+	views[0].camera->aspect = views[0].getAspect();
+
+	views[1].position = ivec2(size.x/2, size.y);
+	views[1].size = ivec2(size.x/2, size.y);
+	views[1].camera->aspect = views[1].getAspect();
+}
+
+
+void AlignVolumesLayout::panActiveViewport(const vec2& delta)
+{
+	Viewport* vp = this->getActiveViewport();
+		vp->camera->pan(delta.x * vp->getAspect(), delta.y);
+}
