@@ -30,7 +30,7 @@ public:
 
 	void reloadShaders();
 
-	void drawScene();
+	void draw();
 
 	void resize(const glm::ivec2& newSize);
 	
@@ -113,7 +113,8 @@ private:
 	bool					drawGrid;
 	bool					drawBboxes;
 	bool					drawSlices;
-		
+	bool					drawRegistrationPoints;
+
 	int						currentStack;
 
 	// how many planes/slices to draw for the volume
@@ -146,6 +147,8 @@ private:
 
 	void drawAxisAlignedSlices(const Viewport* vp, const Shader* shader) const;
 	void drawViewplaneSlices(const Viewport* vp, const Shader* shader) const;
+
+	void drawRegistrationFeatures(const Viewport* vp) const;
 
 	static glm::vec3 getRandomColor(int n);
 

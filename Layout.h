@@ -54,9 +54,7 @@ public:
 
 	virtual void updateMouseMove(const glm::ivec2& coords) = 0;
 	virtual void resize(const glm::ivec2& size) = 0;
-
-	virtual ICamera* getPerspectiveCamera() = 0;
-
+	
 	virtual size_t getViewCount() const = 0;
 	virtual Viewport* getView(unsigned int n) = 0;
 
@@ -78,8 +76,6 @@ public:
 	virtual void updateMouseMove(const glm::ivec2& m);
 	
 	virtual Viewport* getActiveViewport();
-
-	virtual ICamera* getPerspectiveCamera() { return views[3].camera; }
 
 	inline size_t getViewCount() const { return 4; }
 	inline Viewport* getView(unsigned int n) { return &views[n]; }
@@ -118,17 +114,12 @@ class TopViewFullLayout : public SingleViewLayout
 {
 public:
 	TopViewFullLayout(const glm::ivec2& resolution);
-
-	inline ICamera* getPerspectiveCamera() { return nullptr; }
-
 };
 
 class PerspectiveFullLayout : public SingleViewLayout
 {
 public:
 	PerspectiveFullLayout(const glm::ivec2& resolution);
-
-	inline ICamera* getPerspectiveCamera() { return viewport.camera; }
 };
 
 class ContrastEditLayout : public ILayout
@@ -142,7 +133,6 @@ public:
 
 	virtual void resize(const glm::ivec2& size);
 
-	virtual ICamera* getPerspectiveCamera() { return views[0].camera; }
 	inline size_t getViewCount() const { return 2; };
 	inline Viewport* getView(unsigned int n) { return &views[n]; }
 	
@@ -166,7 +156,6 @@ public:
 
 	virtual void resize(const glm::ivec2& size);
 
-	virtual ICamera* getPerspectiveCamera() { return views[0].camera; }
 	inline size_t getViewCount() const { return 2; };
 	inline Viewport* getView(unsigned int n) { return &views[n]; }
 

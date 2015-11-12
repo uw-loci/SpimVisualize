@@ -16,7 +16,7 @@
 
 
 SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(0), sliceShader(0), volumeShader(0), layout(0), 
-drawGrid(true), drawBboxes(false), drawSlices(false), currentStack(-1), sliceCount(600), configPath("./"), cameraMoving(false)
+drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), currentStack(-1), sliceCount(600), configPath("./"), cameraMoving(false)
 {
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
@@ -40,7 +40,10 @@ SpimRegistrationApp::~SpimRegistrationApp()
 		delete stacks[i];
 
 	for (auto l = prevLayouts.begin(); l != prevLayouts.end(); ++l)
+	{
+		assert(l->second);
 		delete l->second;
+	}
 }
 
 void SpimRegistrationApp::reloadShaders()
@@ -59,7 +62,7 @@ void SpimRegistrationApp::reloadShaders()
 }
 
 
-void SpimRegistrationApp::drawScene()
+void SpimRegistrationApp::draw()
 {
 	for (size_t i = 0; i < layout->getViewCount(); ++i)
 	{
@@ -147,6 +150,7 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 
 	if (drawGrid)
 		drawGroundGrid(vp);
+
 	
 
 	if (drawSlices)
@@ -157,62 +161,18 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 	{
 		drawViewplaneSlices(vp, volumeShader);
 	}
+	
 
 	if (drawBboxes)
 	{
-		drawGroundGrid(vp);
-
-		glDisable(GL_DEPTH_TEST);
-		glDepthMask(GL_FALSE);
-
-		glActiveTexture(GL_TEXTURE0);
-		glDisable(GL_BLEND);
-
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glDisableClientState(GL_COLOR_ARRAY);
-
-
-		if (!psfBeads.empty())
-		{
-			for (size_t i = 0; i < psfBeads.size(); ++i)
-			{
-				psfBeads[i].draw();
-			}
-
-		}
-
-
-
-		glDisableClientState(GL_VERTEX_ARRAY);
-		glDepthMask(GL_TRUE);
-		glEnable(GL_DEPTH_TEST);
-	}
-
-
-
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_COLOR_ARRAY);
-
-	if (!refPointsA.empty())
-	{
-		//std::cout << "[Debug] Drawing " << TEST_points.size() << " points.\n";
-
-
-		// draw points
-		glColor3f(1.f, 0.f, 0.f);
-		refPointsA.draw();
-		/*
-		glColor3f(0.f, 1.f, 0.f);
-		refPointsB.draw();
-		*/
+		drawBoundingBoxes();
 
 	}
 
-	if (!refPointsB.empty())
-		refPointsB.draw();
-
-	glDisableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_COLOR_ARRAY);
+	/*
+	if (drawRegistrationPoints)
+		drawRegistrationFeatures(vp);
+	*/
 }
 
 void SpimRegistrationApp::drawVolumeAlignment(const Viewport* vp)
@@ -220,10 +180,11 @@ void SpimRegistrationApp::drawVolumeAlignment(const Viewport* vp)
 	if (vp->name != Viewport::PERSPECTIVE_ALIGNMENT)
 		return;
 
-	drawGroundGrid(vp);
+	if (drawGrid)
+		drawGroundGrid(vp);
 
-
-
+	drawViewplaneSlices(vp, volumeDifferenceShader);
+	
 	if (drawBboxes)
 		drawBoundingBoxes();
 
@@ -291,6 +252,8 @@ void SpimRegistrationApp::setAlignVolumeLayout(const glm::ivec2& res, const glm:
 		layout = new AlignVolumesLayout(res);
 		prevLayouts["Align Volumes"] = layout;
 	}
+
+	layout->updateMouseMove(mouseCoords);
 }
 
 void SpimRegistrationApp::setTopviewLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords)
@@ -326,6 +289,7 @@ void SpimRegistrationApp::setThreeViewLayout(const glm::ivec2& res, const glm::i
 
 void SpimRegistrationApp::setContrastEditorLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords)
 {
+	
 	std::cout << "[Layout] Creating contrast editor layout ... \n";
 	if (prevLayouts["ContrastEditor"])
 		layout = prevLayouts["ContrastEditor"];
@@ -373,7 +337,7 @@ void SpimRegistrationApp::panCamera(const glm::vec2& delta)
 void SpimRegistrationApp::rotateCamera(const glm::vec2& delta)
 {
 	Viewport* vp = layout->getActiveViewport();
-	if (vp && vp->name == Viewport::PERSPECTIVE)
+	if (vp && (vp->name == Viewport::PERSPECTIVE || vp->name == Viewport::PERSPECTIVE_ALIGNMENT))
 		vp->camera->rotate(delta.x, delta.y);
 
 	setCameraMoving(true);
@@ -790,7 +754,7 @@ void SpimRegistrationApp::drawBoundingBoxes() const
 
 void SpimRegistrationApp::drawGroundGrid(const Viewport* vp) const
 {
-	if (vp->name == Viewport::PERSPECTIVE || vp->name == Viewport::ORTHO_Y)
+	if (vp->name == Viewport::PERSPECTIVE || vp->name == Viewport::ORTHO_Y || vp->name == Viewport::PERSPECTIVE_ALIGNMENT)
 	{
 		glColor3f(0.3f, 0.3f, 0.3f);
 		glBegin(GL_LINES);
@@ -981,4 +945,65 @@ void SpimRegistrationApp::drawAxisAlignedSlices(const Viewport* vp, const Shader
 	glDisable(GL_BLEND);
 	glEnable(GL_DEPTH_TEST);
 	glDepthMask(GL_TRUE);
+}
+
+void SpimRegistrationApp::drawRegistrationFeatures(const Viewport* vp) const
+{
+
+	// draw beads here
+	{
+		glDisable(GL_DEPTH_TEST);
+		glDepthMask(GL_FALSE);
+
+		glActiveTexture(GL_TEXTURE0);
+		glDisable(GL_BLEND);
+
+		glEnableClientState(GL_VERTEX_ARRAY);
+		glDisableClientState(GL_COLOR_ARRAY);
+
+
+		if (!psfBeads.empty())
+		{
+			for (size_t i = 0; i < psfBeads.size(); ++i)
+			{
+				psfBeads[i].draw();
+			}
+
+		}
+
+
+
+		glDisableClientState(GL_VERTEX_ARRAY);
+		glDepthMask(GL_TRUE);
+		glEnable(GL_DEPTH_TEST);
+	}
+
+
+
+	// draw registration points
+	{
+		glEnableClientState(GL_VERTEX_ARRAY);
+		glEnableClientState(GL_COLOR_ARRAY);
+
+		if (!refPointsA.empty())
+		{
+			//std::cout << "[Debug] Drawing " << TEST_points.size() << " points.\n";
+
+
+			// draw points
+			glColor3f(1.f, 0.f, 0.f);
+			refPointsA.draw();
+			/*
+			glColor3f(0.f, 1.f, 0.f);
+			refPointsB.draw();
+			*/
+
+		}
+
+		if (!refPointsB.empty())
+			refPointsB.draw();
+
+		glDisableClientState(GL_VERTEX_ARRAY);
+		glDisableClientState(GL_COLOR_ARRAY);
+	}
 }
