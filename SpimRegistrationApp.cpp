@@ -37,6 +37,7 @@ SpimRegistrationApp::~SpimRegistrationApp()
 	delete sliceShader;
 	delete volumeShader;
 	delete volumeDifferenceShader;
+	delete volumeRaycaster;
 
 	glDeleteQueries(1, &samplesPassedQuery);
 
@@ -63,6 +64,9 @@ void SpimRegistrationApp::reloadShaders()
 
 	delete volumeDifferenceShader;
 	volumeDifferenceShader = new Shader("shaders/volumeDist.vert", "shaders/volumeDist.frag");
+
+	delete volumeRaycaster;
+	volumeRaycaster = new Shader("shaders/volumeRaycast.vert", "shaders/volumeRaycast.frag");
 }
 
 
@@ -190,29 +194,12 @@ void SpimRegistrationApp::drawVolumeAlignment(const Viewport* vp)
 
 	static bool queryReady = true;
 	
-	if (queryReady)
-		glBeginQuery(GL_ANY_SAMPLES_PASSED, samplesPassedQuery);
-
-	drawViewplaneSlices(vp, volumeDifferenceShader);
-
-	if (queryReady)
-	{
-		glEndQuery(samplesPassedQuery);
-		queryReady = false;
-	}
+	//drawViewplaneSlices(vp, volumeDifferenceShader);
+	raycastVolumes(vp, volumeRaycaster);
 
 
-	GLint params = GL_FALSE;
-	glGetQueryObjectiv(samplesPassedQuery, GL_QUERY_RESULT_AVAILABLE, &params);
 
-	if (params == GL_TRUE)
-	{
-		glGetQueryObjectiv(samplesPassedQuery, GL_QUERY_RESULT, &params);
-
-		std::cout << "[Debug] MSamples passed: " << params / 1000000<< std::endl;
-		queryReady = true;
-	}
-
+	
 	
 	if (drawBboxes)
 		drawBoundingBoxes();
@@ -843,7 +830,7 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 	shader->bind();
 	shader->setUniform("minThreshold", globalThreshold.min);
 	shader->setUniform("maxThreshold", globalThreshold.max);
-
+	
 	const glm::vec3 camPos = vp->camera->getPosition();
 	const glm::vec3 viewDir = glm::normalize(vp->camera->target - camPos);
 
@@ -1035,4 +1022,94 @@ void SpimRegistrationApp::drawRegistrationFeatures(const Viewport* vp) const
 		glDisableClientState(GL_VERTEX_ARRAY);
 		glDisableClientState(GL_COLOR_ARRAY);
 	}
+}
+
+void SpimRegistrationApp::raycastVolumes(const Viewport* vp, const Shader* shader) const
+{
+	glm::mat4 mvp;// = vp.proj * vp.view;
+	vp->camera->getMVP(mvp);
+	
+	shader->bind();
+	const glm::vec3 camPos = vp->camera->getPosition();
+	const glm::vec3 viewDir = glm::normalize(vp->camera->target - camPos);
+
+
+	// the smallest and largest projected bounding box vertices -- used to calculate the extend of planes
+	// to draw
+	glm::vec3 minPVal(std::numeric_limits<float>::max()), maxPVal(std::numeric_limits<float>::lowest());
+
+	for (size_t i = 0; i < stacks.size(); ++i)
+	{
+		if (!stacks[i]->enabled)
+			continue;
+
+
+		// draw screen filling quads
+		// find max/min distances of bbox cube from camera
+		std::vector<glm::vec3> boxVerts = stacks[i]->getBBox().getVertices();
+
+		// calculate max/min distance
+		float maxDist = 0.f, minDist = std::numeric_limits<float>::max();
+		for (size_t k = 0; k < boxVerts.size(); ++k)
+		{
+			glm::vec4 p = mvp * stacks[i]->getTransform() * glm::vec4(boxVerts[k], 1.f);
+			p /= p.w;
+
+			minPVal = glm::min(minPVal, glm::vec3(p));
+			maxPVal = glm::max(maxPVal, glm::vec3(p));
+
+		}
+
+	}
+
+	maxPVal = glm::min(maxPVal, glm::vec3(1.f));
+	minPVal = glm::max(minPVal, glm::vec3(-1.f));
+
+
+	for (size_t i = 0; i < stacks.size(); ++i)
+	{
+		glActiveTexture(GL_TEXTURE0 + i);
+		glBindTexture(GL_TEXTURE_3D, stacks[i]->getTexture());
+
+		char uname[256];
+		sprintf(uname, "volume[%d].texture", i);
+		shader->setUniform(uname, (int)i);
+
+		AABB bbox = stacks[i]->getBBox();
+		sprintf(uname, "volume[%d].bboxMax", i);
+		shader->setUniform(uname, bbox.max);
+		sprintf(uname, "volume[%d].bboxMin", i);
+		shader->setUniform(uname, bbox.min);
+
+		sprintf(uname, "volume[%d].enabled", i);
+		shader->setUniform(uname, stacks[i]->enabled);
+
+		sprintf(uname, "volume[%d].inverseMVP", i);
+		shader->setMatrix4(uname, glm::inverse(mvp * stacks[i]->getTransform()));
+	
+		sprintf(uname, "volume[%d].transform", i);
+		shader->setMatrix4(uname, stacks[i]->getTransform());
+	
+		sprintf(uname, "volume[%d].inverseTransform", i);
+		shader->setMatrix4(uname, glm::inverse(stacks[i]->getTransform()));
+	}
+
+	shader->setUniform("minRayDist", minPVal.z);
+	shader->setUniform("maxRayDist", maxPVal.z);
+	shader->setUniform("inverseMVP", glm::inverse(mvp));
+	shader->setUniform("cameraPos", camPos);
+
+	// draw only the frontmost slice
+	glBegin(GL_QUADS);
+	float z = minPVal.z;// glm::mix(minPVal.z, maxPVal.z, 0.5f);
+	glVertex3f(minPVal.x, maxPVal.y, z);
+	glVertex3f(minPVal.x, minPVal.y, z);
+	glVertex3f(maxPVal.x, minPVal.y, z);
+	glVertex3f(maxPVal.x, maxPVal.y, z);
+	glEnd();
+		
+	glActiveTexture(GL_TEXTURE0);
+
+	shader->disable();
+	
 }

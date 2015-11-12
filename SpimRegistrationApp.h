@@ -125,7 +125,8 @@ private:
 	Shader*					sliceShader;
 
 	Shader*					volumeDifferenceShader;
-	
+	Shader*					volumeRaycaster;
+
 	ReferencePoints			refPointsA, refPointsB;
 
 
@@ -150,6 +151,7 @@ private:
 
 	void drawAxisAlignedSlices(const Viewport* vp, const Shader* shader) const;
 	void drawViewplaneSlices(const Viewport* vp, const Shader* shader) const;
+	void raycastVolumes(const Viewport* vp, const Shader* shader) const;
 
 	void drawRegistrationFeatures(const Viewport* vp) const;
 
