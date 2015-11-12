@@ -25,6 +25,8 @@ out vec4 fragColor;
 
 void main()
 {
+	vec3 color;
+
 	// total intensity of the all visible volume texels at that fragment
 	int intensity = 0;
 
@@ -54,18 +56,35 @@ void main()
 			intensity += t; 
 			//color += worldPosition;
 			weight++;
+
+
+
+
+
+			vec3 localColor = vec3(1.0, 0.0, 0.0);
+			if (i == 1)
+				localColor = vec3(0.0, 1.0, 0.0);
+		
+			color += localColor * intensity;
+
 		}
+
+
 	}
 
 
 	intensity /= weight;
+
+	//color *= intensity;
+
+	/*
 	vec3 color = normalize(vec3(float(intensity)));
 
 	if (intensity > maxThreshold)
 		vec3 color = vec3(0.0, 1.0, 0.0);
 	if (intensity < minThreshold)
 		vec3 color = vec3(1.0, 0.0, 0.0);
-
+	*/
 
 	float alpha = 1.0 / sliceCount;
 

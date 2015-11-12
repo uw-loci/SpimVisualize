@@ -770,8 +770,12 @@ void SpimRegistrationApp::calculateHistogram()
 	if (stacks.empty())
 		return;
 
+
+	std::cout << "[Histo] Calculating histogram for stack 0 ... ";
+
 	dataLimits = stacks[0]->getLimits();
 	histogram = stacks[0]->calculateHistogram(globalThreshold);
+	std::cout << "done.\n";
 }
 
 void SpimRegistrationApp::drawContrastEditor(const Viewport* vp)

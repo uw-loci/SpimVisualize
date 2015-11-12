@@ -973,7 +973,7 @@ vector<Hourglass> SpimStack::detectHourglasses() const
 		vector<Vec3f> circles;
 
 		
-		HoughCircles(plane8bit, circles, CV_HOUGH_GRADIENT, 1, plane8bit.rows / 8, 10, 5, 0, 0);
+		HoughCircles(plane8bit, circles, CV_HOUGH_GRADIENT, 1, plane8bit.rows / 8, 6, 30, 0, 0);
 	
 		cout << "[Beads] Detected " << circles.size() << " circles in plane " << i << endl;
 
@@ -1013,6 +1013,8 @@ vector<Hourglass> SpimStack::detectHourglasses() const
 				Hourglass h;
 				h.centerAxis = axis;
 				h.circles.push_back(vec2(i, radius));
+		
+				result.push_back(h);
 			}
 			else
 			{
@@ -1031,6 +1033,7 @@ vector<Hourglass> SpimStack::detectHourglasses() const
 				}
 
 				Hourglass& h = result[bestFit];
+				
 				h.circles.push_back(vec2(i, radius));
 			}
 

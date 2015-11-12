@@ -298,7 +298,6 @@ int main(int argc, const char** argv)
 	try
 	{
 		
-		/*
 		for (int i = 0; i < 2; ++i)
 		{
 			char filename[256];
@@ -313,11 +312,11 @@ int main(int argc, const char** argv)
 		regoApp->centerCamera();
 		regoApp->loadStackTransformations();
 		regoApp->loadContrastSettings();
-		*/
+		/*
 
 		regoApp->addSpimStack("e:/spim/test_beads/spim_TL01_Angle0.ome.tiff");
 		regoApp->centerCamera(); 
-
+		*/
 	}
 	catch (const std::runtime_error& e)
 	{

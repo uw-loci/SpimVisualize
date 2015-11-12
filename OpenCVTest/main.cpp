@@ -34,7 +34,7 @@ int main(int argc, const char** argv)
 
 
 	// 1 -- load image
-	input = imread("e:/spim/OpenSPIM_tutorial/spim_TL05_Angle4.ome.tiff", CV_LOAD_IMAGE_ANYDEPTH);
+	input = imread("e:/spim/test_beads/spim_TL01_Angle0.ome.tiff", CV_LOAD_IMAGE_ANYDEPTH);
 	input.convertTo(input, CV_8U);
 	
 	
