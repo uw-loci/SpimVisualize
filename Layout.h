@@ -14,7 +14,7 @@ struct Viewport : boost::noncopyable
 
 	glm::vec3		color;
 
-	enum ViewportName { ORTHO_X = 0, ORTHO_Y, ORTHO_Z, PERSPECTIVE, CONTRAST_EDITOR } name;
+	enum ViewportName { ORTHO_X = 0, ORTHO_Y, ORTHO_Z, PERSPECTIVE, CONTRAST_EDITOR, PERSPECTIVE_ALIGNMENT } name;
 
 	ICamera*		camera;
 	bool			highlighted;

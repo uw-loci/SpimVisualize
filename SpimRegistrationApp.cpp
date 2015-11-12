@@ -65,10 +65,11 @@ void SpimRegistrationApp::drawScene()
 	{
 		const Viewport* vp = layout->getView(i);
 		vp->setup();
-
-
+		
 		if (vp->name == Viewport::CONTRAST_EDITOR)
 			drawContrastEditor(vp);
+		else if (vp->name == Viewport::PERSPECTIVE_ALIGNMENT)
+			drawVolumeAlignment(vp);
 		else
 			drawScene(vp);
 	}
@@ -148,195 +149,23 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 
 
 	if (drawGrid)
-	{
-		if (vp->name == Viewport::PERSPECTIVE || vp->name == Viewport::ORTHO_Y)
-		{
-			glColor3f(0.3f, 0.3f, 0.3f);
-			glBegin(GL_LINES);
-			for (int i = -1000; i <= 1000; i += 100)
-			{
-				glVertex3i(-1000, 0, i);
-				glVertex3i(1000, 0, i);
-				glVertex3i(i, 0, -1000);
-				glVertex3i(i, 0, 1000);
-			}
-
-			glEnd();
-		}
-
-		if (vp->name == Viewport::ORTHO_X)
-		{
-			glColor3f(0.3f, 0.3f, 0.3f);
-			glBegin(GL_LINES);
-			for (int i = -1000; i <= 1000; i += 100)
-			{
-				glVertex3i(0, -1000, i);
-				glVertex3i(0, 1000, i);
-				glVertex3i(0, i, -1000);
-				glVertex3i(0, i, 1000);
-			}
-
-			glEnd();
-		}
-
-		if (vp->name == Viewport::ORTHO_Z)
-		{
-			glColor3f(0.3f, 0.3f, 0.3f);
-			glBegin(GL_LINES);
-			for (int i = -1000; i <= 1000; i += 100)
-			{
-				glVertex3i(-1000, i, 0);
-				glVertex3i(1000, i, 0);
-				glVertex3i(i, -1000, 0);
-				glVertex3i(i, 1000, 0);
-			}
-
-			glEnd();
-		}
-	}
+		drawGroundGrid(vp);
 
 
 
 	if (drawSlices)
 	{
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-
-		glDisable(GL_DEPTH_TEST);
-		glDepthMask(GL_FALSE);
-
-		sliceShader->bind();
-		sliceShader->setUniform("minThreshold", (int)globalThreshold.min);
-		sliceShader->setUniform("maxThreshold", (int)globalThreshold.max);
-		sliceShader->setUniform("mvpMatrix", mvp);
-
-		for (size_t i = 0; i < stacks.size(); ++i)
-		{
-			if (stacks[i]->enabled)
-			{
-
-				sliceShader->setUniform("color", getRandomColor(i));
-				sliceShader->setMatrix4("transform", stacks[i]->getTransform());
-
-
-				glColor4f(0.f, 0.f, 0.f, 1.f);
-
-				// calculate view vector
-				glm::vec3 view = vp->camera->getViewDirection();
-				stacks[i]->drawSlices(volumeShader, view);
-
-			}
-
-
-		}
-
-		volumeShader->disable();
-
-		glDisable(GL_BLEND);
-		glEnable(GL_DEPTH_TEST);
-		glDepthMask(GL_TRUE);
+		drawAxisAlignedSlices(vp, sliceShader, mvp);
 	}
 	else
 	{
-
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		
-		volumeShader->bind();
-		volumeShader->setUniform("minThreshold", globalThreshold.min);
-		volumeShader->setUniform("maxThreshold", globalThreshold.max);
-		
-		const glm::vec3 camPos = vp->camera->getPosition();
-		const glm::vec3 viewDir = glm::normalize(vp->camera->target - camPos);
-
-		// the smallest and largest projected bounding box vertices -- used to calculate the extend of planes
-		// to draw
-		glm::vec3 minPVal(std::numeric_limits<float>::max()), maxPVal(std::numeric_limits<float>::lowest());
-
-		for (size_t i = 0; i < stacks.size(); ++i)
-		{
-			if (!stacks[i]->enabled)
-				continue;
-
-
-			// draw screen filling quads
-			// find max/min distances of bbox cube from camera
-			std::vector<glm::vec3> boxVerts = stacks[i]->getBBox().getVertices();
-
-			// calculate max/min distance
-			float maxDist = 0.f, minDist = std::numeric_limits<float>::max();
-			for (size_t k = 0; k < boxVerts.size(); ++k)
-			{
-				glm::vec4 p = mvp * stacks[i]->getTransform() * glm::vec4(boxVerts[k], 1.f);
-				p /= p.w;
-
-				minPVal = glm::min(minPVal, glm::vec3(p));
-				maxPVal = glm::max(maxPVal, glm::vec3(p));
-
-			}
-
-		}
-
-		maxPVal = glm::min(maxPVal, glm::vec3(1.f));
-		minPVal = glm::max(minPVal, glm::vec3(-1.f));
-
-
-		for (size_t i = 0; i < stacks.size(); ++i)
-		{
-			glActiveTexture(GL_TEXTURE0 + i);
-			glBindTexture(GL_TEXTURE_3D, stacks[i]->getTexture());
-
-			char uname[256];
-			sprintf(uname, "volume[%d].texture", i);
-			volumeShader->setUniform(uname, (int)i);
-
-			AABB bbox = stacks[i]->getBBox();
-			sprintf(uname, "volume[%d].bboxMax", i);
-			volumeShader->setUniform(uname, bbox.max);
-			sprintf(uname, "volume[%d].bboxMin", i);
-			volumeShader->setUniform(uname, bbox.min);
-
-			sprintf(uname, "volume[%d].enabled", i);
-			volumeShader->setUniform(uname, stacks[i]->enabled);
-
-			sprintf(uname, "volume[%d].inverseMVP", i);
-			volumeShader->setMatrix4(uname, glm::inverse(mvp * stacks[i]->getTransform()));
-		}
-
-
-		// draw all slices
-		glBegin(GL_QUADS);
-
-		unsigned int slices = sliceCount;
-		if (cameraMoving)
-			slices = 100;
-
-		volumeShader->setUniform("sliceCount", (float)slices);
-
-
-		for (int z = 0; z < slices; ++z)
-		{
-			// render back-to-front
-			float zf = glm::mix(maxPVal.z, minPVal.z, (float)z / slices);
-
-			glVertex3f(minPVal.x, maxPVal.y, zf);
-			glVertex3f(minPVal.x, minPVal.y, zf);
-			glVertex3f(maxPVal.x, minPVal.y, zf);
-			glVertex3f(maxPVal.x, maxPVal.y, zf);
-		}
-		glEnd();
-
-
-		glActiveTexture(GL_TEXTURE0);
-
-		volumeShader->disable();
-		glDisable(GL_BLEND);
-
+		drawViewplaneSlices(vp, volumeShader, mvp);
 	}
 
 	if (drawBboxes)
 	{
+		drawGroundGrid(vp);
+
 		glDisable(GL_DEPTH_TEST);
 		glDepthMask(GL_FALSE);
 
@@ -347,24 +176,6 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 		glDisableClientState(GL_COLOR_ARRAY);
 
 
-		for (size_t i = 0; i < stacks.size(); ++i)
-		{
-			if (stacks[i]->enabled)
-			{
-				glPushMatrix();
-				glMultMatrixf(glm::value_ptr(stacks[i]->getTransform()));
-
-
-				if (i == currentStack)
-					glColor3f(1, 1, 0);
-				else
-					glColor3f(0.6, 0.6, 0.6);
-				stacks[i]->getBBox().draw();
-
-				glPopMatrix();
-			}
-		}
-		
 		if (!psfBeads.empty())
 		{
 			for (size_t i = 0; i < psfBeads.size(); ++i)
@@ -407,6 +218,20 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
 }
+
+void SpimRegistrationApp::drawVolumeAlignment(const Viewport* vp)
+{
+	if (vp->name != Viewport::PERSPECTIVE_ALIGNMENT)
+		return;
+
+	drawGroundGrid(vp);
+
+
+	if (drawBboxes)
+		drawBoundingBoxes();
+
+}
+
 
 glm::vec3 SpimRegistrationApp::getRandomColor(int n)
 {
@@ -929,4 +754,227 @@ void SpimRegistrationApp::TEST_detectBeads()
 {
 	assert(!stacks.empty());
 	stacks[0]->detectHourglasses();
+}
+
+void SpimRegistrationApp::drawBoundingBoxes() const
+{
+	glDisable(GL_DEPTH_TEST);
+	glDepthMask(GL_FALSE);
+
+	glActiveTexture(GL_TEXTURE0);
+	glDisable(GL_BLEND);
+
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glDisableClientState(GL_COLOR_ARRAY);
+
+
+	for (size_t i = 0; i < stacks.size(); ++i)
+	{
+		if (stacks[i]->enabled)
+		{
+			glPushMatrix();
+			glMultMatrixf(glm::value_ptr(stacks[i]->getTransform()));
+
+
+			if (i == currentStack)
+				glColor3f(1, 1, 0);
+			else
+				glColor3f(0.6, 0.6, 0.6);
+			stacks[i]->getBBox().draw();
+
+			glPopMatrix();
+		}
+	}
+
+	glDisableClientState(GL_VERTEX_ARRAY);
+	glDepthMask(GL_TRUE);
+	glEnable(GL_DEPTH_TEST);
+}
+
+void SpimRegistrationApp::drawGroundGrid(const Viewport* vp) const
+{
+	if (vp->name == Viewport::PERSPECTIVE || vp->name == Viewport::ORTHO_Y)
+	{
+		glColor3f(0.3f, 0.3f, 0.3f);
+		glBegin(GL_LINES);
+		for (int i = -1000; i <= 1000; i += 100)
+		{
+			glVertex3i(-1000, 0, i);
+			glVertex3i(1000, 0, i);
+			glVertex3i(i, 0, -1000);
+			glVertex3i(i, 0, 1000);
+		}
+
+		glEnd();
+	}
+
+	if (vp->name == Viewport::ORTHO_X)
+	{
+		glColor3f(0.3f, 0.3f, 0.3f);
+		glBegin(GL_LINES);
+		for (int i = -1000; i <= 1000; i += 100)
+		{
+			glVertex3i(0, -1000, i);
+			glVertex3i(0, 1000, i);
+			glVertex3i(0, i, -1000);
+			glVertex3i(0, i, 1000);
+		}
+
+		glEnd();
+	}
+
+	if (vp->name == Viewport::ORTHO_Z)
+	{
+		glColor3f(0.3f, 0.3f, 0.3f);
+		glBegin(GL_LINES);
+		for (int i = -1000; i <= 1000; i += 100)
+		{
+			glVertex3i(-1000, i, 0);
+			glVertex3i(1000, i, 0);
+			glVertex3i(i, -1000, 0);
+			glVertex3i(i, 1000, 0);
+		}
+
+		glEnd();
+	}
+
+}
+
+void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* shader, const glm::mat4& mvp) const
+{
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	shader->bind();
+	shader->setUniform("minThreshold", globalThreshold.min);
+	shader->setUniform("maxThreshold", globalThreshold.max);
+
+	const glm::vec3 camPos = vp->camera->getPosition();
+	const glm::vec3 viewDir = glm::normalize(vp->camera->target - camPos);
+
+	// the smallest and largest projected bounding box vertices -- used to calculate the extend of planes
+	// to draw
+	glm::vec3 minPVal(std::numeric_limits<float>::max()), maxPVal(std::numeric_limits<float>::lowest());
+
+	for (size_t i = 0; i < stacks.size(); ++i)
+	{
+		if (!stacks[i]->enabled)
+			continue;
+
+
+		// draw screen filling quads
+		// find max/min distances of bbox cube from camera
+		std::vector<glm::vec3> boxVerts = stacks[i]->getBBox().getVertices();
+
+		// calculate max/min distance
+		float maxDist = 0.f, minDist = std::numeric_limits<float>::max();
+		for (size_t k = 0; k < boxVerts.size(); ++k)
+		{
+			glm::vec4 p = mvp * stacks[i]->getTransform() * glm::vec4(boxVerts[k], 1.f);
+			p /= p.w;
+
+			minPVal = glm::min(minPVal, glm::vec3(p));
+			maxPVal = glm::max(maxPVal, glm::vec3(p));
+
+		}
+
+	}
+
+	maxPVal = glm::min(maxPVal, glm::vec3(1.f));
+	minPVal = glm::max(minPVal, glm::vec3(-1.f));
+
+
+	for (size_t i = 0; i < stacks.size(); ++i)
+	{
+		glActiveTexture(GL_TEXTURE0 + i);
+		glBindTexture(GL_TEXTURE_3D, stacks[i]->getTexture());
+
+		char uname[256];
+		sprintf(uname, "volume[%d].texture", i);
+		shader->setUniform(uname, (int)i);
+
+		AABB bbox = stacks[i]->getBBox();
+		sprintf(uname, "volume[%d].bboxMax", i);
+		shader->setUniform(uname, bbox.max);
+		sprintf(uname, "volume[%d].bboxMin", i);
+		shader->setUniform(uname, bbox.min);
+
+		sprintf(uname, "volume[%d].enabled", i);
+		shader->setUniform(uname, stacks[i]->enabled);
+
+		sprintf(uname, "volume[%d].inverseMVP", i);
+		shader->setMatrix4(uname, glm::inverse(mvp * stacks[i]->getTransform()));
+	}
+
+
+	// draw all slices
+	glBegin(GL_QUADS);
+
+	unsigned int slices = sliceCount;
+	if (cameraMoving)
+		slices = 100;
+
+	shader->setUniform("sliceCount", (float)slices);
+
+
+	for (int z = 0; z < slices; ++z)
+	{
+		// render back-to-front
+		float zf = glm::mix(maxPVal.z, minPVal.z, (float)z / slices);
+
+		glVertex3f(minPVal.x, maxPVal.y, zf);
+		glVertex3f(minPVal.x, minPVal.y, zf);
+		glVertex3f(maxPVal.x, minPVal.y, zf);
+		glVertex3f(maxPVal.x, maxPVal.y, zf);
+	}
+	glEnd();
+
+
+	glActiveTexture(GL_TEXTURE0);
+
+	shader->disable();
+	glDisable(GL_BLEND);
+
+}
+
+void SpimRegistrationApp::drawAxisAlignedSlices(const Viewport* vp, const Shader* shader, const glm::mat4& mvp) const
+{
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+
+	glDisable(GL_DEPTH_TEST);
+	glDepthMask(GL_FALSE);
+
+	shader->bind();
+	shader->setUniform("minThreshold", (int)globalThreshold.min);
+	shader->setUniform("maxThreshold", (int)globalThreshold.max);
+	shader->setUniform("mvpMatrix", mvp);
+
+	for (size_t i = 0; i < stacks.size(); ++i)
+	{
+		if (stacks[i]->enabled)
+		{
+
+			shader->setUniform("color", getRandomColor(i));
+			shader->setMatrix4("transform", stacks[i]->getTransform());
+
+
+			glColor4f(0.f, 0.f, 0.f, 1.f);
+
+			// calculate view vector
+			glm::vec3 view = vp->camera->getViewDirection();
+			stacks[i]->drawSlices(volumeShader, view);
+
+		}
+
+
+	}
+
+	shader->disable();
+
+	glDisable(GL_BLEND);
+	glEnable(GL_DEPTH_TEST);
+	glDepthMask(GL_TRUE);
 }

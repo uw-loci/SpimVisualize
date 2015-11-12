@@ -139,6 +139,14 @@ private:
 
 	void drawContrastEditor(const Viewport* vp);
 	void drawScene(const Viewport* vp);
+	void drawVolumeAlignment(const Viewport* vp);
+
+	void drawGroundGrid(const Viewport* vp) const;
+	void drawBoundingBoxes() const;
+
+	void drawAxisAlignedSlices(const Viewport* vp, const Shader* shader, const glm::mat4& mvp) const;
+	void drawViewplaneSlices(const Viewport* vp, const Shader* shader, const glm::mat4& mvp) const;
+
 	static glm::vec3 getRandomColor(int n);
 
 	inline bool currentStackValid() const { return currentStack > -1 && currentStack < stacks.size();  }

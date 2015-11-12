@@ -268,8 +268,8 @@ AlignVolumesLayout::AlignVolumesLayout(const ivec2& res)
 	views[0].camera = new OrbitCamera;
 	views[0].color = vec3(1);
 
-	views[1].name = Viewport::ORTHO_X;
-	views[1].camera = new UnitCamera; // OrthoCamera(glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f, 1.f, 0.f), 1.1f);
+	views[1].name = Viewport::PERSPECTIVE_ALIGNMENT;
+	views[1].camera = views[0].camera; //new UnitCamera; // OrthoCamera(glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f, 1.f, 0.f), 1.1f);
 	views[1].color = vec3(1, 1, 0);
 
 	OrbitCamera* cam = dynamic_cast<OrbitCamera*>(views[0].camera);
@@ -285,7 +285,7 @@ AlignVolumesLayout::AlignVolumesLayout(const ivec2& res)
 AlignVolumesLayout::~AlignVolumesLayout()
 {
 	delete views[0].camera;
-	delete views[1].camera;
+	//delete views[1].camera;
 }
 
 
