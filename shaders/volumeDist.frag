@@ -54,19 +54,20 @@ void main()
 		{
 			++count;
 
-			sum += float(t) / VOLUMES;
-
+			sum += float(t);
 		}
 
 
 	}
 
-	if (count == VOLUMES && sum > 120.0)
+	const float THRESHOLD = 120*VOLUMES;
+
+	if (count == VOLUMES && sum > THRESHOLD)
 	{
 		vec3 red = vec3(1.0, 0.0, 0.0);
 		vec3 green = vec3(0.0, 1.0, 0.0);
 
-		color = mix(green, red, sum/200.0);
+		color = mix(green, red, sum/(2*THRESHOLD));
 
 
 	}

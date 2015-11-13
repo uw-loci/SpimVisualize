@@ -52,6 +52,9 @@ public:
 	void calculateHistogram();
 
 
+	void TEST_beginAutoAlign();
+	void TEST_endAutoAlign();
+
 	void TEST_extractFeaturePoints();
 	void TEST_alignStacks();
 	void TEST_detectBeads();
@@ -136,6 +139,12 @@ private:
 
 	// volume-based alignment
 	unsigned int			samplesPassedQuery;
+	unsigned int			lastSamplesPass;
+
+	glm::mat4				lastMatrix, lastPassMatrix;
+	bool					runAlignment;
+
+
 
 
 	Threshold				dataLimits;
@@ -154,6 +163,8 @@ private:
 	void raycastVolumes(const Viewport* vp, const Shader* shader) const;
 
 	void drawRegistrationFeatures(const Viewport* vp) const;
+
+	void TEST_alignStack(const Viewport* vp);
 
 	static glm::vec3 getRandomColor(int n);
 

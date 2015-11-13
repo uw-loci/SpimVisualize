@@ -68,6 +68,10 @@ static void keyboard(unsigned char key, int x, int y)
 		regoApp->TEST_detectBeads();
 	}
 
+	
+
+	if (key == ' ')
+		regoApp->TEST_beginAutoAlign();
 
 	if (key == ',')
 		regoApp->increaseMinThreshold();
@@ -152,6 +156,12 @@ static void keyboard(unsigned char key, int x, int y)
 		regoApp->setDataLimits();
 	if (key == 'M')
 		regoApp->resetDataLimits();
+}
+
+static void keyboardUp(unsigned char key, int x, int y)
+{
+	if (key == ' ')
+		regoApp->TEST_endAutoAlign();
 }
 
 
@@ -286,6 +296,7 @@ int main(int argc, const char** argv)
 	glutIdleFunc(idle);
 	glutMouseFunc(button);
 	glutKeyboardFunc(keyboard);
+	glutKeyboardUpFunc(keyboardUp);
 	glutMotionFunc(motion);
 	glutReshapeFunc(reshape);
 	glutPassiveMotionFunc(passiveMotion);

@@ -52,7 +52,10 @@ public:
 	void move(const glm::vec3& delta);
 	void rotate(float d);
 
-	inline const glm::mat4& getTransform() const { return transform; }
+
+	glm::mat4				transform;
+
+
 
 	glm::vec3 getCentroid() const;
 
@@ -90,8 +93,6 @@ private:
 	unsigned short			minVal, maxVal;
 
 
-	glm::mat4				transform;
-	
 	void createPlaneLists();
 
 

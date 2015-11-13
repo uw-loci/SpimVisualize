@@ -8,15 +8,18 @@
 
 #include <algorithm>
 #include <iostream>
-#include <GL/glew.h>
 #include <fstream>
+#include <random>
 
+
+#include <GL/glew.h>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/io.hpp>
-
+#include <glm/gtx/transform2.hpp>
 
 SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(0), sliceShader(0), volumeShader(0), layout(0), 
-drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), currentStack(-1), sliceCount(400), configPath("./"), cameraMoving(false)
+	drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), currentStack(-1), sliceCount(400), 
+	configPath("./"), cameraMoving(false), runAlignment(false), lastMatrix(1.f)
 {
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
@@ -188,6 +191,10 @@ void SpimRegistrationApp::drawVolumeAlignment(const Viewport* vp)
 	if (vp->name != Viewport::PERSPECTIVE_ALIGNMENT)
 		return;
 
+	if (runAlignment)
+		TEST_alignStack(vp);
+
+
 	if (drawGrid)
 		drawGroundGrid(vp);
 
@@ -212,7 +219,22 @@ void SpimRegistrationApp::drawVolumeAlignment(const Viewport* vp)
 
 	GLuint64 samplesPassed = 0;
 	glGetQueryObjectui64v(samplesPassedQuery, GL_QUERY_RESULT, &samplesPassed);
-	std::cout << "[Debug] Samples passed: " << samplesPassed << std::endl;
+	
+	if (runAlignment)
+	{
+
+		// undo transform if we are worse off
+		if (samplesPassed < lastSamplesPass)
+		{
+			stacks[1]->transform = lastPassMatrix;
+
+		}
+		else
+			lastSamplesPass = samplesPassed;
+
+	}
+			
+	std::cout << "[Debug] Samples passed: " << samplesPassed << " (" << lastSamplesPass << ")" << std::endl;
 	queryReady = true;
 
 	
@@ -775,7 +797,7 @@ void SpimRegistrationApp::drawBoundingBoxes() const
 		if (stacks[i]->enabled)
 		{
 			glPushMatrix();
-			glMultMatrixf(glm::value_ptr(stacks[i]->getTransform()));
+			glMultMatrixf(glm::value_ptr(stacks[i]->transform));
 
 
 			if (i == currentStack)
@@ -877,7 +899,7 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 		float maxDist = 0.f, minDist = std::numeric_limits<float>::max();
 		for (size_t k = 0; k < boxVerts.size(); ++k)
 		{
-			glm::vec4 p = mvp * stacks[i]->getTransform() * glm::vec4(boxVerts[k], 1.f);
+			glm::vec4 p = mvp * stacks[i]->transform * glm::vec4(boxVerts[k], 1.f);
 			p /= p.w;
 
 			minPVal = glm::min(minPVal, glm::vec3(p));
@@ -910,7 +932,7 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 		shader->setUniform(uname, stacks[i]->enabled);
 
 		sprintf(uname, "volume[%d].inverseMVP", i);
-		shader->setMatrix4(uname, glm::inverse(mvp * stacks[i]->getTransform()));
+		shader->setMatrix4(uname, glm::inverse(mvp * stacks[i]->transform));
 	}
 
 
@@ -967,7 +989,7 @@ void SpimRegistrationApp::drawAxisAlignedSlices(const Viewport* vp, const Shader
 		{
 
 			shader->setUniform("color", getRandomColor(i));
-			shader->setMatrix4("transform", stacks[i]->getTransform());
+			shader->setMatrix4("transform", stacks[i]->transform);
 
 
 			glColor4f(0.f, 0.f, 0.f, 1.f);
@@ -1077,7 +1099,7 @@ void SpimRegistrationApp::raycastVolumes(const Viewport* vp, const Shader* shade
 		float maxDist = 0.f, minDist = std::numeric_limits<float>::max();
 		for (size_t k = 0; k < boxVerts.size(); ++k)
 		{
-			glm::vec4 p = mvp * stacks[i]->getTransform() * glm::vec4(boxVerts[k], 1.f);
+			glm::vec4 p = mvp * stacks[i]->transform * glm::vec4(boxVerts[k], 1.f);
 			p /= p.w;
 
 			minPVal = glm::min(minPVal, glm::vec3(p));
@@ -1110,13 +1132,13 @@ void SpimRegistrationApp::raycastVolumes(const Viewport* vp, const Shader* shade
 		shader->setUniform(uname, stacks[i]->enabled);
 
 		sprintf(uname, "volume[%d].inverseMVP", i);
-		shader->setMatrix4(uname, glm::inverse(mvp * stacks[i]->getTransform()));
+		shader->setMatrix4(uname, glm::inverse(mvp * stacks[i]->transform));
 	
 		sprintf(uname, "volume[%d].transform", i);
-		shader->setMatrix4(uname, stacks[i]->getTransform());
+		shader->setMatrix4(uname, stacks[i]->transform);
 	
 		sprintf(uname, "volume[%d].inverseTransform", i);
-		shader->setMatrix4(uname, glm::inverse(stacks[i]->getTransform()));
+		shader->setMatrix4(uname, glm::inverse(stacks[i]->transform));
 	}
 
 	shader->setUniform("minRayDist", minPVal.z);
@@ -1137,4 +1159,53 @@ void SpimRegistrationApp::raycastVolumes(const Viewport* vp, const Shader* shade
 
 	shader->disable();
 	
+}
+
+
+void SpimRegistrationApp::TEST_beginAutoAlign()
+{
+	assert(stacks.size() > 1);
+
+	runAlignment = true;
+	lastMatrix = stacks[1]->transform;
+
+}
+
+void SpimRegistrationApp::TEST_endAutoAlign()
+{
+	runAlignment = false;
+	lastSamplesPass = 0;
+}
+
+void SpimRegistrationApp::TEST_alignStack(const Viewport* vp)
+{
+
+
+	static std::mt19937 rng;
+	static std::uniform_real<float> rngDist(-1.f, 1.f);
+	
+	// 1) get camera frame
+	
+
+	// 2) create delta matrix
+	float dx = rngDist(rng);
+	float dz = rngDist(rng);
+	float ry = rngDist(rng);
+	
+	glm::mat4 R = glm::rotate(ry, glm::vec3(0, 1, 0));
+	glm::mat4 T = glm::translate(glm::vec3(dx, 0, dz));
+	glm::mat4 M = R * T;
+
+	std::cout << "[Debug] Delta T: " << M << std::endl;
+
+
+	lastPassMatrix = stacks[1]->transform;
+
+	// 3) apply matrix to stack
+	assert(stacks.size() > 1);
+	stacks[1]->applyTransform(M);
+
+
+	// 4) render frame stack and record value
+
 }
