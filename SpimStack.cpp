@@ -17,6 +17,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/io.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/transform2.hpp>
 
 #include <FreeImage.h>
 #include <GL/glew.h>
@@ -236,7 +237,7 @@ glm::vec3 SpimStack::getCentroid() const
 
 void SpimStack::move(const glm::vec3& delta)
 {
-	transform = glm::translate(transform, delta);
+	transform = glm::translate(delta) * transform;//  glm::translate(transform, delta);
 }
 
 void SpimStack::rotate(float d)
