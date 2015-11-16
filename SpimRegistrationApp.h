@@ -154,9 +154,8 @@ private:
 	// stores undo transformations for all stacks
 	struct StackTransform
 	{
-		unsigned int	stack;
+		SpimStack*		stack;
 		glm::mat4		matrix;
-
 	};
 
 	std::vector<StackTransform> transformUndoChain;
@@ -187,5 +186,6 @@ private:
 
 	inline bool currentStackValid() const { return currentStack > -1 && currentStack < stacks.size();  }
 
+	void saveStackTransform(unsigned int n);
 
 };

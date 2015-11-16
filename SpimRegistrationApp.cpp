@@ -103,15 +103,9 @@ void SpimRegistrationApp::loadStackTransformations()
 {
 	for (unsigned int i = 0; i < stacks.size(); ++i)
 	{
+		saveStackTransform(i);
+
 		SpimStack* s = stacks[i];
-
-		// save the current matrix
-		StackTransform st;
-		st.matrix = s->transform;
-		st.stack = i;
-		transformUndoChain.push_back(st);		
-
-
 		std::string filename = s->getFilename() + ".registration.txt";
 		s->loadTransform(filename);
 	};
@@ -1191,10 +1185,7 @@ void SpimRegistrationApp::TEST_beginAutoAlign()
 
 	runAlignment = true;
 
-	StackTransform st;
-	st.stack = currentStack;
-	st.matrix = stacks[currentStack]->transform;
-
+	saveStackTransform(currentStack);
 }
 
 void SpimRegistrationApp::TEST_endAutoAlign()
@@ -1241,12 +1232,11 @@ void SpimRegistrationApp::undoLastTransform()
 	if (transformUndoChain.empty())
 		return;
 
-	StackTransform st(transformUndoChain.back());
+	
+	StackTransform st = transformUndoChain.back();
+	st.stack->transform = st.matrix;
+
 	transformUndoChain.pop_back();
-
-
-	assert(st.stack < stacks.size());
-	stacks[st.stack]->transform = st.matrix;
 }
 
 void SpimRegistrationApp::startStackMove()
@@ -1254,12 +1244,21 @@ void SpimRegistrationApp::startStackMove()
 	if (currentStack == -1)
 		return;
 
-	StackTransform st;
-	st.matrix = stacks[currentStack]->transform;
-	st.stack = currentStack;
-	transformUndoChain.push_back(st);
+	saveStackTransform(currentStack);
 }
 
 void SpimRegistrationApp::endStackMove()
 {
 }
+
+void SpimRegistrationApp::saveStackTransform(unsigned int n)
+{
+	assert(n < stacks.size());
+
+	StackTransform st;
+	st.matrix = stacks[n]->transform;
+	st.stack = stacks[n];
+
+	transformUndoChain.push_back(st);
+}
+
