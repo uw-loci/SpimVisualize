@@ -19,7 +19,7 @@
 
 SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(0), sliceShader(0), volumeShader(0), layout(0), 
 	drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), currentStack(-1), sliceCount(400), 
-	configPath("./"), cameraMoving(false), runAlignment(false), lastMatrix(1.f)
+	configPath("./"), cameraMoving(false), runAlignment(false)
 {
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
@@ -101,11 +101,20 @@ void SpimRegistrationApp::saveStackTransformations() const
 
 void SpimRegistrationApp::loadStackTransformations()
 {
-	std::for_each(stacks.begin(), stacks.end(), [](SpimStack* s)
+	for (unsigned int i = 0; i < stacks.size(); ++i)
 	{
+		SpimStack* s = stacks[i];
+
+		// save the current matrix
+		StackTransform st;
+		st.matrix = s->transform;
+		st.stack = i;
+		transformUndoChain.push_back(st);		
+
+
 		std::string filename = s->getFilename() + ".registration.txt";
 		s->loadTransform(filename);
-	});
+	};
 }
 
 void SpimRegistrationApp::saveContrastSettings() const
@@ -459,7 +468,7 @@ void SpimRegistrationApp::moveStack(const glm::vec2& delta)
 		return;
 
 	Viewport* vp = layout->getActiveViewport();
-	if (vp && vp->name != Viewport::PERSPECTIVE)
+	if (vp)// && vp->name != Viewport::PERSPECTIVE)
 	{
 		stacks[currentStack]->move(vp->camera->calculatePlanarMovement(delta));
 	}
@@ -1175,10 +1184,16 @@ void SpimRegistrationApp::raycastVolumes(const Viewport* vp, const Shader* shade
 
 void SpimRegistrationApp::TEST_beginAutoAlign()
 {
-	assert(stacks.size() > 1);
+	if (stacks.size() < 2 || currentStack == -1)
+		return;
+
+	std::cout << "[Debug] Aligning stack " << currentStack << " ... " << std::endl;
 
 	runAlignment = true;
-	lastMatrix = stacks[1]->transform;
+
+	StackTransform st;
+	st.stack = currentStack;
+	st.matrix = stacks[currentStack]->transform;
 
 }
 
@@ -1210,13 +1225,41 @@ void SpimRegistrationApp::TEST_alignStack(const Viewport* vp)
 	std::cout << "[Debug] Delta T: " << M << std::endl;
 
 
-	lastPassMatrix = stacks[1]->transform;
+	lastPassMatrix = stacks[currentStack]->transform;
 
 	// 3) apply matrix to stack
 	assert(stacks.size() > 1);
-	stacks[1]->applyTransform(M);
+	stacks[currentStack]->applyTransform(M);
 
 
 	// 4) render frame stack and record value
 
+}
+
+void SpimRegistrationApp::undoLastTransform()
+{
+	if (transformUndoChain.empty())
+		return;
+
+	StackTransform st(transformUndoChain.back());
+	transformUndoChain.pop_back();
+
+
+	assert(st.stack < stacks.size());
+	stacks[st.stack]->transform = st.matrix;
+}
+
+void SpimRegistrationApp::startStackMove()
+{
+	if (currentStack == -1)
+		return;
+
+	StackTransform st;
+	st.matrix = stacks[currentStack]->transform;
+	st.stack = currentStack;
+	transformUndoChain.push_back(st);
+}
+
+void SpimRegistrationApp::endStackMove()
+{
 }

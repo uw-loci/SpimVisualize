@@ -68,7 +68,9 @@ static void keyboard(unsigned char key, int x, int y)
 		regoApp->TEST_detectBeads();
 	}
 
-	
+	// backspace
+	if (key == '\b')
+		regoApp->undoLastTransform();
 
 	if (key == ' ')
 		regoApp->TEST_beginAutoAlign();
@@ -186,11 +188,14 @@ static void motion(int x, int y)
 	if (mouse.button[1])
 		regoApp->panCamera(glm::vec2(dx, dy));
 
+	if (mouse.button[2])
+		regoApp->rotateCamera(glm::vec2(dt, dp));
+
 	if (mouse.button[0])
 	{
 		// let the application decide what to do with it:
 		// camera movement in a perspective window
-		regoApp->rotateCamera(glm::vec2(dt, dp));
+		//regoApp->rotateCamera(glm::vec2(dt, dp));
 		
 		// stack movement in an ortho window
 		regoApp->moveStack(glm::vec2(dx, dy));
@@ -247,7 +252,7 @@ static void special(int key, int x, int y)
 	{
 
 	}
-
+	
 }
 
 static void button(int button, int state, int x, int y)
@@ -258,6 +263,12 @@ static void button(int button, int state, int x, int y)
 	mouse.coordinates.y = y;
 
 	mouse.button[button] = (state == GLUT_DOWN);
+
+
+	if (button == 0 && state == GLUT_DOWN)
+		regoApp->startStackMove();
+	if (button == 0 && state == GLUT_UP)
+		regoApp->endStackMove();
 }
 
 static void reshape(int w, int h)
@@ -314,7 +325,7 @@ int main(int argc, const char** argv)
 	try
 	{
 		
-		for (int i = 0; i < 2; ++i)
+		for (int i = 0; i < 1; ++i)
 		{
 			char filename[256];
 			//sprintf(filename, "e:/spim/test/spim_TL00_Angle%d.tif", i);

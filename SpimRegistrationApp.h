@@ -38,6 +38,11 @@ public:
 	void toggleSelectStack(int n);
 	void toggleStack(int n);
 	inline void toggleCurrentStack() { toggleStack(currentStack); }
+	
+	void startStackMove();
+	void endStackMove();
+
+
 	void moveStack(const glm::vec2& delta);
 	void rotateCurrentStack(float rotY);
 
@@ -54,6 +59,7 @@ public:
 
 	void TEST_beginAutoAlign();
 	void TEST_endAutoAlign();
+	void undoLastTransform();
 
 	void TEST_extractFeaturePoints();
 	void TEST_alignStacks();
@@ -141,8 +147,19 @@ private:
 	unsigned int			samplesPassedQuery;
 	unsigned int			lastSamplesPass;
 
-	glm::mat4				lastMatrix, lastPassMatrix;
+	glm::mat4				lastPassMatrix;
 	bool					runAlignment;
+
+
+	// stores undo transformations for all stacks
+	struct StackTransform
+	{
+		unsigned int	stack;
+		glm::mat4		matrix;
+
+	};
+
+	std::vector<StackTransform> transformUndoChain;
 
 
 
