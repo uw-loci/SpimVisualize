@@ -292,16 +292,16 @@ void SpimRegistrationApp::setPerspectiveLayout(const glm::ivec2& res, const glm:
 	std::cout << "[Layout] Creating fullscreen perspective layout ... \n";
 	
 	if (prevLayouts["Perspective"])
+	{
 		layout = prevLayouts["Perspective"];
+		layout->resize(res);
+	}
 	else
 	{
 		layout = new PerspectiveFullLayout(res);
 		prevLayouts["Perspective"] = layout;
 	}
-
-
-
-
+	
 	layout->updateMouseMove(mouseCoords);
 }
 
@@ -309,7 +309,10 @@ void SpimRegistrationApp::setAlignVolumeLayout(const glm::ivec2& res, const glm:
 {
 	std::cout << "[Layout] Creating volume aligning layout ... \n";
 	if (prevLayouts["Align Volumes"])
+	{
 		layout = prevLayouts["Align Volumes"];
+		layout->resize(res);
+	}
 	else
 	{
 		layout = new AlignVolumesLayout(res);
@@ -324,7 +327,10 @@ void SpimRegistrationApp::setTopviewLayout(const glm::ivec2& res, const glm::ive
 	std::cout << "[Layout] Creating fullscreen top-view layout ... \n";
 
 	if (prevLayouts["TopView"])
+	{
 		layout = prevLayouts["TopView"];
+		layout->resize(res);
+	}
 	else
 	{
 		layout = new TopViewFullLayout(res);
@@ -334,12 +340,14 @@ void SpimRegistrationApp::setTopviewLayout(const glm::ivec2& res, const glm::ive
 	layout->updateMouseMove(mouseCoords);
 }
 
-
 void SpimRegistrationApp::setThreeViewLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords)
 {
 	std::cout << "[Layout] Creating four-view layout ... \n";
 	if (prevLayouts["FourView"])
+	{
 		layout = prevLayouts["FourView"];
+		layout->resize(res);
+	}
 	else
 	{
 		layout = new FourViewLayout(res);
@@ -355,7 +363,10 @@ void SpimRegistrationApp::setContrastEditorLayout(const glm::ivec2& res, const g
 	
 	std::cout << "[Layout] Creating contrast editor layout ... \n";
 	if (prevLayouts["ContrastEditor"])
+	{
 		layout = prevLayouts["ContrastEditor"];
+		layout->resize(res);
+	}
 	else
 	{
 		layout = new ContrastEditLayout(res);
