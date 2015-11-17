@@ -317,7 +317,7 @@ int main(int argc, const char** argv)
 
 	try
 	{
-		
+
 		for (int i = 0; i < 2; ++i)
 		{
 			char filename[256];
@@ -326,8 +326,12 @@ int main(int argc, const char** argv)
 			//sprintf(filename, "e:/spim/zebra/spim_TL01_Angle%d.ome.tiff", i);
 			sprintf(filename, "e:/spim/zebra_beads/spim_TL01_Angle%d.ome.tiff", i);
 			sprintf(filename, "e:/spim/121514 Fish2 no beads-selected/spim_TL01_Angle%d.ome.tiff", i);
+			
+			
 			regoApp->addSpimStack(filename);
 		}
+
+		//regoApp->addSpimStack("e:/regoApp/result_31x31x360.bin");
 
 		regoApp->centerCamera();
 		regoApp->loadStackTransformations();

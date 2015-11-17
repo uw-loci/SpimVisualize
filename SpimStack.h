@@ -93,6 +93,10 @@ private:
 	unsigned short			minVal, maxVal;
 
 
+	void loadImage(const std::string& filename);
+	void loadBinary(const std::string& filename, const glm::ivec3& resolution);
+
+
 	void createPlaneLists();
 
 

@@ -17,6 +17,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/io.hpp>
 #include <glm/gtx/transform2.hpp>
+#include <GL/glut.h>
 
 SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(0), sliceShader(0), volumeShader(0), layout(0), 
 	drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), currentStack(-1), sliceCount(400), 
@@ -34,7 +35,7 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(0)
 
 	glGenQueries(1, &samplesPassedQuery);
 
-	queryRenderTarget = new Framebuffer(512, 512, GL_RGB, GL_FLOAT, 1, GL_NEAREST);
+	queryRenderTarget = new Framebuffer(256, 256, GL_RGB, GL_UNSIGNED_BYTE, 1, GL_NEAREST);
 }
 
 SpimRegistrationApp::~SpimRegistrationApp()
@@ -70,15 +71,16 @@ void SpimRegistrationApp::reloadShaders()
 
 	delete volumeShader;
 	volumeShader = new Shader("shaders/volume2.vert", "shaders/volume2.frag");
-
-	delete volumeDifferenceShader;
-	volumeDifferenceShader = new Shader("shaders/volumeDist.vert", "shaders/volumeDist.frag");
-
+		
 	delete volumeRaycaster;
 	volumeRaycaster = new Shader("shaders/volumeRaycast.vert", "shaders/volumeRaycast.frag");
 
 	delete drawQuad;
 	drawQuad = new Shader("shaders/drawQuad.vert", "shaders/drawQuad.frag");
+
+	delete volumeDifferenceShader;
+	volumeDifferenceShader = new Shader("shaders/volumeDist.vert", "shaders/volumeDist.frag");
+
 }
 
 
@@ -158,15 +160,16 @@ void SpimRegistrationApp::addSpimStack(const std::string& filename)
 {
 	SpimStack* stack = new SpimStack(filename);
 
-
 	stacks.push_back(stack);
 	AABB bbox = stack->getBBox();
-	
+
 	if (stacks.size() == 1)
 		globalBBox = bbox;
 	else
 		globalBBox.extend(bbox);
 }
+
+
 
 void SpimRegistrationApp::drawScene(const Viewport* vp)
 {
@@ -209,26 +212,23 @@ unsigned long SpimRegistrationApp::TEST_occlusionQueryStackOverlap(const Viewpor
 
 	drawGroundGrid(vp);
 	drawBoundingBoxes();
-
-
-	queryRenderTarget->disable();
-
-
-
+		
 	glBeginQuery(GL_SAMPLES_PASSED, samplesPassedQuery);
 
-
+	/*
 	glDepthMask(GL_FALSE);
 	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+	*/
 
 	drawViewplaneSlices(vp, volumeDifferenceShader);
 	//drawAxisAlignedSlices(vp, volumeDifferenceShader);
 
 	glEndQuery(GL_SAMPLES_PASSED);
 
+	/*
 	glDepthMask(GL_TRUE);
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-
+	*/
 
 
 	GLint queryStatus = GL_FALSE;
@@ -242,21 +242,6 @@ unsigned long SpimRegistrationApp::TEST_occlusionQueryStackOverlap(const Viewpor
 	glGetQueryObjectui64v(samplesPassedQuery, GL_QUERY_RESULT, &samplesPassed);
 
 	/*
-	if (runAlignment)
-	{
-
-		// undo transform if we are worse off
-		if (samplesPassed < lastSamplesPass)
-		{
-			stacks[1]->transform = lastPassMatrix;
-
-		}
-		else
-			lastSamplesPass = samplesPassed;
-
-	}
-	*/
-
 	if (samplesPassed != lastSamplesPass)
 	{
 
@@ -270,7 +255,7 @@ unsigned long SpimRegistrationApp::TEST_occlusionQueryStackOverlap(const Viewpor
 		std::cout << lastSamplesPass << ")" << std::endl;
 		lastSamplesPass = samplesPassed;
 	}
-
+	*/
 
 	queryRenderTarget->disable();
 
@@ -294,7 +279,8 @@ void SpimRegistrationApp::drawVolumeAlignment(const Viewport* vp)
 
 	if (runAlignment)
 	{
-		TEST_alignStacksSeries(vp);
+		//TEST_alignStacksSeries(vp);
+		TEST_alignStacksVolume(vp);
 		runAlignment = false;
 	}
 
@@ -689,6 +675,89 @@ void SpimRegistrationApp::TEST_alignStacksSeries(const Viewport* vp)
 
 
 }
+
+void SpimRegistrationApp::TEST_alignStacksVolume(const Viewport* vp)
+{
+	using namespace std;
+	using namespace glm;
+
+	if (currentStack == -1)
+		return;
+
+
+	cout << "[Align] Auto-aligning stack " << currentStack << " ... \n";
+
+
+	
+	const unsigned int ANGLES = 120;
+	const float ANGLE_STEP = 360.f / ANGLES;
+
+	const int X_BOUND = 15;
+	const int Z_BOUND = 15;
+	const float PLANAR_STEP = 4.f;
+	
+	unsigned short* resultSpace = new unsigned short[ANGLES * (X_BOUND*2+1) * (Z_BOUND*2+1)];
+
+	mat4 originalTransform = stacks[currentStack]->transform;
+	
+
+	for (int a = 0; a < ANGLES; ++a)
+	{
+		mat4 R = glm::rotate((float)(a - ANGLES/2) * ANGLE_STEP, vec3(0, 1, 0));
+
+		cout << "[Align] " << a << "/" << ANGLES << " ... ";
+
+		unsigned int startTime = glutGet(GLUT_ELAPSED_TIME);
+
+		unsigned short maxVal = 0;
+		unsigned short minVal = numeric_limits<unsigned short>::max();
+
+		for (int x = -X_BOUND; x <= X_BOUND; ++x)
+		{
+			float dx = (float)x * PLANAR_STEP; // / 2.f;
+			unsigned int ix = x + X_BOUND;
+
+			for (int z = -Z_BOUND; z <= Z_BOUND; ++z)
+			{
+				float dz = (float)z * PLANAR_STEP; // / 2.f;
+				unsigned int iz = z + Z_BOUND;
+				mat4 T = translate(vec3(dx, 0, dz));
+
+				// reset transform for this iteration
+				stacks[currentStack]->transform = originalTransform;
+
+				stacks[currentStack]->applyTransform(R*T);
+				unsigned short result = (unsigned short)TEST_occlusionQueryStackOverlap(vp);
+				
+				maxVal = std::max(maxVal, result);
+				minVal = std::min(minVal, result);
+
+				unsigned int index = ix + iz * (X_BOUND * 2 + 1) + a * (X_BOUND * 2 + 1) * (Z_BOUND * 2 + 1);
+				resultSpace[index] = result;
+			}
+
+
+
+		}
+
+		unsigned int endTime = glutGet(GLUT_ELAPSED_TIME);
+		float seconds = (float)(endTime - startTime) / 1000.f;
+
+		cout << "done (" << seconds << "s). [" << minVal << " -- " << maxVal << "]\n";
+
+	}
+
+	char filename[256];
+	sprintf(filename, "result_%dx%dx%d.bin", (X_BOUND * 2 + 1), (Z_BOUND * 2 + 1), ANGLES);
+	ofstream file(configPath + string(filename));
+
+	file.write(reinterpret_cast<const char*>(resultSpace), (X_BOUND * 2 + 1) * (Z_BOUND * 2 + 1) * ANGLES* sizeof(unsigned short));
+
+	delete[] resultSpace;
+
+
+}
+
 
 void SpimRegistrationApp::increaseMaxThreshold()
 {
@@ -1339,6 +1408,7 @@ void SpimRegistrationApp::undoLastTransform()
 	st.stack->transform = st.matrix;
 
 	transformUndoChain.pop_back();
+	updateGlobalBbox();
 }
 
 void SpimRegistrationApp::startStackMove()
@@ -1351,6 +1421,7 @@ void SpimRegistrationApp::startStackMove()
 
 void SpimRegistrationApp::endStackMove()
 {
+	updateGlobalBbox();
 }
 
 void SpimRegistrationApp::saveStackTransform(unsigned int n)
@@ -1362,4 +1433,19 @@ void SpimRegistrationApp::saveStackTransform(unsigned int n)
 	st.stack = stacks[n];
 
 	transformUndoChain.push_back(st);
+}
+
+void SpimRegistrationApp::updateGlobalBbox()
+{
+	if (stacks.empty())
+	{
+		globalBBox.reset();
+		return;
+	}
+	
+	globalBBox = stacks[0]->getBBox();
+	for (size_t i = 1; i < stacks.size(); ++i)
+		globalBBox.extend(stacks[i]->getBBox());
+
+
 }

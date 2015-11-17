@@ -164,8 +164,10 @@ private:
 
 
 	Threshold				dataLimits;
+	
 	Histogram				histogram;
 
+	void updateGlobalBbox();
 
 	void drawContrastEditor(const Viewport* vp);
 	void drawScene(const Viewport* vp);
@@ -180,6 +182,7 @@ private:
 
 	void drawRegistrationFeatures(const Viewport* vp) const;
 
+	void TEST_alignStacksVolume(const Viewport* vp);
 	void TEST_alignStacksSeries(const Viewport* vp);
 	void TEST_alignStack(const Viewport* vp);
 	unsigned long TEST_occlusionQueryStackOverlap(const Viewport* vp);

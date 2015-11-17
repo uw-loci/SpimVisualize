@@ -55,45 +55,23 @@ SpimStack::SpimStack(const string& name, unsigned int subsampleSteps) : filename
 	volumeList[0] = 0;
 	volumeList[1] = 0;
 
-	FIMULTIBITMAP* fmb = FreeImage_OpenMultiBitmap(FIF_TIFF, filename.c_str(), FALSE, TRUE);
-	assert(fmb);
 
-
-	// get the dimensions
-	depth = FreeImage_GetPageCount(fmb);
-	for (unsigned int z = 0; z < depth; ++z)
+	if (filename.find(".bin") == string::npos)
+		loadImage(filename);
+	else
 	{
-		FIBITMAP* bm = FreeImage_LockPage(fmb, z);
 
-		int w = FreeImage_GetWidth(bm);
-		int h = FreeImage_GetHeight(bm);
-		
-		if (width == 0)
-		{
-			width = w;
-			height = h;
-			volume = new unsigned short[width*height*depth];
-		}
-		else
-		{
-			assert(width == w);
-			assert(height = h);
-		}
+		string s = filename.substr(filename.find_last_of("_"));
+	
+		cout << "[Debug] " << s << endl;
+		ivec3 res;
+		assert(sscanf(s.c_str(), "_%dx%dx%d.bin", &res.x, &res.y, &res.z) == 3);
+		cout << "[Debug] Reading binary volume with resolution " << res << endl;
 
-
-		unsigned short* bits = reinterpret_cast<unsigned short*>(FreeImage_GetBits(bm));
-		
-		size_t offset = width*height*z;
-		memcpy(&volume[offset], bits, sizeof(unsigned short)*width*height);
-
-		FreeImage_UnlockPage(fmb, bm, FALSE);
+		loadBinary(filename, res);
 	}
-
-	cout << "[Stack] Loaded image stack: " << width << "x" << height << "x" << depth << endl;
-
-
-	FreeImage_CloseMultiBitmap(fmb);
-
+	
+	
 	cout << "[Stack] Updating stats ... ";
 	maxVal = 0;
 	minVal = std::numeric_limits<unsigned short>::max();
@@ -134,6 +112,67 @@ SpimStack::~SpimStack()
 	glDeleteTextures(1, &volumeTextureId);
 	glDeleteLists(volumeList[0], 1);
 	glDeleteLists(volumeList[1], 1);
+
+}
+
+void SpimStack::loadImage(const std::string& filename)
+{
+	FIMULTIBITMAP* fmb = FreeImage_OpenMultiBitmap(FIF_TIFF, filename.c_str(), FALSE, TRUE);
+	assert(fmb);
+
+
+	// get the dimensions
+	depth = FreeImage_GetPageCount(fmb);
+	for (unsigned int z = 0; z < depth; ++z)
+	{
+		FIBITMAP* bm = FreeImage_LockPage(fmb, z);
+
+		int w = FreeImage_GetWidth(bm);
+		int h = FreeImage_GetHeight(bm);
+
+		if (width == 0)
+		{
+			width = w;
+			height = h;
+			volume = new unsigned short[width*height*depth];
+		}
+		else
+		{
+			assert(width == w);
+			assert(height = h);
+		}
+
+
+		unsigned short* bits = reinterpret_cast<unsigned short*>(FreeImage_GetBits(bm));
+
+		size_t offset = width*height*z;
+		memcpy(&volume[offset], bits, sizeof(unsigned short)*width*height);
+
+		FreeImage_UnlockPage(fmb, bm, FALSE);
+	}
+
+	cout << "[Stack] Loaded image stack: " << width << "x" << height << "x" << depth << endl;
+
+
+	FreeImage_CloseMultiBitmap(fmb);
+
+}
+
+void SpimStack::loadBinary(const std::string& filename, const glm::ivec3& res)
+{
+	width = res.x;
+	height = res.y;
+	depth = res.z;
+
+	volume = new unsigned short[width*height*depth];
+
+	std::ifstream file(filename, ios::binary);
+	assert(file.is_open());
+
+	file.read(reinterpret_cast<char*>(volume), width*height*depth*sizeof(unsigned short));
+
+
+	cout << "[Stack] Loaded binary volume: " << width << "x" << height << "x" << depth << endl;
 
 }
 
