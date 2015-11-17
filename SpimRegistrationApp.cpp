@@ -1,5 +1,6 @@
 #include "SpimRegistrationApp.h"
 
+#include "Framebuffer.h"
 #include "Layout.h"
 #include "Shader.h"
 #include "SpimStack.h"
@@ -32,10 +33,15 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(0)
 	reloadShaders();
 
 	glGenQueries(1, &samplesPassedQuery);
+
+	queryRenderTarget = new Framebuffer(512, 512, GL_RGB, GL_FLOAT, 1, GL_NEAREST);
 }
 
 SpimRegistrationApp::~SpimRegistrationApp()
 {
+	delete queryRenderTarget;
+
+	delete drawQuad;
 	delete pointShader;
 	delete sliceShader;
 	delete volumeShader;
@@ -70,6 +76,9 @@ void SpimRegistrationApp::reloadShaders()
 
 	delete volumeRaycaster;
 	volumeRaycaster = new Shader("shaders/volumeRaycast.vert", "shaders/volumeRaycast.frag");
+
+	delete drawQuad;
+	drawQuad = new Shader("shaders/drawQuad.vert", "shaders/drawQuad.frag");
 }
 
 
@@ -164,8 +173,7 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 
 	if (drawGrid)
 		drawGroundGrid(vp);
-
-	
+		
 
 	if (drawSlices)
 	{
@@ -189,28 +197,38 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 	*/
 }
 
-void SpimRegistrationApp::drawVolumeAlignment(const Viewport* vp)
+
+unsigned long SpimRegistrationApp::TEST_occlusionQueryStackOverlap(const Viewport* vp)
 {
 	if (vp->name != Viewport::PERSPECTIVE_ALIGNMENT)
-		return;
+		return 0;
 
-	if (runAlignment)
-		TEST_alignStack(vp);
-
-
-	if (drawGrid)
-		drawGroundGrid(vp);
+	queryRenderTarget->bind();
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
-	static bool queryReady = true;
-	
-	if (queryReady)
-		glBeginQuery(GL_SAMPLES_PASSED, samplesPassedQuery);
+	drawGroundGrid(vp);
+	drawBoundingBoxes();
+
+
+	queryRenderTarget->disable();
+
+
+
+	glBeginQuery(GL_SAMPLES_PASSED, samplesPassedQuery);
+
+
+	glDepthMask(GL_FALSE);
+	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 
 	drawViewplaneSlices(vp, volumeDifferenceShader);
-	
+	//drawAxisAlignedSlices(vp, volumeDifferenceShader);
+
 	glEndQuery(GL_SAMPLES_PASSED);
-	
+
+	glDepthMask(GL_TRUE);
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+
 
 
 	GLint queryStatus = GL_FALSE;
@@ -222,7 +240,8 @@ void SpimRegistrationApp::drawVolumeAlignment(const Viewport* vp)
 
 	GLuint64 samplesPassed = 0;
 	glGetQueryObjectui64v(samplesPassedQuery, GL_QUERY_RESULT, &samplesPassed);
-	
+
+	/*
 	if (runAlignment)
 	{
 
@@ -236,24 +255,71 @@ void SpimRegistrationApp::drawVolumeAlignment(const Viewport* vp)
 			lastSamplesPass = samplesPassed;
 
 	}
-			
-	std::cout << "[Debug] Samples passed: " << samplesPassed << " (" << lastSamplesPass << ")" << std::endl;
-	queryReady = true;
+	*/
 
-	
-	
-	
-	
-	
-	//raycastVolumes(vp, volumeRaycaster);
+	if (samplesPassed != lastSamplesPass)
+	{
+
+		std::cout << "[Debug] Samples passed: " << samplesPassed;
+		if (samplesPassed < lastSamplesPass)
+			std::cout << "< (";
+		else if (samplesPassed > lastSamplesPass)
+			std::cout << "> (";
+		else
+			std::cout << "= (";
+		std::cout << lastSamplesPass << ")" << std::endl;
+		lastSamplesPass = samplesPassed;
+	}
 
 
+	queryRenderTarget->disable();
 
+	return samplesPassed;
+}
+
+
+void SpimRegistrationApp::drawVolumeAlignment(const Viewport* vp)
+{
+	if (vp->name != Viewport::PERSPECTIVE_ALIGNMENT)
+		return;
+
+	/*
+	if (runAlignment)
+	{
+		TEST_alignStack(vp);
+		TEST_occlusionQueryStackOverlap(vp);
+	}
+	*/
+
+
+	if (runAlignment)
+	{
+		TEST_alignStacksSeries(vp);
+		runAlignment = false;
+	}
+
+	TEST_occlusionQueryStackOverlap(vp);
 	
 	
-	if (drawBboxes)
-		drawBoundingBoxes();
+	glDisable(GL_DEPTH_TEST);
+	glDepthMask(GL_FALSE);
 
+	drawQuad->bind();
+	drawQuad->setTexture2D("colormap", queryRenderTarget->getColorbuffer());
+
+	glBegin(GL_QUADS);
+	glVertex2i(0, 1);
+	glVertex2i(0, 0);
+	glVertex2i(1, 0);
+	glVertex2i(1, 1);
+	glEnd();
+
+
+	drawQuad->disable();
+
+
+	glEnable(GL_DEPTH_TEST);
+	glDepthMask(GL_TRUE);
 }
 
 
@@ -514,83 +580,114 @@ void SpimRegistrationApp::changeContrast(const glm::ivec2& cursor)
 }
 
 
-void SpimRegistrationApp::TEST_extractFeaturePoints()
+void SpimRegistrationApp::TEST_alignStacksSeries(const Viewport* vp)
 {
-
-	stacks[0]->extractTransformedFeaturePoints(globalThreshold, refPointsA);
-	stacks[1]->extractTransformedFeaturePoints(globalThreshold, refPointsB);
-
-
-
-
-
-
-
-
-
-
-
-	/*
-	using namespace glm;
-	if (stacks.size() < 2)
+	if (currentStack == -1)
 		return;
 
-	refPointsA.setPoints(stacks[0]->extractTransformedPoints(stacks[1], globalThreshold));
-	refPointsB.setPoints(stacks[1]->extractTransformedPoints(stacks[0], globalThreshold));
 
-	std::cout << "[Align] Extracted " << refPointsA.size() << " and\n";
-	std::cout << "[Align]           " << refPointsB.size() << " points.\n";
+	std::cout << "[Align] Auto-aligning stack " << currentStack << " ... \n";
 
-
-	if (refPointsA.empty() || refPointsB.empty())
+	struct AlignResult
 	{
-		std::cout << "[Aling] Either data set is empty, aborting.\n";
-		return;
+		float			delta;
+		unsigned long	samplesPassed;
+	};
+
+	std::vector<AlignResult> series;
+
+	glm::mat4 originalTransform = stacks[currentStack]->transform;
+
+	// test for x movement
+	for (int i = -100; i <= 100; ++i)
+	{
+
+		// reset transform for this iteration
+		stacks[currentStack]->transform = originalTransform;
+
+		float x = (float)i / 2.f;
+
+		glm::mat4 T = glm::translate(glm::vec3(x, 0, 0));
+		stacks[currentStack]->applyTransform(T);
+
+		AlignResult result;
+		result.delta = x;
+		result.samplesPassed = TEST_occlusionQueryStackOverlap(vp);
+
+		series.push_back(result);
 	}
 
+	std::ofstream file(configPath + "/series_x.csv");
+	assert(file.is_open());
+	for (size_t i = 0; i < series.size(); ++i)
+		file << series[i].delta << ", " << series[i].samplesPassed << std::endl;
+	
+	file.close();
+	series.clear();
 
 
-	if (refPointsA.size() > refPointsB.size())
-		refPointsA.trim(&refPointsB);
-	else
-		refPointsB.trim(&refPointsA);
 
-	*/
+	// test for z movement
+	for (int i = -100; i <= 100; ++i)
+	{
 
-}
+		// reset transform for this iteration
+		stacks[currentStack]->transform = originalTransform;
 
-void SpimRegistrationApp::TEST_alignStacks()
-{
+		float z = (float)i / 2.f;
+
+		glm::mat4 T = glm::translate(glm::vec3(0, 0, z));
+		stacks[currentStack]->applyTransform(T);
+
+		AlignResult result;
+		result.delta = z;
+		result.samplesPassed = TEST_occlusionQueryStackOverlap(vp);
+
+		series.push_back(result);
+	}
+
+	file.open(configPath + "/series_z.csv");
+	assert(file.is_open());
+	for (size_t i = 0; i < series.size(); ++i)
+		file << series[i].delta << ", " << series[i].samplesPassed << std::endl;
+
+	file.close();
+	series.clear();
 	
 
-
-
-	/*
-	using namespace glm;
-
-	if (stacks.size() < 2)
-		return;
-
-	if (refPointsA.empty() || refPointsB.empty())
+	// test for y rotation
+	for (int i = -180; i <= 180; ++i)
 	{
-		std::cout << "[Aling] Either data set is empty, aborting.\n";
-		return;
+		// reset transform for this iteration
+		stacks[currentStack]->transform = originalTransform;
+
+		float a = (float)i;
+
+		glm::mat4 T = glm::rotate(a, glm::vec3(0, 1, 0));
+		stacks[currentStack]->applyTransform(T);
+
+		AlignResult result;
+		result.delta = a;
+		result.samplesPassed = TEST_occlusionQueryStackOverlap(vp);
+
+		series.push_back(result);
 	}
 
+	file.open(configPath + "/series_ry.csv");
+	assert(file.is_open());
+	for (size_t i = 0; i < series.size(); ++i)
+		file << series[i].delta << ", " << series[i].samplesPassed << std::endl;
 
-	std::cout << "[Align] Mean distance before alignment: " << refPointsA.calculateMeanDistance(&refPointsB) << std::endl;
-
-	mat4 delta(1.f);
-	refPointsA.align(&refPointsB, delta);
-
-	std::cout << delta << std::endl;
-
-	stacks[1]->applyTransform(delta);
-	refPointsB.applyTransform(delta);
+	file.close();
+	series.clear();
 
 
-	std::cout << "[Align] Mean distance after alignment: " << refPointsA.calculateMeanDistance(&refPointsB) << std::endl;
-	*/
+
+
+
+
+
+
 }
 
 void SpimRegistrationApp::increaseMaxThreshold()
@@ -1196,14 +1293,17 @@ void SpimRegistrationApp::TEST_endAutoAlign()
 
 void SpimRegistrationApp::TEST_alignStack(const Viewport* vp)
 {
-
+	if (currentStack == -1)
+		return;
 
 	static std::mt19937 rng;
-	static std::uniform_real<float> rngDist(-1.f, 1.f);
-	
-	// 1) get camera frame
+	static std::uniform_real<float> rngDist(-0.5f, 0.5f);
 	
 
+
+	// 1) get camera frame
+	
+	
 	// 2) create delta matrix
 	float dx = rngDist(rng);
 	float dz = rngDist(rng);
@@ -1212,6 +1312,8 @@ void SpimRegistrationApp::TEST_alignStack(const Viewport* vp)
 	glm::mat4 R = glm::rotate(ry, glm::vec3(0, 1, 0));
 	glm::mat4 T = glm::translate(glm::vec3(dx, 0, dz));
 	glm::mat4 M = R * T;
+	
+
 
 	std::cout << "[Debug] Delta T: " << M << std::endl;
 
@@ -1261,4 +1363,3 @@ void SpimRegistrationApp::saveStackTransform(unsigned int n)
 
 	transformUndoChain.push_back(st);
 }
-

@@ -263,28 +263,20 @@ void ContrastEditLayout::panActiveViewport(const vec2& delta)
 
 AlignVolumesLayout::AlignVolumesLayout(const ivec2& res)
 {
-
-	/*
-	views[0].name = Viewport::PERSPECTIVE;
-	views[0].camera = new OrbitCamera;
-	views[0].color = vec3(1);
-	*/
-
 	views[0].name = Viewport::ORTHO_Y;
 	views[0].camera = new OrthoCamera(glm::vec3(0.f, -1, 0), glm::vec3(1.f, 0.f, 0.f));
 	views[0].color = vec3(0, 1, 0);
 
 
 	views[1].name = Viewport::PERSPECTIVE_ALIGNMENT;
-	views[1].camera = new OrbitCamera; // OrthoCamera(glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f, 1.f, 0.f), 1.1f);
 	views[1].color = vec3(1, 0, 0);
-
+	views[1].camera = new OrbitCamera;
+	
 	OrbitCamera* cam = dynamic_cast<OrbitCamera*>(views[1].camera);
 	cam->far = CAMERA_DISTANCE * 4.0;
 	cam->near = cam->far / 100.0;
 	cam->radius = (CAMERA_DISTANCE * 1.5);
 	cam->target = CAMERA_TARGET;
-
 
 	AlignVolumesLayout::resize(res);
 }

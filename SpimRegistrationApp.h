@@ -10,6 +10,7 @@
 #include "StackRegistration.h"
 #include "Histogram.h"
 
+class Framebuffer;
 class Shader;
 class ILayout;
 class SpimStack;
@@ -61,8 +62,6 @@ public:
 	void TEST_endAutoAlign();
 	void undoLastTransform();
 
-	void TEST_extractFeaturePoints();
-	void TEST_alignStacks();
 	void TEST_detectBeads();
 
 	void clearRegistrationPoints();
@@ -135,6 +134,7 @@ private:
 
 	Shader*					volumeDifferenceShader;
 	Shader*					volumeRaycaster;
+	Shader*					drawQuad;;
 
 	ReferencePoints			refPointsA, refPointsB;
 
@@ -157,10 +157,10 @@ private:
 		SpimStack*		stack;
 		glm::mat4		matrix;
 	};
-
+		
 	std::vector<StackTransform> transformUndoChain;
-
-
+		
+	Framebuffer*			queryRenderTarget;
 
 
 	Threshold				dataLimits;
@@ -180,7 +180,9 @@ private:
 
 	void drawRegistrationFeatures(const Viewport* vp) const;
 
+	void TEST_alignStacksSeries(const Viewport* vp);
 	void TEST_alignStack(const Viewport* vp);
+	unsigned long TEST_occlusionQueryStackOverlap(const Viewport* vp);
 
 	static glm::vec3 getRandomColor(int n);
 

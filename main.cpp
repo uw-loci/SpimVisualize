@@ -87,13 +87,6 @@ static void keyboard(unsigned char key, int x, int y)
 		regoApp->autoThreshold();
 
 
-	if (key == 'e')
-		regoApp->TEST_extractFeaturePoints();
-	if (key == 'r')
-		regoApp->TEST_alignStacks();
-	if (key == 'E')
-		regoApp->clearRegistrationPoints();
-
 	
 	if (key == '[')
 		regoApp->rotateCurrentStack(-1);
