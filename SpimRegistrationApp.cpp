@@ -211,7 +211,7 @@ unsigned long SpimRegistrationApp::TEST_occlusionQueryStackOverlap(const Viewpor
 
 
 	drawGroundGrid(vp);
-	drawBoundingBoxes();
+	//drawBoundingBoxes();
 		
 	glBeginQuery(GL_SAMPLES_PASSED, samplesPassedQuery);
 
@@ -279,8 +279,8 @@ void SpimRegistrationApp::drawVolumeAlignment(const Viewport* vp)
 
 	if (runAlignment)
 	{
-		//TEST_alignStacksSeries(vp);
-		TEST_alignStacksVolume(vp);
+		TEST_alignStacksSeries(vp);
+		//TEST_alignStacksVolume(vp);
 		runAlignment = false;
 	}
 
@@ -572,20 +572,27 @@ void SpimRegistrationApp::TEST_alignStacksSeries(const Viewport* vp)
 		return;
 
 
-	std::cout << "[Align] Auto-aligning stack " << currentStack << " ... \n";
+	std::cout << "[Align] Auto-aligning stack " << currentStack << " ... ";
 
 	struct AlignResult
 	{
 		float			delta;
 		unsigned long	samplesPassed;
+	
+	
+		inline bool operator < (const AlignResult& rhs) const
+		{
+			return samplesPassed < rhs.samplesPassed;
+		}
 	};
 
 	std::vector<AlignResult> series;
 
+	AlignResult bestX;
 	glm::mat4 originalTransform = stacks[currentStack]->transform;
 
 	// test for x movement
-	for (int i = -100; i <= 100; ++i)
+	for (int i = -200; i <= 200; ++i)
 	{
 
 		// reset transform for this iteration
@@ -607,14 +614,17 @@ void SpimRegistrationApp::TEST_alignStacksSeries(const Viewport* vp)
 	assert(file.is_open());
 	for (size_t i = 0; i < series.size(); ++i)
 		file << series[i].delta << ", " << series[i].samplesPassed << std::endl;
-	
 	file.close();
+
+	// save the best result
+	sort(series.begin(), series.end());
+	bestX = series.back();
+
 	series.clear();
-
-
+	
 
 	// test for z movement
-	for (int i = -100; i <= 100; ++i)
+	for (int i = -200; i <= 200; ++i)
 	{
 
 		// reset transform for this iteration
@@ -636,18 +646,17 @@ void SpimRegistrationApp::TEST_alignStacksSeries(const Viewport* vp)
 	assert(file.is_open());
 	for (size_t i = 0; i < series.size(); ++i)
 		file << series[i].delta << ", " << series[i].samplesPassed << std::endl;
-
 	file.close();
 	series.clear();
 	
 
 	// test for y rotation
-	for (int i = -180; i <= 180; ++i)
+	for (int i = -45; i <= 45; ++i)
 	{
 		// reset transform for this iteration
 		stacks[currentStack]->transform = originalTransform;
 
-		float a = (float)i;
+		float a = (float)i * 0.5;
 
 		glm::mat4 T = glm::rotate(a, glm::vec3(0, 1, 0));
 		stacks[currentStack]->applyTransform(T);
@@ -666,6 +675,88 @@ void SpimRegistrationApp::TEST_alignStacksSeries(const Viewport* vp)
 
 	file.close();
 	series.clear();
+
+	stacks[currentStack]->transform = originalTransform; 
+	std::cout << "done.\n";
+
+
+	bool autoAlign = true;
+	if (autoAlign)
+	{
+		saveStackTransform(currentStack);
+		
+		// use the prev. found best X transform
+		std::cout << "[Align] Rerunning best result ... ";
+		glm::mat4 T = glm::translate(glm::vec3(bestX.delta, 0, 0));
+		stacks[currentStack]->applyTransform(T);
+		
+		originalTransform = stacks[currentStack]->transform;
+		
+		
+		// rerun the test for z movement on the best x axis
+		for (int i = -200; i <= 200; ++i)
+		{
+
+			// reset transform for this iteration
+			stacks[currentStack]->transform = originalTransform;
+
+			float z = (float)i / 2.f;
+
+			glm::mat4 T = glm::translate(glm::vec3(0, 0, z));
+			stacks[currentStack]->applyTransform(T);
+
+			AlignResult result;
+			result.delta = z;
+			result.samplesPassed = TEST_occlusionQueryStackOverlap(vp);
+
+			series.push_back(result);
+		}
+
+		// find and apply the best result here
+		std::sort(series.begin(), series.end());
+		AlignResult bestZ = series.back();
+		series.clear();
+		
+		stacks[currentStack]->transform = originalTransform;
+		stacks[currentStack]->applyTransform(glm::translate(glm::vec3(0, 0, bestZ.delta)));
+
+
+
+		// rerun the test for y rotation
+		// test for y rotation
+		originalTransform = stacks[currentStack]->transform;
+
+		for (int i = -45; i <= 45; ++i)
+		{
+			// reset transform for this iteration
+			stacks[currentStack]->transform = originalTransform;
+
+			float a = (float)i * 0.5;
+
+			glm::mat4 T = glm::rotate(a, glm::vec3(0, 1, 0));
+			stacks[currentStack]->applyTransform(T);
+
+			AlignResult result;
+			result.delta = a;
+			result.samplesPassed = TEST_occlusionQueryStackOverlap(vp);
+
+			series.push_back(result);
+		}
+
+
+		// find and apply the best result here
+		std::sort(series.begin(), series.end());
+		AlignResult bestRY = series.back();
+
+		stacks[currentStack]->transform = originalTransform; 
+		stacks[currentStack]->applyTransform(glm::rotate(bestRY.delta, glm::vec3(0, 1, 0)));
+				
+		std::cout << "done.\n";
+	
+		updateGlobalBbox();
+	}
+
+
 
 
 

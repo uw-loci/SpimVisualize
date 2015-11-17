@@ -99,7 +99,7 @@ void main()
 
 	}
 
-	float alpha = 2.0 / sliceCount;	
+	float alpha = 5.0 / sliceCount;	
 	fragColor = vec4(color, alpha);
 
 
