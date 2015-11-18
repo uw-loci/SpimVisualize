@@ -10,7 +10,7 @@ struct Volume
 	bool			enabled;
 };
 
-#define VOLUMES 2
+#define VOLUMES 5
 uniform Volume volume[VOLUMES];
 
 uniform float sliceCount = 100;
@@ -19,12 +19,25 @@ uniform float sliceWeight;
 uniform bool enableDiscard = true;
 int value[VOLUMES];
 
+vec3 colors[VOLUMES];
+
 in vec4 vertex;
 out vec4 fragColor;
 
 void main()
 {
 	vec3 color = vec3(0.0);
+
+
+	// init colors here
+	colors[0] = vec3(1.0, 0.0, 0.0);
+	colors[1] = vec3(0.0, 1.0, 0.0);
+	if (VOLUMES > 1)
+		colors[2] = vec3(0.0, 0.0, 1.0);
+	if (VOLUMES > 2)
+		colors[3] = vec3(1.0, 1.0, 0.0);
+	if (VOLUMES > 3)
+		colors[4] = vec3(0.0, 1.0, 1.0);
 
 
 	// count of the number volumes this pixel is contained int
@@ -78,26 +91,28 @@ void main()
 
 
 	const int THRESHOLD = 115;
-	if (value[0] > THRESHOLD)
-		color = vec3(1.0, 0.0, 0.0);
 
-	if (value[1] > THRESHOLD)
-		color += vec3(0.0, 1.0, 0.0);
-
-	if (value[0] < THRESHOLD && value[1] < THRESHOLD)
-		discard;
-
-
-
-
-	if (enableDiscard)
+	bool anyGreater = false;
+	for (int i = 0; i < VOLUMES; ++i)
 	{
 
-	if (value[0] < THRESHOLD || value[1] < THRESHOLD)
+		if (value[i] > THRESHOLD)
+		{
+			//color[i] += 1.0;
+			
+			color += colors[i];
+			anyGreater = true;
+		}
+
+		if (enableDiscard && value[i] < THRESHOLD)
+			discard;
+	}
+
+	if (!anyGreater)
 		discard;
 
+	color = normalize(color);
 
-	}
 
 	float alpha = 5.0 / sliceCount;	
 	fragColor = vec4(color, alpha);

@@ -160,6 +160,9 @@ void SpimRegistrationApp::addSpimStack(const std::string& filename)
 {
 	SpimStack* stack = new SpimStack(filename);
 
+	stack->subsample();
+	stack->subsample();
+
 	stacks.push_back(stack);
 	AABB bbox = stack->getBBox();
 
