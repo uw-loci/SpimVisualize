@@ -140,6 +140,9 @@ private:
 	Shader*					volumeRaycaster;
 	Shader*					drawQuad;;
 
+	// for contrast mapping
+	Shader*					tonemapper;
+
 	ReferencePoints			refPointsA, refPointsB;
 
 
@@ -164,6 +167,7 @@ private:
 		
 	std::vector<StackTransform> transformUndoChain;
 		
+	Framebuffer*			volumeRenderTarget;
 	Framebuffer*			queryRenderTarget;
 
 	

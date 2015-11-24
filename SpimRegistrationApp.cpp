@@ -36,11 +36,14 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(0)
 	glGenQueries(1, &samplesPassedQuery);
 
 	queryRenderTarget = new Framebuffer(256, 256, GL_RGB, GL_UNSIGNED_BYTE, 1, GL_NEAREST);
+
+	volumeRenderTarget = new Framebuffer(1024, 1024, GL_RGBA, GL_FLOAT);
 }
 
 SpimRegistrationApp::~SpimRegistrationApp()
 {
 	delete queryRenderTarget;
+	delete volumeRenderTarget;
 
 	delete drawQuad;
 	delete pointShader;
@@ -48,6 +51,7 @@ SpimRegistrationApp::~SpimRegistrationApp()
 	delete volumeShader;
 	delete volumeDifferenceShader;
 	delete volumeRaycaster;
+
 
 	glDeleteQueries(1, &samplesPassedQuery);
 
@@ -81,6 +85,9 @@ void SpimRegistrationApp::reloadShaders()
 	delete volumeDifferenceShader;
 	volumeDifferenceShader = new Shader("shaders/volumeDist.vert", "shaders/volumeDist.frag");
 
+	delete tonemapper;
+	tonemapper = new Shader("shaders/drawQuad.vert", "shaders/tonemapper.frag");
+
 }
 
 
@@ -90,13 +97,45 @@ void SpimRegistrationApp::draw()
 	{
 		const Viewport* vp = layout->getView(i);
 		vp->setup();
-		
+
 		if (vp->name == Viewport::CONTRAST_EDITOR)
 			drawContrastEditor(vp);
 		else if (vp->name == Viewport::PERSPECTIVE_ALIGNMENT)
 			drawVolumeAlignment(vp);
 		else
+		{
+			volumeRenderTarget->bind();
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 			drawScene(vp);
+
+			volumeRenderTarget->disable();
+
+
+			glDisable(GL_DEPTH_TEST);
+			glDepthMask(GL_FALSE);
+
+			tonemapper->bind();
+			tonemapper->setUniform("maxThreshold", (int)globalThreshold.max);
+			tonemapper->setUniform("minThreshold", (int)globalThreshold.min);
+			tonemapper->setTexture2D("colormap", volumeRenderTarget->getColorbuffer());
+
+			glBegin(GL_QUADS);
+			glVertex2i(0, 1);
+			glVertex2i(0, 0);
+			glVertex2i(1, 0);
+			glVertex2i(1, 1);
+			glEnd();
+
+			tonemapper->disable();
+
+			glEnable(GL_DEPTH_TEST);
+			glDepthMask(GL_TRUE);
+
+
+
+
+		}
 	}
 
 }
@@ -120,6 +159,8 @@ void SpimRegistrationApp::loadStackTransformations()
 		std::string filename = s->getFilename() + ".registration.txt";
 		s->loadTransform(filename);
 	};
+
+	updateGlobalBbox();
 }
 
 void SpimRegistrationApp::saveContrastSettings() const
@@ -160,6 +201,8 @@ void SpimRegistrationApp::addSpimStack(const std::string& filename)
 {
 	SpimStack* stack = new SpimStack(filename);
 
+	stack->subsample(false);
+	stack->subsample();
 
 	stacks.push_back(stack);
 	AABB bbox = stack->getBBox();
@@ -1267,33 +1310,35 @@ void SpimRegistrationApp::drawAxisAlignedSlices(const Viewport* vp, const Shader
 	glm::mat4 mvp;// = vp.proj * vp.view;
 	vp->camera->getMVP(mvp);
 
+	// additive blending
 	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	//glBlendFunc(GL_ONE, GL_ONE); // GL_ONE_MINUS_SRC_ALPHA);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
 
 	glDisable(GL_DEPTH_TEST);
 	glDepthMask(GL_FALSE);
 
 	shader->bind();
-	shader->setUniform("minThreshold", (int)globalThreshold.min);
-	shader->setUniform("maxThreshold", (int)globalThreshold.max);
 	shader->setUniform("mvpMatrix", mvp);
+
+	shader->setUniform("maxThreshold", (int)globalThreshold.max);
+	shader->setUniform("minThreshold", (int)globalThreshold.min);
 
 	for (size_t i = 0; i < stacks.size(); ++i)
 	{
 		if (stacks[i]->enabled)
 		{
-
-			shader->setUniform("color", getRandomColor(i));
 			shader->setMatrix4("transform", stacks[i]->transform);
-
-
-			glColor4f(0.f, 0.f, 0.f, 1.f);
-
-			// calculate view vector
+			
+			// calculate view vector in volume coordinates
 			glm::vec3 view = vp->camera->getViewDirection();
-			stacks[i]->drawSlices(volumeShader, view);
+			glm::vec4(localView) = glm::inverse(stacks[i]->transform) * glm::vec4(view, 0.0);
+			view = glm::vec3(localView);
 
+			//stacks[i]->drawSlices(volumeShader, view);
+			stacks[i]->drawSlices(volumeShader, glm::vec3(0,0,1));
+		
 		}
 
 
