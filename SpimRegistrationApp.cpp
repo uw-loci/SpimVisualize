@@ -880,22 +880,33 @@ void SpimRegistrationApp::decreaseMinThreshold()
 
 void SpimRegistrationApp::autoThreshold()
 {
+	using namespace std;
+
 	globalThreshold.max = 0;
-	globalThreshold.min = std::numeric_limits<unsigned short>::max();
+	globalThreshold.min = numeric_limits<unsigned short>::max();
+	globalThreshold.mean = 0;
+	globalThreshold.stdDeviation = 0;
 
 	for (size_t i = 0; i < stacks.size(); ++i)
 	{
-		Threshold l = stacks[i]->getLimits();
+		Threshold t = stacks[i]->getLimits();
+		cout << "[Contrast] Stack " << i << " contrast: [" << t.min << " -> " << t.max << "], mean: " << t.mean << ", std dev: " << t.stdDeviation << std::endl;
 
 
-		std::cout << "[Contrast] Stack " << i << " contrast: " << (int)l.min << " -> " << (int)l.max << std::endl;
-
-		globalThreshold.max = std::max(globalThreshold.max, l.max);
-		globalThreshold.min = std::min(globalThreshold.min, l.min);
+		globalThreshold.min = min(globalThreshold.min, t.min);
+		globalThreshold.max = max(globalThreshold.max, t.max);
+		globalThreshold.mean += t.mean;
+		globalThreshold.stdDeviation = max(globalThreshold.stdDeviation, t.stdDeviation);
 	}
 
+	globalThreshold.mean /= stacks.size();
 
-	std::cout << "[Contrast] Set global thresholds to " << (int)globalThreshold.min << " -> " << (int)globalThreshold.max << std::endl;
+	globalThreshold.min = globalThreshold.mean - 3 * globalThreshold.stdDeviation;
+	globalThreshold.max = globalThreshold.mean + 3 * globalThreshold.stdDeviation;
+
+	cout << "[Contrast] Global contrast: [" << globalThreshold.min << " -> " << globalThreshold.max << "], mean: " << globalThreshold.mean << ", std dev: " << globalThreshold.stdDeviation << std::endl;
+
+
 }
 
 void SpimRegistrationApp::clearRegistrationPoints()
@@ -929,6 +940,9 @@ void SpimRegistrationApp::calculateHistogram()
 	dataLimits = stacks[0]->getLimits();
 	histogram = stacks[0]->calculateHistogram(globalThreshold);
 	std::cout << "done.\n";
+
+
+	std::cout << "[Histo] Limits: [" << dataLimits.min << " -> " << dataLimits.max << "], mean: " << dataLimits.mean << ", std dev: " << dataLimits.stdDeviation << std::endl;
 }
 
 void SpimRegistrationApp::drawContrastEditor(const Viewport* vp)

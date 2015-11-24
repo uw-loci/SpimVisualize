@@ -54,6 +54,7 @@
     <ClInclude Include="SpimStack.h" />
     <ClInclude Include="StackRegistration.h" />
     <ClInclude Include="stb_image.h" />
+    <ClInclude Include="TinyStats.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{57E101A3-E7CB-4FE9-B7E8-1D4FD826E7BB}</ProjectGuid>

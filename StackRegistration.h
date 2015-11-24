@@ -13,6 +13,9 @@ struct Threshold
 	unsigned short	min;
 	unsigned short	max;
 
+	double			mean;
+	double			stdDeviation;
+
 	inline unsigned short getSpread() const { return max - min; }
 
 	inline float getRelativeValue(unsigned short v) const { return float(v - min) / float(max - min); }

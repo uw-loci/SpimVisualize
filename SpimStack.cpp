@@ -896,12 +896,30 @@ Threshold SpimStack::getLimits() const
 	t.max = 0;
 	t.min = numeric_limits<unsigned short>::max();
 
-	for (unsigned int i = 0; i < width*height*depth; ++i)
+	t.mean = 0;
+
+	const unsigned int count = width*height*depth;
+
+	for (unsigned int i = 0; i < count; ++i)
 	{
 		const unsigned short& v = volume[i];
 		t.max = std::max(t.max, v);
 		t.min = std::min(t.min, v);
+	
+		t.mean += (unsigned int)v;
 	}
+
+	t.mean /= count;
+
+	double variance = 0;
+	for (unsigned int i = 0; i < count; ++i)
+	{
+		double v = (double)volume[i];
+		variance = variance + (v - t.mean)*(v - t.mean);
+	}
+	
+	variance /= count;
+	t.stdDeviation = ::sqrt((double)variance);
 
 	return std::move(t);
 }

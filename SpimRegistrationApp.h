@@ -57,7 +57,7 @@ public:
 
 	void calculateHistogram();
 
-
+	
 	void TEST_beginAutoAlign();
 	void TEST_endAutoAlign();
 	void undoLastTransform();
