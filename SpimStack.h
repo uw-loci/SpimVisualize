@@ -13,7 +13,6 @@ struct AABB;
 class Shader;
 class ReferencePoints;
 struct Threshold;
-struct Histogram;
 struct Hourglass;
 
 // a single stack of SPIM images
@@ -34,10 +33,7 @@ public:
 
 	// halfs the internal resolution of the dataset
 	void subsample(bool updateTexture=true);
-
-	Histogram calculateHistogram(const Threshold& t) const;
-
-	
+		
 	// extracts the points in world coords. The w coordinate contains the point's value
 	std::vector<glm::vec4> extractTransformedPoints() const;
 	// extracts the points in world space and clip them against the other's transformed bounding box. The w coordinate contains the point's value
@@ -67,6 +63,8 @@ public:
 
 
 	Threshold getLimits() const;
+	std::vector<size_t> calculateHistogram(const Threshold& t) const;
+
 
 
 	inline const std::string& getFilename() const { return filename;  }

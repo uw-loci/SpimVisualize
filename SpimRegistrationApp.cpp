@@ -21,7 +21,7 @@
 
 SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(0), sliceShader(0), volumeShader(0), layout(0), 
 	drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), currentStack(-1), sliceCount(400), 
-	configPath("./"), cameraMoving(false), runAlignment(false)
+	configPath("./"), cameraMoving(false), runAlignment(false), histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f)
 {
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
@@ -523,6 +523,21 @@ void SpimRegistrationApp::moveStack(const glm::vec2& delta)
 	}
 }
 
+void SpimRegistrationApp::contrastEditorApplyThresholds()
+{
+	unsigned short newMin = globalThreshold.min + minCursor * globalThreshold.getSpread();
+	unsigned short newMax = globalThreshold.min + maxCursor * globalThreshold.getSpread();
+
+	globalThreshold.min = newMin;
+	globalThreshold.max = newMax;
+
+	minCursor = 0.f;
+	maxCursor = 1.f;
+
+	std::cout << "[Contrast] Set new global threshold to [" << newMin << "->" << newMax << "]\n";
+	histogramsNeedUpdate = true;
+}
+
 void SpimRegistrationApp::changeContrast(const glm::ivec2& cursor)
 {
 	Viewport* vp = layout->getActiveViewport();
@@ -537,32 +552,39 @@ void SpimRegistrationApp::changeContrast(const glm::ivec2& cursor)
 		if (coords.x > 1.f)
 			coords.x = 1.f;
 
-		
+		//std::cout << "[Debug] Cursor: " << cursor << ", coords: " << coords << std::endl;
 
-		const float leftLimit = dataLimits.min;
-		const float rightLimit = dataLimits.max;
-		
-		float minBar = globalThreshold.min / rightLimit;
-		float maxBar = globalThreshold.max / rightLimit;
-		
-		if (abs(coords.x - minBar) < abs(coords.x - maxBar))
+		static unsigned int lastValue = 0;
+		float currentContrastCursor = coords.x;
+
+		if (abs(currentContrastCursor - minCursor) < abs(currentContrastCursor - maxCursor))
 		{
 			// min bar is closer to cursor -- move this
-			unsigned short val = (unsigned short)(dataLimits.max*coords.x);
-			globalThreshold.min = val;
-		
-
-			std::cout << "[Contrast] min val:" << val << " (" << minBar << ")\n";
+			minCursor = currentContrastCursor;
 		}
 		else
 		{
 			// max bar is closer to cursor -- move this
-			unsigned short val = (unsigned short)(dataLimits.max*coords.x);
-			globalThreshold.max = val;
-
-			std::cout << "[Contrast] max val:" << val << " (" << maxBar << ")\n";
+			maxCursor = currentContrastCursor;
 		}
+
 		
+		unsigned int value = globalThreshold.min + (int)(currentContrastCursor * globalThreshold.getSpread());
+
+		if (value != lastValue)
+		{
+			lastValue = value;
+			std::cout << "[Debug] Selected Contrast: " << value << "(" << currentContrastCursor << ")\n";
+
+
+			unsigned int index = currentContrastCursor * globalThreshold.getSpread();
+			for (size_t i = 0; i < histograms.size(); ++i)
+			{
+				std::cout << "[Histo] " << i << ": " << histograms[i][index] << std::endl;
+			}
+
+
+		}
 
 
 	}
@@ -855,26 +877,39 @@ void SpimRegistrationApp::TEST_alignStacksVolume(const Viewport* vp)
 
 void SpimRegistrationApp::increaseMaxThreshold()
 {
-	globalThreshold.max += 10;
+	globalThreshold.max += 5;
 	std::cout << "[Threshold] Max: " << (int)globalThreshold.max << std::endl;
+
+	histogramsNeedUpdate = true;
 }
 
 void SpimRegistrationApp::increaseMinThreshold()
 {
-	globalThreshold.min += 10;
+	globalThreshold.min += 5;
+	if (globalThreshold.min > globalThreshold.max)
+		globalThreshold.min = globalThreshold.max;
 	std::cout << "[Threshold] Min: " << (int)globalThreshold.min << std::endl;
+
+	histogramsNeedUpdate = true;
 }
 
 void SpimRegistrationApp::decreaseMaxThreshold()
 {
-	globalThreshold.max -= 10;
+	globalThreshold.max -= 5;
+	if (globalThreshold.max < globalThreshold.min)
+		globalThreshold.max = globalThreshold.min;
+
 	std::cout << "[Threshold] Max: " << (int)globalThreshold.max << std::endl;
+
+	histogramsNeedUpdate = true;
 }
 
 void SpimRegistrationApp::decreaseMinThreshold()
 {
-	globalThreshold.min -= 10;
+	globalThreshold.min -= 5;
 	std::cout << "[Threshold] Min: " << (int)globalThreshold.min << std::endl;
+
+	histogramsNeedUpdate = true;
 }
 
 
@@ -907,6 +942,8 @@ void SpimRegistrationApp::autoThreshold()
 	cout << "[Contrast] Global contrast: [" << globalThreshold.min << " -> " << globalThreshold.max << "], mean: " << globalThreshold.mean << ", std dev: " << globalThreshold.stdDeviation << std::endl;
 
 
+
+	histogramsNeedUpdate = true;
 }
 
 void SpimRegistrationApp::clearRegistrationPoints()
@@ -929,39 +966,45 @@ void SpimRegistrationApp::subsampleAllStacks()
 		(*it)->subsample(true);
 }
 
-void SpimRegistrationApp::calculateHistogram()
+void SpimRegistrationApp::calculateHistograms()
 {
-	if (stacks.empty())
-		return;
+	histograms.clear();
+
+	size_t maxVal = 0.f;
+
+	for (size_t i = 0; i < stacks.size(); ++i)
+	{
+		std::vector<size_t> histoRaw = stacks[i]->calculateHistogram(globalThreshold);
+
+		for (size_t j = 0; j < histoRaw.size(); ++j)
+			maxVal = std::max(maxVal, histoRaw[j]);
 
 
-	std::cout << "[Histo] Calculating histogram for stack 0 ... ";
+		std::vector<float> histoFloat(histoRaw.begin(), histoRaw.end());
+		histograms.push_back(histoFloat);
+	}
 
-	dataLimits = stacks[0]->getLimits();
-	histogram = stacks[0]->calculateHistogram(globalThreshold);
-	std::cout << "done.\n";
+	std::cout << "[Contrast] Calculated " << histograms.size() << ", normalizing to " << maxVal << " ... \n";
+		 
+
+	// normalize based on max histogram value
+	for (size_t i = 0; i < histograms.size(); ++i)
+	{
+		for (size_t j = 0; j < histograms[i].size(); ++j)
+			histograms[i][j] /= maxVal;
+	}
 
 
-	std::cout << "[Histo] Limits: [" << dataLimits.min << " -> " << dataLimits.max << "], mean: " << dataLimits.mean << ", std dev: " << dataLimits.stdDeviation << std::endl;
+
+	histogramsNeedUpdate = false;
 }
+
 
 void SpimRegistrationApp::drawContrastEditor(const Viewport* vp)
 {
-	if (histogram.empty())
-	{
-		calculateHistogram();
-	}
-
-	/*
-	glColor3f(0.7f, 0.7f, 0.7f);
-	glBegin(GL_QUADS);
-	glVertex2i(0, 0);
-	glVertex2i(1, 0);
-	glVertex2i(1, 1);
-	glVertex2i(0, 1);
-	glEnd();
-	*/
-
+	if (histograms.empty() || histogramsNeedUpdate)
+		calculateHistograms();
+		
 	glColor3f(1,1,1);
 	glBegin(GL_LINE_LOOP);
 	glVertex2i(0, 0);
@@ -972,95 +1015,58 @@ void SpimRegistrationApp::drawContrastEditor(const Viewport* vp)
 
 
 
-	const float leftLimit = 0.f;
-	const float rightLimit = dataLimits.max;
+	const float leftLimit = globalThreshold.min;
+	const float rightLimit = globalThreshold.max;
 
 
 	glLineWidth(2.f);
 	glBegin(GL_LINES);
-	glColor3f(1, 1, 0);
-	glVertex2f((float)globalThreshold.min / rightLimit, 0);
-	glVertex2f((float)globalThreshold.min / rightLimit, 1);
+	
+	glColor3f(1, 0, 0);
+	glVertex2f(maxCursor, 0.f);
+	glVertex2f(maxCursor, 1.f);
 
-	glColor3f(1, 0.5, 0);
-	glVertex2f((float)globalThreshold.max / rightLimit, 0);
-	glVertex2f((float)globalThreshold.max / rightLimit, 1);
-	
-	
+	glColor3f(1, 0, 0);
+	glVertex2f(minCursor, 0.f);
+	glVertex2f(minCursor, 1.f);
+
+
 	glEnd();
-
 	
 	glLineWidth(1.f);
 
 
+
+
+
 	// draw histogram
-	if (!histogram.empty())
+	
+	glBegin(GL_LINES);
+	for (size_t i = 0; i < histograms.size(); ++i)
 	{
-		float dx = 1.f / histogram.bins.size();
-		float dy = 1.f / histogram.max;
+		glm::vec3 rc = getRandomColor(i);
+		glColor3fv(glm::value_ptr(rc));
+	
 
-		glBegin(GL_LINES);
-		glColor3f(0.7f, 0.7f, 0.7f);
-
-		for (int i = 0; i < histogram.bins.size(); ++i)
+		for (unsigned int ix = 0; ix < histograms[i].size(); ++ix)
 		{
-			glVertex2f(dx*i, 0.f);
-			glVertex2f(dx*i, dy*log((float)histogram.bins[i]));
+			float x = (float)ix / histograms[i].size();
 
+			// offset each value slightly
+			//x += ((float)histograms.size() / (float)vp->size.x);
+			x += 0.04;
 
+			glVertex2f(x, 0.f);
+			glVertex2f(x, histograms[i][ix]);
 		}
 
-		glEnd();
+
 
 	}
-	
-
-
-	/*
-	glBegin(GL_LINES);
-		
-	glColor3f(0.7f, 0.7f, 0.7f);
-
-	glVertex2i(0, 0);
-	glVertex2i(histogram.bins.size(), 0);
-
-	glColor3f(1.f, 1.f, 1.f);
-	for (unsigned int i = 0; i < histogram.bins.size(); ++i)
-	{
-		unsigned int x = i * histogram.binSize * histogram.lowest;
-
-		glVertex3i(x, 0, 0);
-		glVertex3f(x, log((float)histogram.bins[i]), 0);
-	}
-	
-	glColor3f(1, 1, 0);
-	glVertex3i(globalThreshold.min, 0, 0);
-	glVertex3i(globalThreshold.min, 1, 0);
-
-	glColor3f(1, 0.5, 0);
-	glVertex3i(globalThreshold.max, 0, 0);
-	glVertex3i(globalThreshold.max, 1, 0);
-
 	glEnd();
-	*/
-	/*
-	glMatrixMode(GL_PROJECTION);
-	glPopMatrix();
-	glMatrixMode(GL_MODELVIEW);
-	glPopMatrix();
-	*/
 
 }
 
-void SpimRegistrationApp::setDataLimits()
-{
-	dataLimits = globalThreshold;
-}
-
-void SpimRegistrationApp::resetDataLimits()
-{
-	dataLimits = stacks[0]->getLimits();
-}
 
 void SpimRegistrationApp::TEST_detectBeads()
 {

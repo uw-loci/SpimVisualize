@@ -76,16 +76,19 @@ static void keyboard(unsigned char key, int x, int y)
 		regoApp->TEST_beginAutoAlign();
 
 	if (key == ',')
-		regoApp->increaseMinThreshold();
+		regoApp->decreaseMinThreshold();
 	if (key == '.')
 		regoApp->increaseMaxThreshold();
+	/*
 	if (key == '<')
 		regoApp->decreaseMinThreshold();
 	if (key == '>')
 		regoApp->decreaseMaxThreshold();
+	*/
 	if (key == 'C')
 		regoApp->autoThreshold();
-
+	if (key == 't')
+		regoApp->contrastEditorApplyThresholds();
 
 	
 	if (key == '[')
@@ -117,11 +120,13 @@ static void keyboard(unsigned char key, int x, int y)
 		regoApp->toggleSelectStack(4);
 
 	
+	/*
 	if (key == 't')
 		regoApp->loadStackTransformations();
 
 	if (key == 'T')
 		regoApp->saveStackTransformations();
+	*/
 
 
 	if (key == 'v')
@@ -146,11 +151,6 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == 'd')
 		regoApp->panCamera(glm::vec2(10, 0));
 
-
-	if (key == 'm')
-		regoApp->setDataLimits();
-	if (key == 'M')
-		regoApp->resetDataLimits();
 }
 
 static void keyboardUp(unsigned char key, int x, int y)

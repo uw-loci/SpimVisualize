@@ -8,7 +8,6 @@
 
 #include "AABB.h"
 #include "StackRegistration.h"
-#include "Histogram.h"
 
 class Framebuffer;
 class Shader;
@@ -48,15 +47,19 @@ public:
 	void rotateCurrentStack(float rotY);
 
 	void changeContrast(const glm::ivec2& cursor);
-	void setDataLimits();
-	void resetDataLimits();
+	void calculateHistograms();
+	void increaseMaxThreshold();
+	void decreaseMaxThreshold();
+	void increaseMinThreshold();
+	void decreaseMinThreshold();
+	void autoThreshold();
+	void contrastEditorApplyThresholds();
 
 
 	void toggleAllStacks();
 
 
-	void calculateHistogram();
-
+	
 	
 	void TEST_beginAutoAlign();
 	void TEST_endAutoAlign();
@@ -93,13 +96,7 @@ public:
 	inline void toggleBboxes() { drawBboxes = !drawBboxes; }
 	inline void toggleSlices() { drawSlices = !drawSlices; }
 	
-	void increaseMaxThreshold();
-	void decreaseMaxThreshold();
-	void increaseMinThreshold();
-	void decreaseMinThreshold();
-	void autoThreshold();
 
-	
 
 	inline void setConfigPath(const std::string& p) { configPath = p; }
 
@@ -113,7 +110,14 @@ private:
 
 	AABB					globalBBox;
 
+	// global contrast settings
 	Threshold				globalThreshold;
+
+	// normalized histograms
+	std::vector<std::vector<float> > histograms;
+	bool					histogramsNeedUpdate;
+	float					minCursor, maxCursor;
+
 
 	bool					cameraMoving;
 
@@ -162,11 +166,7 @@ private:
 		
 	Framebuffer*			queryRenderTarget;
 
-
-	Threshold				dataLimits;
 	
-	Histogram				histogram;
-
 	void updateGlobalBbox();
 
 	void drawContrastEditor(const Viewport* vp);

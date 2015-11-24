@@ -2,7 +2,6 @@
 #include "AABB.h"
 #include "Shader.h"
 #include "StackRegistration.h"
-#include "Histogram.h"
 #include "BeadDetection.h"
 
 #include <iostream>
@@ -985,28 +984,19 @@ std::vector<glm::vec3> SpimStack::calculateVolumeNormals() const
 }
 
 
-Histogram SpimStack::calculateHistogram(const Threshold& t) const
+vector<size_t> SpimStack::calculateHistogram(const Threshold& t) const
 {
-	Histogram h;
-	h.bins.resize(t.max - t.min + 1);
-	h.lowest = t.min;
-	h.highest = t.max;
-	h.binSize = 1;
+	vector<size_t> histogram(t.getSpread(), 0);
 
 	for (unsigned int i = 0; i < width*height*depth; ++i)
 	{
-		unsigned short v = volume[i];
-		if (v >= t.min && v <= t.max)
-		{
-			h.bins[v - t.min]++;
-		}
+		int j = (int)volume[i] - (int)t.min;
 
+		if (j >= 0 && j < histogram.size())
+			++histogram[j];
 	}
-
-	h.max = *std::max_element(h.bins.begin(), h.bins.end());
-	h.max = *std::min_element(h.bins.begin(), h.bins.end());
-
-	return std::move(h);
+	
+	return std::move(histogram);
 }
 
 vector<Hourglass> SpimStack::detectHourglasses() const
