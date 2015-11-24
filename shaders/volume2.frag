@@ -10,7 +10,7 @@ struct Volume
 	bool			enabled;
 };
 
-#define VOLUMES 5
+#define VOLUMES 2
 uniform Volume volume[VOLUMES];
 
 uniform float sliceCount;
@@ -75,20 +75,13 @@ void main()
 
 	intensity /= weight;
 
-	//color *= intensity;
-
-	/*
-	vec3 color = normalize(vec3(float(intensity)));
-
-	if (intensity > maxThreshold)
-		vec3 color = vec3(0.0, 1.0, 0.0);
-	if (intensity < minThreshold)
-		vec3 color = vec3(1.0, 0.0, 0.0);
-	*/
-
 	float alpha = 4.0 / sliceCount;
 
 	float density = float(intensity - minThreshold) / float(maxThreshold - minThreshold);
+
+	//density *= density;
+
+
 	alpha *= density;
 	
 	fragColor = vec4(color, alpha);

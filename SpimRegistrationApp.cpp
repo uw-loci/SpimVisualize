@@ -160,8 +160,6 @@ void SpimRegistrationApp::addSpimStack(const std::string& filename)
 {
 	SpimStack* stack = new SpimStack(filename);
 
-	stack->subsample();
-	stack->subsample();
 
 	stacks.push_back(stack);
 	AABB bbox = stack->getBBox();
@@ -1026,10 +1024,14 @@ void SpimRegistrationApp::drawContrastEditor(const Viewport* vp)
 	glVertex2f(maxCursor, 0.f);
 	glVertex2f(maxCursor, 1.f);
 
-	glColor3f(1, 0, 0);
+	glColor3f(1, 1, 0);
 	glVertex2f(minCursor, 0.f);
 	glVertex2f(minCursor, 1.f);
 
+	glColor3f(0.1, 0.1, 0.1);
+	glVertex2f(minCursor, 0.f);
+	glColor3f(1, 1, 1);
+	glVertex2f(maxCursor, 1.f);
 
 	glEnd();
 	
@@ -1054,7 +1056,7 @@ void SpimRegistrationApp::drawContrastEditor(const Viewport* vp)
 
 			// offset each value slightly
 			//x += ((float)histograms.size() / (float)vp->size.x);
-			x += 0.04;
+			x += 0.1;
 
 			glVertex2f(x, 0.f);
 			glVertex2f(x, histograms[i][ix]);
