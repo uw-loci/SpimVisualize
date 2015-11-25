@@ -548,6 +548,7 @@ void SpimRegistrationApp::rotateCurrentStack(float rotY)
 		return;
 
 	stacks[currentStack]->rotate(rotY);
+	updateGlobalBbox();
 }
 
 
@@ -1113,12 +1114,6 @@ void SpimRegistrationApp::drawContrastEditor(const Viewport* vp)
 }
 
 
-void SpimRegistrationApp::TEST_detectBeads()
-{
-	assert(!stacks.empty());
-	stacks[0]->detectHourglasses();
-}
-
 void SpimRegistrationApp::drawBoundingBoxes() const
 {
 	glDisable(GL_DEPTH_TEST);
@@ -1148,6 +1143,9 @@ void SpimRegistrationApp::drawBoundingBoxes() const
 			glPopMatrix();
 		}
 	}
+
+	glColor3f(0, 1, 1);
+	globalBBox.draw();
 
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDepthMask(GL_TRUE);
@@ -1312,8 +1310,9 @@ void SpimRegistrationApp::drawAxisAlignedSlices(const Viewport* vp, const Shader
 
 	// additive blending
 	glEnable(GL_BLEND);
-	//glBlendFunc(GL_ONE, GL_ONE); // GL_ONE_MINUS_SRC_ALPHA);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+	glBlendEquation(GL_FUNC_ADD);
+	glBlendFunc(GL_ONE, GL_ONE); // GL_ONE_MINUS_SRC_ALPHA);
+	//glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
 
 	glDisable(GL_DEPTH_TEST);
@@ -1604,9 +1603,9 @@ void SpimRegistrationApp::updateGlobalBbox()
 		return;
 	}
 	
-	globalBBox = stacks[0]->getBBox();
+	globalBBox = stacks[0]->getTransformedBBox();
 	for (size_t i = 1; i < stacks.size(); ++i)
-		globalBBox.extend(stacks[i]->getBBox());
+		globalBBox.extend(stacks[i]->getTransformedBBox());
 
 
 }

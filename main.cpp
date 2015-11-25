@@ -62,12 +62,7 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == 'b')
 		regoApp->toggleBboxes();
 
-	if (key == 'h')
-	{
-		//regoApp->calculateHistogram();
-		regoApp->TEST_detectBeads();
-	}
-
+	
 	// backspace
 	if (key == '\b')
 		regoApp->undoLastTransform();

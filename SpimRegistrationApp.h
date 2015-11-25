@@ -65,8 +65,6 @@ public:
 	void TEST_endAutoAlign();
 	void undoLastTransform();
 
-	void TEST_detectBeads();
-
 	void clearRegistrationPoints();
 
 	void updateMouseMotion(const glm::ivec2& cursor);

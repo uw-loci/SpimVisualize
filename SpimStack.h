@@ -42,6 +42,7 @@ public:
 	void extractTransformedFeaturePoints(const Threshold& t, ReferencePoints& result) const;
 
 	AABB getBBox() const;
+	AABB getTransformedBBox() const;
 
 	void setRotation(float angle);
 
@@ -68,8 +69,6 @@ public:
 
 
 	inline const std::string& getFilename() const { return filename;  }
-
-	std::vector<Hourglass> detectHourglasses() const;
 
 
 private:

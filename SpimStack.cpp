@@ -988,6 +988,7 @@ vector<size_t> SpimStack::calculateHistogram(const Threshold& t) const
 	return std::move(histogram);
 }
 
+/*
 vector<Hourglass> SpimStack::detectHourglasses() const
 {
 	using namespace cv;
@@ -1089,6 +1090,7 @@ vector<Hourglass> SpimStack::detectHourglasses() const
 	return std::move(result);
 
 }
+*/
 
 cv::Mat SpimStack::getImagePlane(unsigned int z) const
 {
@@ -1108,6 +1110,27 @@ cv::Mat SpimStack::getImagePlane(unsigned int z) const
 		}
 	}
 	
+
+	return std::move(result);
+}
+
+AABB SpimStack::getTransformedBBox() const
+{
+	using namespace glm;
+	using namespace std;
+
+	AABB result;
+	vector<vec3> verts = getBBox().getVertices();
+	for (size_t i = 0; i < verts.size(); ++i)
+	{
+		vec4 v = this->transform * vec4(verts[i], 1.f);
+
+		if (i == 0)
+			result.reset(vec3(v));
+		else
+			result.extend(vec3(v));
+	}
+
 
 	return std::move(result);
 }
