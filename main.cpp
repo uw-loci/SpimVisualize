@@ -44,7 +44,7 @@ static void idle()
 	oldTime = time;
 	
 	regoApp->update(dt);
-	regoApp->setCameraMoving(false);
+	//regoApp->setCameraMoving(false);
 
 	glutPostRedisplay();
 }
@@ -69,7 +69,7 @@ static void keyboard(unsigned char key, int x, int y)
 		regoApp->undoLastTransform();
 
 	if (key == ' ')
-		regoApp->TEST_beginAutoAlign();
+		regoApp->beginAutoAlign();
 
 	if (key == ',')
 		regoApp->decreaseMinThreshold();
@@ -155,7 +155,7 @@ static void keyboard(unsigned char key, int x, int y)
 static void keyboardUp(unsigned char key, int x, int y)
 {
 	if (key == ' ')
-		regoApp->TEST_endAutoAlign();
+		regoApp->endAutoAlign();
 }
 
 
@@ -253,6 +253,9 @@ static void button(int button, int state, int x, int y)
 	mouse.coordinates.y = y;
 
 	mouse.button[button] = (state == GLUT_DOWN);
+
+	if (state == GLUT_UP)
+		regoApp->setCameraMoving(false);
 
 
 	if (button == 0 && state == GLUT_DOWN)

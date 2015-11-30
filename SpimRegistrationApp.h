@@ -62,11 +62,9 @@ public:
 
 	
 	
-	void TEST_beginAutoAlign();
-	void TEST_endAutoAlign();
+	void beginAutoAlign();
+	void endAutoAlign();
 	void undoLastTransform();
-
-	void clearRegistrationPoints();
 
 	void updateMouseMotion(const glm::ivec2& cursor);
 	
@@ -81,7 +79,6 @@ public:
 	void zoomCamera(float dt);
 	void panCamera(const glm::vec2& delta);
 	void centerCamera();
-
 	void maximizeViews();
 
 
@@ -146,20 +143,7 @@ private:
 	// for contrast mapping
 	Shader*					tonemapper;
 
-	ReferencePoints			refPointsA, refPointsB;
-
-
-	// Bead detection
-	std::vector<Hourglass>	psfBeads;
-
-
-	// volume-based alignment
-	unsigned int			samplesPassedQuery[3];
-	unsigned int			lastSamplesPass;
-
-	glm::mat4				lastPassMatrix;
-	bool					runAlignment;
-
+	
 
 	// stores undo transformations for all stacks
 	struct StackTransform
@@ -171,16 +155,12 @@ private:
 	std::vector<StackTransform> transformUndoChain;
 		
 	Framebuffer*			volumeRenderTarget;
-	Framebuffer*			queryRenderTarget[3];
-
-	enum OcclusionPass
-	{
-		OCCLUSION_QUERY_PASS_X = 0,
-		OCCLUSION_QUERY_PASS_Y,
-		OCCLUSION_QUERY_PASS_Z
-	};
-
 	
+	
+
+
+
+
 	void updateGlobalBbox();
 
 	void drawContrastEditor(const Viewport* vp);
@@ -189,20 +169,36 @@ private:
 	void drawGroundGrid(const Viewport* vp) const;
 	void drawBoundingBoxes() const;
 
+	void drawTexturedQuad(unsigned int texture) const;
+	void drawTonemappedQuad(unsigned int texture) const;
+
 	void drawAxisAlignedSlices(const glm::mat4& mvp, const glm::vec3& axis, const Shader* shader) const;
 	void drawAxisAlignedSlices(const Viewport* vp, const Shader* shader) const;
 	void drawViewplaneSlices(const Viewport* vp, const Shader* shader) const;
 	void raycastVolumes(const Viewport* vp, const Shader* shader) const;
 
-	void drawRegistrationFeatures(const Viewport* vp) const;
+	
+	// auto-stack alignment
+	void createAutoAlignments();
+	
+	unsigned int			lastSamplesPass;
+	glm::mat4				lastPassMatrix;
+		
+	bool					runAlignment;
 
+	struct AutoAlignPass
+	{
+		glm::mat4		matrix;
+		unsigned int	queryId[4];
+		unsigned long	queryResult[4];
+		bool			enabledMask[4];
+		bool			ready;
 
+		inline bool operator < (const AutoAlignPass& rhs) const { return queryResult < rhs.queryResult; }
+	};
 
-	void TEST_alignStacksVolume(const Viewport* vp);
-	void TEST_alignStacksSeries(const Viewport* vp);
-	void TEST_alignStack(const Viewport* vp);
-	void TEST_occlusionQueryStackOverlap(const Viewport* vp, OcclusionPass pass);
-	unsigned long TEST_occlusionQuery(OcclusionPass pass);
+	std::vector<AutoAlignPass>	autoAlignPasses;
+	unsigned int				currentPass;
 
 	static glm::vec3 getRandomColor(int n);
 

@@ -18,6 +18,17 @@ void Viewport::setup() const
 {
 	glViewport(position.x, position.y, size.x, size.y);
 
+	// set correct matrices
+	assert(camera);
+	camera->setup();
+	
+}
+
+void Viewport::drawBorder() const
+{
+
+	glDisable(GL_DEPTH_TEST);
+	
 	// reset any transform
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
@@ -38,10 +49,8 @@ void Viewport::setup() const
 		glEnd();
 	}
 
-	// set correct matrices
-	assert(camera);
-	camera->setup();
-	
+	glEnable(GL_DEPTH_TEST);
+
 }
 
 
