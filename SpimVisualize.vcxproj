@@ -33,6 +33,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AABB.h" />
+    <ClInclude Include="AppMode.h" />
     <ClInclude Include="BeadDetection.h" />
     <ClInclude Include="Framebuffer.h" />
     <ClInclude Include="Layout.h" />

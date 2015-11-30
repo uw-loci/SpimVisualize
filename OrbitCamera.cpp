@@ -1,4 +1,5 @@
 #include "OrbitCamera.h"
+#include "AABB.h"
 
 #include <GL/glew.h>
 #include <iostream>
@@ -88,6 +89,8 @@ void OrbitCamera::zoom(float d)
 
 	radius = std::max(near, radius);
 	radius = std::min(far, radius);
+
+	std::cout << "[Debug] Camera: new radius: " << radius << std::endl;
 }
 
 void OrbitCamera::rotate(float deltaTheta, float deltaPhi)
@@ -127,6 +130,25 @@ void OrbitCamera::jitter(float v)
 {
 	theta += v;
 	phi += v;
+}
+
+
+void OrbitCamera::maximizeView(const AABB& bbox)
+{
+	target = bbox.getCentroid();
+
+	float boundSphere = bbox.getBoundingSphereRadius();
+	
+
+	
+	// calculate the best distance to the centroid based on the fovy and the sphere radius
+	//radius = boundSphere * tan(glm::radians(fovy) * 0.5f);
+	
+	radius = boundSphere;
+
+	std::cout << "[Debug] Camera: calculated radius: " << radius << std::endl;
+
+	
 }
 
 
@@ -189,6 +211,15 @@ glm::vec3 OrthoCamera::calculatePlanarMovement(const glm::vec2& delta) const
 	return right * delta.x + up * delta.y;
 }
 
+
+void OrthoCamera::maximizeView(const AABB& bbox)
+{
+	target = bbox.getCentroid();
+
+	vec3 maxVal = max(abs(bbox.min), bbox.max);
+	zoomFactor = glm::max(maxVal.x, glm::max(maxVal.y, maxVal.z));
+}
+
 UnitCamera::UnitCamera()
 {
 	this->target = vec3(0.f);
@@ -223,3 +254,10 @@ void UnitCamera::getMVP(glm::mat4& mvp) const
 	mvp = proj * view;
 }
 
+void UnitCamera::maximizeView(const AABB& bbox)
+{
+	target = bbox.getCentroid();
+
+	vec3 maxVal = max(abs(bbox.min), bbox.max);
+	//zoomFactor = glm::max(maxVal.x, glm::max(maxVal.y, maxVal.z));
+}

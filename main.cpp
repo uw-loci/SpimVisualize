@@ -43,6 +43,7 @@ static void idle()
 	float dt = (float)(time - oldTime) / 1000.f;
 	oldTime = time;
 	
+	regoApp->update(dt);
 	regoApp->setCameraMoving(false);
 
 	glutPostRedisplay();
@@ -122,6 +123,9 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == 'T')
 		regoApp->saveStackTransformations();
 	*/
+
+	if (key == 'm')
+		regoApp->maximizeViews();
 
 
 	if (key == 'v')
@@ -219,9 +223,6 @@ static void special(int key, int x, int y)
 		regoApp->setThreeViewLayout(winRes, mouse.coordinates);
 	
 	if (key == GLUT_KEY_F4)
-		regoApp->setAlignVolumeLayout(winRes, mouse.coordinates);
-
-	if (key == GLUT_KEY_F5)
 		regoApp->setContrastEditorLayout(winRes, mouse.coordinates);
 
 	if (key == GLUT_KEY_DOWN)
@@ -313,7 +314,7 @@ int main(int argc, const char** argv)
 	try
 	{
 
-		for (int i = 0; i < 1; ++i)
+		for (int i = 0; i < 2; ++i)
 		{
 			char filename[256];
 			//sprintf(filename, "e:/spim/test/spim_TL00_Angle%d.tif", i);

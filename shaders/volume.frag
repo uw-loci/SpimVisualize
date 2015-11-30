@@ -21,8 +21,10 @@ void main()
 
 	int intensity = texture(volumeTexture, texcoord).r;
 
-	float alpha = sliceWeight;// * float(intensity);
+	float alpha = float(intensity);
 	vec3 color = vec3(float(intensity - minThreshold) / float(maxThreshold-minThreshold));
 
-	fragColor = vec4(color, sliceWeight);
+	alpha = 1.0;
+
+	fragColor = vec4(color, alpha);
 }

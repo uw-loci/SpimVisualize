@@ -44,6 +44,11 @@ struct AABB
 
 	inline glm::vec3 getSpan() const { return max - min; }
 	inline float getSpanLength() const { return glm::length(max-min); }
+
+	AABB calculateScreenSpaceBBox(const glm::mat4& mvp) const;
+
+	float getBoundingSphereRadius() const;
+
 };
 
 

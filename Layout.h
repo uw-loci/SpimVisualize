@@ -40,6 +40,8 @@ struct Viewport : boost::noncopyable
 		return (float)size.x / size.y;
 	}
 
+	void maximizeView(const AABB& bbox);
+
 
 	void setup() const;
 };
@@ -59,6 +61,8 @@ public:
 	virtual Viewport* getView(unsigned int n) = 0;
 
 	virtual void panActiveViewport(const glm::vec2& delta) = 0;
+
+	virtual void maximizeView(const AABB& bbox) = 0;
 
 	/*
 	virtual void saveState(const std::string& filename) const = 0;
@@ -82,6 +86,7 @@ public:
 
 
 	virtual void panActiveViewport(const glm::vec2& delta);
+	virtual void maximizeView(const AABB& bbox);
 
 private:
 	Viewport		views[4];
@@ -101,6 +106,7 @@ public:
 	inline size_t getViewCount() const { return 1; }
 	inline Viewport* getView(unsigned int n) { return &viewport; }
 
+	inline void maximizeView(const AABB& bbox) { viewport.maximizeView(bbox); }
 
 	virtual void panActiveViewport(const glm::vec2& delta);
 
@@ -136,33 +142,8 @@ public:
 	inline size_t getViewCount() const { return 2; };
 	inline Viewport* getView(unsigned int n) { return &views[n]; }
 	
-
+	virtual void maximizeView(const AABB& bbox);
 	virtual void panActiveViewport(const glm::vec2& delta);
-
-protected:
-	Viewport		views[2];
-};
-
-
-class AlignVolumesLayout : public ILayout
-{
-public:
-	AlignVolumesLayout(const glm::ivec2& resolution);
-	virtual ~AlignVolumesLayout();
-
-
-	virtual Viewport* getActiveViewport();
-	virtual void updateMouseMove(const glm::ivec2& coords);
-
-	virtual void resize(const glm::ivec2& size);
-
-	inline size_t getViewCount() const { return 2; };
-	inline Viewport* getView(unsigned int n) { return &views[n]; }
-
-
-	virtual void panActiveViewport(const glm::vec2& delta);
-
-
 
 protected:
 	Viewport		views[2];

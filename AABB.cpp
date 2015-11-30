@@ -252,3 +252,63 @@ void AABB::calculate(const std::vector<glm::vec3>& points)
 	for (size_t i = 1; i < points.size(); ++i)
 		this->extend(points[i]);
 }
+
+AABB AABB::calculateScreenSpaceBBox(const glm::mat4& mvp) const
+{
+	vec4 vertices[] = { vec4(min.x, min.y, min.z, 1.f),
+						vec4(min.x, min.y, max.z, 1.f),
+						vec4(max.x, min.y, max.z, 1.f),
+						vec4(max.x, min.y, min.z, 1.f),
+						vec4(min.x, max.y, min.z, 1.f),
+						vec4(min.x, max.y, max.z, 1.f),
+						vec4(max.x, max.y, max.z, 1.f),
+						vec4(max.x, max.y, min.z, 1.f) };
+
+	vec3 minBox(std::numeric_limits<float>::max());
+	vec3 maxBox(std::numeric_limits<float>::lowest());
+
+	for (int i = 0; i < 8; ++i)
+	{
+		vec4& v = vertices[i];
+
+		v = mvp * v;
+		v /= v.w;
+	
+		vec3 v2(v);
+
+		minBox = glm::min(minBox, v2);
+		maxBox = glm::max(maxBox, v2);
+				
+		/*
+		minBox.x = glm::min(minBox.x, v.x);
+		minBox.y = glm::min(minBox.y, v.y);
+		
+
+		maxBox.x = glm::max(maxBox.x, v.x);
+		maxBox.y = glm::max(maxBox.y, v.y);
+		*/
+	
+	}
+	
+
+	AABB result;
+	result.min = minBox;
+	result.max = maxBox;
+
+	return std::move(result);
+}
+
+float AABB::getBoundingSphereRadius() const
+{
+	float maxRad = 0.f;
+	vec3 c = getCentroid();
+
+	vec3 d0 = max - c;
+	vec3 d1 = min - c;
+
+	// compare the square lengths
+	maxRad = glm::max(dot(d0, d0), dot(d1, d1));
+
+	maxRad = sqrtf(maxRad);
+	return maxRad;
+}

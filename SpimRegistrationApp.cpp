@@ -20,8 +20,9 @@
 #include <GL/glut.h>
 
 SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(0), sliceShader(0), volumeShader(0), layout(0), 
-	drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), currentStack(-1), sliceCount(400), 
-	configPath("./"), cameraMoving(false), runAlignment(false), histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f)
+	drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), currentStack(-1), sliceCount(40), 
+	configPath("./"), cameraMoving(false), runAlignment(false), histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f),
+	mode(OPMODE_NAVMODE)
 {
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
@@ -33,16 +34,22 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(0)
 
 	reloadShaders();
 
-	glGenQueries(1, &samplesPassedQuery);
+	glGenQueries(3, samplesPassedQuery);
 
-	queryRenderTarget = new Framebuffer(256, 256, GL_RGB, GL_UNSIGNED_BYTE, 1, GL_NEAREST);
+	for (int i = 0; i < 3; ++i)
+		queryRenderTarget[i] = new Framebuffer(256, 256, GL_RGB, GL_UNSIGNED_BYTE, 1, GL_NEAREST);
 
 	volumeRenderTarget = new Framebuffer(1024, 1024, GL_RGBA, GL_FLOAT);
+
+	setMode(OPMODE_NAVMODE);
 }
 
 SpimRegistrationApp::~SpimRegistrationApp()
 {
-	delete queryRenderTarget;
+
+	for (int i = 0; i < 3; ++i)
+		delete queryRenderTarget[i];
+	
 	delete volumeRenderTarget;
 
 	delete drawQuad;
@@ -53,7 +60,7 @@ SpimRegistrationApp::~SpimRegistrationApp()
 	delete volumeRaycaster;
 
 
-	glDeleteQueries(1, &samplesPassedQuery);
+	glDeleteQueries(3, samplesPassedQuery);
 
 	for (size_t i = 0; i < stacks.size(); ++i)
 		delete stacks[i];
@@ -88,11 +95,13 @@ void SpimRegistrationApp::reloadShaders()
 	delete tonemapper;
 	tonemapper = new Shader("shaders/drawQuad.vert", "shaders/tonemapper.frag");
 
+
 }
 
 
 void SpimRegistrationApp::draw()
 {
+
 	for (size_t i = 0; i < layout->getViewCount(); ++i)
 	{
 		const Viewport* vp = layout->getView(i);
@@ -100,8 +109,6 @@ void SpimRegistrationApp::draw()
 
 		if (vp->name == Viewport::CONTRAST_EDITOR)
 			drawContrastEditor(vp);
-		else if (vp->name == Viewport::PERSPECTIVE_ALIGNMENT)
-			drawVolumeAlignment(vp);
 		else
 		{
 			volumeRenderTarget->bind();
@@ -245,112 +252,58 @@ void SpimRegistrationApp::drawScene(const Viewport* vp)
 }
 
 
-unsigned long SpimRegistrationApp::TEST_occlusionQueryStackOverlap(const Viewport* vp)
+#undef near
+#undef far
+
+void SpimRegistrationApp::TEST_occlusionQueryStackOverlap(const Viewport* vp, OcclusionPass pass)
 {
-	if (vp->name != Viewport::PERSPECTIVE_ALIGNMENT)
-		return 0;
+	using namespace glm;
 
-	queryRenderTarget->bind();
+	queryRenderTarget[pass]->bind();
+	
+	vec3 clearColor = getRandomColor(pass);
+	glClearColor(clearColor.r, clearColor.g, clearColor.b, 1.0);
+
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-
+	
 	drawGroundGrid(vp);
-	//drawBoundingBoxes();
+	drawBoundingBoxes();
 		
-	glBeginQuery(GL_SAMPLES_PASSED, samplesPassedQuery);
-
-	/*
-	glDepthMask(GL_FALSE);
-	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-	*/
+	glBeginQuery(GL_SAMPLES_PASSED, samplesPassedQuery[pass]);
+	
+	
+	// setup the matrix based on the pass direction
+	vec3 center = globalBBox.getCentroid();
+	
+	OrthoCamera* cam = dynamic_cast<OrthoCamera*>(vp->camera);
+	cam->target = center;
+	
 
 	drawViewplaneSlices(vp, volumeDifferenceShader);
-	//drawAxisAlignedSlices(vp, volumeDifferenceShader);
 
 	glEndQuery(GL_SAMPLES_PASSED);
+	
+	queryRenderTarget[pass]->disable();
+	glClearColor(0, 0, 0, 0);
+}
 
-	/*
-	glDepthMask(GL_TRUE);
-	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-	*/
 
-
+unsigned long SpimRegistrationApp::TEST_occlusionQuery(OcclusionPass pass)
+{
 	GLint queryStatus = GL_FALSE;
 	while (queryStatus == GL_FALSE)
 	{
-		glGetQueryObjectiv(samplesPassedQuery, GL_QUERY_RESULT_AVAILABLE, &queryStatus);
+		glGetQueryObjectiv(samplesPassedQuery[pass], GL_QUERY_RESULT_AVAILABLE, &queryStatus);
 	}
 
 
 	GLuint64 samplesPassed = 0;
-	glGetQueryObjectui64v(samplesPassedQuery, GL_QUERY_RESULT, &samplesPassed);
+	glGetQueryObjectui64v(samplesPassedQuery[pass], GL_QUERY_RESULT, &samplesPassed);
 
-	/*
-	if (samplesPassed != lastSamplesPass)
-	{
-
-		std::cout << "[Debug] Samples passed: " << samplesPassed;
-		if (samplesPassed < lastSamplesPass)
-			std::cout << "< (";
-		else if (samplesPassed > lastSamplesPass)
-			std::cout << "> (";
-		else
-			std::cout << "= (";
-		std::cout << lastSamplesPass << ")" << std::endl;
-		lastSamplesPass = samplesPassed;
-	}
-	*/
-
-	queryRenderTarget->disable();
 
 	return samplesPassed;
 }
 
-
-void SpimRegistrationApp::drawVolumeAlignment(const Viewport* vp)
-{
-	if (vp->name != Viewport::PERSPECTIVE_ALIGNMENT)
-		return;
-
-	/*
-	if (runAlignment)
-	{
-		TEST_alignStack(vp);
-		TEST_occlusionQueryStackOverlap(vp);
-	}
-	*/
-
-
-	if (runAlignment)
-	{
-		TEST_alignStacksSeries(vp);
-		//TEST_alignStacksVolume(vp);
-		runAlignment = false;
-	}
-
-	TEST_occlusionQueryStackOverlap(vp);
-	
-	
-	glDisable(GL_DEPTH_TEST);
-	glDepthMask(GL_FALSE);
-
-	drawQuad->bind();
-	drawQuad->setTexture2D("colormap", queryRenderTarget->getColorbuffer());
-
-	glBegin(GL_QUADS);
-	glVertex2i(0, 1);
-	glVertex2i(0, 0);
-	glVertex2i(1, 0);
-	glVertex2i(1, 1);
-	glEnd();
-
-
-	drawQuad->disable();
-
-
-	glEnable(GL_DEPTH_TEST);
-	glDepthMask(GL_TRUE);
-}
 
 
 glm::vec3 SpimRegistrationApp::getRandomColor(int n)
@@ -404,22 +357,6 @@ void SpimRegistrationApp::setPerspectiveLayout(const glm::ivec2& res, const glm:
 	layout->updateMouseMove(mouseCoords);
 }
 
-void SpimRegistrationApp::setAlignVolumeLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords)
-{
-	std::cout << "[Layout] Creating volume aligning layout ... \n";
-	if (prevLayouts["Align Volumes"])
-	{
-		layout = prevLayouts["Align Volumes"];
-		layout->resize(res);
-	}
-	else
-	{
-		layout = new AlignVolumesLayout(res);
-		prevLayouts["Align Volumes"] = layout;
-	}
-
-	layout->updateMouseMove(mouseCoords);
-}
 
 void SpimRegistrationApp::setTopviewLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords)
 {
@@ -510,7 +447,7 @@ void SpimRegistrationApp::panCamera(const glm::vec2& delta)
 void SpimRegistrationApp::rotateCamera(const glm::vec2& delta)
 {
 	Viewport* vp = layout->getActiveViewport();
-	if (vp && (vp->name == Viewport::PERSPECTIVE || vp->name == Viewport::PERSPECTIVE_ALIGNMENT))
+	if (vp && vp->name == Viewport::PERSPECTIVE)
 		vp->camera->rotate(delta.x, delta.y);
 
 	setCameraMoving(true);
@@ -672,7 +609,8 @@ void SpimRegistrationApp::TEST_alignStacksSeries(const Viewport* vp)
 
 		AlignResult result;
 		result.delta = x;
-		result.samplesPassed = TEST_occlusionQueryStackOverlap(vp);
+		TEST_occlusionQueryStackOverlap(vp, OCCLUSION_QUERY_PASS_Y);
+		result.samplesPassed = TEST_occlusionQuery(OCCLUSION_QUERY_PASS_Y);
 
 		series.push_back(result);
 	}
@@ -704,7 +642,8 @@ void SpimRegistrationApp::TEST_alignStacksSeries(const Viewport* vp)
 
 		AlignResult result;
 		result.delta = z;
-		result.samplesPassed = TEST_occlusionQueryStackOverlap(vp);
+		TEST_occlusionQueryStackOverlap(vp, OCCLUSION_QUERY_PASS_Y);
+		result.samplesPassed = TEST_occlusionQuery(OCCLUSION_QUERY_PASS_Y);
 
 		series.push_back(result);
 	}
@@ -730,7 +669,8 @@ void SpimRegistrationApp::TEST_alignStacksSeries(const Viewport* vp)
 
 		AlignResult result;
 		result.delta = a;
-		result.samplesPassed = TEST_occlusionQueryStackOverlap(vp);
+		TEST_occlusionQueryStackOverlap(vp, OCCLUSION_QUERY_PASS_Y);
+		result.samplesPassed = TEST_occlusionQuery(OCCLUSION_QUERY_PASS_Y);
 
 		series.push_back(result);
 	}
@@ -774,7 +714,8 @@ void SpimRegistrationApp::TEST_alignStacksSeries(const Viewport* vp)
 
 			AlignResult result;
 			result.delta = z;
-			result.samplesPassed = TEST_occlusionQueryStackOverlap(vp);
+			TEST_occlusionQueryStackOverlap(vp, OCCLUSION_QUERY_PASS_Y);
+			result.samplesPassed = TEST_occlusionQuery(OCCLUSION_QUERY_PASS_Y);
 
 			series.push_back(result);
 		}
@@ -805,7 +746,8 @@ void SpimRegistrationApp::TEST_alignStacksSeries(const Viewport* vp)
 
 			AlignResult result;
 			result.delta = a;
-			result.samplesPassed = TEST_occlusionQueryStackOverlap(vp);
+			TEST_occlusionQueryStackOverlap(vp, OCCLUSION_QUERY_PASS_Y);
+			result.samplesPassed = TEST_occlusionQuery(OCCLUSION_QUERY_PASS_Y);
 
 			series.push_back(result);
 		}
@@ -834,8 +776,11 @@ void SpimRegistrationApp::TEST_alignStacksSeries(const Viewport* vp)
 
 }
 
+#if 0
 void SpimRegistrationApp::TEST_alignStacksVolume(const Viewport* vp)
 {
+
+
 	using namespace std;
 	using namespace glm;
 
@@ -915,6 +860,7 @@ void SpimRegistrationApp::TEST_alignStacksVolume(const Viewport* vp)
 
 
 }
+#endif
 
 
 void SpimRegistrationApp::increaseMaxThreshold()
@@ -1154,7 +1100,7 @@ void SpimRegistrationApp::drawBoundingBoxes() const
 
 void SpimRegistrationApp::drawGroundGrid(const Viewport* vp) const
 {
-	if (vp->name == Viewport::PERSPECTIVE || vp->name == Viewport::ORTHO_Y || vp->name == Viewport::PERSPECTIVE_ALIGNMENT)
+	if (vp->name == Viewport::PERSPECTIVE || vp->name == Viewport::ORTHO_Y)
 	{
 		glColor3f(0.3f, 0.3f, 0.3f);
 		glBegin(GL_LINES);
@@ -1209,7 +1155,9 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 
 
 	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+
 
 	shader->bind();
 	shader->setUniform("minThreshold", globalThreshold.min);
@@ -1303,6 +1251,41 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 
 }
 
+void SpimRegistrationApp::drawAxisAlignedSlices(const glm::mat4& mvp, const glm::vec3& viewAxis, const Shader* shader) const
+{
+	glEnable(GL_BLEND);
+	glBlendEquation(GL_FUNC_ADD);
+	glBlendFunc(GL_ONE, GL_ONE); // GL_ONE_MINUS_SRC_ALPHA);
+	//glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+
+	glDisable(GL_DEPTH_TEST);
+	glDepthMask(GL_FALSE);
+
+	shader->bind();
+	shader->setUniform("mvpMatrix", mvp);
+
+	shader->setUniform("maxThreshold", (int)globalThreshold.max);
+	shader->setUniform("minThreshold", (int)globalThreshold.min);
+
+	for (size_t i = 0; i < stacks.size(); ++i)
+	{
+		if (stacks[i]->enabled)
+		{
+			shader->setMatrix4("transform", stacks[i]->transform);
+			
+			stacks[i]->drawSlices(volumeShader, viewAxis);
+		}
+
+
+	}
+
+	shader->disable();
+
+	glDisable(GL_BLEND);
+	glEnable(GL_DEPTH_TEST);
+	glDepthMask(GL_TRUE);
+}
+
 void SpimRegistrationApp::drawAxisAlignedSlices(const Viewport* vp, const Shader* shader) const
 {
 	glm::mat4 mvp;// = vp.proj * vp.view;
@@ -1335,8 +1318,8 @@ void SpimRegistrationApp::drawAxisAlignedSlices(const Viewport* vp, const Shader
 			glm::vec4(localView) = glm::inverse(stacks[i]->transform) * glm::vec4(view, 0.0);
 			view = glm::vec3(localView);
 
-			//stacks[i]->drawSlices(volumeShader, view);
-			stacks[i]->drawSlices(volumeShader, glm::vec3(0,0,1));
+			stacks[i]->drawSlices(volumeShader, view);
+			//stacks[i]->drawSlices(volumeShader, glm::vec3(0,0,1));
 		
 		}
 
@@ -1608,4 +1591,40 @@ void SpimRegistrationApp::updateGlobalBbox()
 		globalBBox.extend(stacks[i]->getTransformedBBox());
 
 
+}
+
+void SpimRegistrationApp::update(float dt)
+{
+
+}
+
+void SpimRegistrationApp::maximizeViews()
+{
+	if (currentStackValid())
+	{
+		for (auto it = prevLayouts.begin(); it != prevLayouts.end(); ++it)
+			it->second->maximizeView(stacks[currentStack]->getBBox());
+
+	}
+	else
+	{
+		for (auto it = prevLayouts.begin(); it != prevLayouts.end(); ++it)
+			it->second->maximizeView(globalBBox);
+	}
+	
+	
+}
+
+void SpimRegistrationApp::setMode(OpMode newMode)
+{
+	mode = newMode;
+
+	if (newMode == OPMODE_NAVMODE)
+	{
+
+
+
+		
+
+	}
 }

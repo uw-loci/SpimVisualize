@@ -6,6 +6,8 @@
 #undef near
 #undef far
 
+struct AABB;
+
 class ICamera
 {
 public:
@@ -25,6 +27,8 @@ public:
 
 	// calculates the planar movement from the given 2D vector which is assumed to be on the near plane of the camera
 	virtual glm::vec3 calculatePlanarMovement(const glm::vec2& delta) const = 0;
+
+	virtual void maximizeView(const AABB& bbox) = 0;
 
 	float		aspect, near, far;
 	glm::vec3	target, up;
@@ -63,6 +67,7 @@ public:
 
 	virtual glm::vec3 calculatePlanarMovement(const glm::vec2& delta) const;
 
+	void maximizeView(const AABB& bbox);
 
 	inline float getTheta() const { return theta; }
 	inline float getPhi() const { return phi; }
@@ -92,6 +97,8 @@ public:
 	inline glm::vec3 getPosition() const { return target - viewDirection; } ;
 	inline glm::vec3 getViewDirection() const {	return viewDirection;}
 
+	void maximizeView(const AABB& bbox);
+
 	float			zoomFactor;
 
 protected:
@@ -120,6 +127,6 @@ public:
 	inline glm::vec3 getPosition() const { return target; };
 	inline glm::vec3 getViewDirection() const { return glm::vec3(0,0,-1.f); }
 
-
+	void maximizeView(const AABB& bbox);
 
 };

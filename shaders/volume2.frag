@@ -25,10 +25,12 @@ out vec4 fragColor;
 
 void main()
 {
-	vec3 color;
+	vec3 color = vec3(0.0);
 
 	// total intensity of the all visible volume texels at that fragment
 	int intensity = 0;
+
+	float w = 0.0;
 
 	// weight of all visible volume texels at that fragment
 	int weight = 0;
@@ -42,7 +44,6 @@ void main()
 
 		vec3 worldPosition = v.xyz;
 
-
 		vec3 texcoord = worldPosition - volume[i].bboxMin; // vec3(1344.0, 1024.0, 101.0);
 		texcoord /= (volume[i].bboxMax - volume[i].bboxMin);
 	
@@ -54,11 +55,11 @@ void main()
 			worldPosition.z > volume[i].bboxMin.z && worldPosition.z < volume[i].bboxMax.z) 
 		{
 			intensity += t; 
-			//color += worldPosition;
+			color = worldPosition / 2000.0;
 			weight++;
 
 
-
+			w += float(t);
 
 
 			vec3 localColor = vec3(1.0, 0.0, 0.0);
@@ -72,17 +73,9 @@ void main()
 
 	}
 
-
-	intensity /= weight;
-
-	float alpha = 4.0 / sliceCount;
-
-	float density = float(intensity - minThreshold) / float(maxThreshold - minThreshold);
-
-	//density *= density;
+	if (weight == 0)
+		discard;
 
 
-	alpha *= density;
-	
-	fragColor = vec4(color, alpha);
+	fragColor = vec4(color, 1.0);
 }

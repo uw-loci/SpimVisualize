@@ -30,6 +30,7 @@ public:
 
 	void reloadShaders();
 
+	void update(float dt);
 	void draw();
 
 	void resize(const glm::ivec2& newSize);
@@ -74,12 +75,14 @@ public:
 	void setTopviewLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
 	void setThreeViewLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
 	void setContrastEditorLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
-	void setAlignVolumeLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
 
 	void rotateCamera(const glm::vec2& delta);
 	void zoomCamera(float dt);
 	void panCamera(const glm::vec2& delta);
 	void centerCamera();
+
+	void maximizeViews();
+
 
 	inline void setCameraMoving(bool m) { cameraMoving = m; }
 
@@ -96,6 +99,17 @@ public:
 	
 
 
+	enum OpMode
+	{
+		OPMODE_NAVMODE,
+		OPMODE_AUTOALIGN
+	}	opMode;
+
+
+	void setMode(OpMode mode);
+
+
+
 	inline void setConfigPath(const std::string& p) { configPath = p; }
 
 private:
@@ -103,6 +117,9 @@ private:
 	
 	ILayout*				layout;
 	std::map<std::string, ILayout*>	prevLayouts;
+
+
+	OpMode		mode;
 
 	std::vector<SpimStack*>	stacks;
 
@@ -149,7 +166,7 @@ private:
 
 
 	// volume-based alignment
-	unsigned int			samplesPassedQuery;
+	unsigned int			samplesPassedQuery[3];
 	unsigned int			lastSamplesPass;
 
 	glm::mat4				lastPassMatrix;
@@ -166,28 +183,38 @@ private:
 	std::vector<StackTransform> transformUndoChain;
 		
 	Framebuffer*			volumeRenderTarget;
-	Framebuffer*			queryRenderTarget;
+	Framebuffer*			queryRenderTarget[3];
+
+	enum OcclusionPass
+	{
+		OCCLUSION_QUERY_PASS_X = 0,
+		OCCLUSION_QUERY_PASS_Y,
+		OCCLUSION_QUERY_PASS_Z
+	};
 
 	
 	void updateGlobalBbox();
 
 	void drawContrastEditor(const Viewport* vp);
 	void drawScene(const Viewport* vp);
-	void drawVolumeAlignment(const Viewport* vp);
-
+	
 	void drawGroundGrid(const Viewport* vp) const;
 	void drawBoundingBoxes() const;
 
+	void drawAxisAlignedSlices(const glm::mat4& mvp, const glm::vec3& axis, const Shader* shader) const;
 	void drawAxisAlignedSlices(const Viewport* vp, const Shader* shader) const;
 	void drawViewplaneSlices(const Viewport* vp, const Shader* shader) const;
 	void raycastVolumes(const Viewport* vp, const Shader* shader) const;
 
 	void drawRegistrationFeatures(const Viewport* vp) const;
 
+
+
 	void TEST_alignStacksVolume(const Viewport* vp);
 	void TEST_alignStacksSeries(const Viewport* vp);
 	void TEST_alignStack(const Viewport* vp);
-	unsigned long TEST_occlusionQueryStackOverlap(const Viewport* vp);
+	void TEST_occlusionQueryStackOverlap(const Viewport* vp, OcclusionPass pass);
+	unsigned long TEST_occlusionQuery(OcclusionPass pass);
 
 	static glm::vec3 getRandomColor(int n);
 
