@@ -21,8 +21,7 @@
 
 SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(0), sliceShader(0), volumeShader(0), layout(0), 
 	drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), currentStack(-1), sliceCount(40), 
-	configPath("./"), cameraMoving(false), runAlignment(false), histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f),
-	mode(OPMODE_NAVMODE)
+	configPath("./"), cameraMoving(false), runAlignment(false), histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f)
 {
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
@@ -40,8 +39,6 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(0)
 		queryRenderTarget[i] = new Framebuffer(256, 256, GL_RGB, GL_UNSIGNED_BYTE, 1, GL_NEAREST);
 
 	volumeRenderTarget = new Framebuffer(1024, 1024, GL_RGBA, GL_FLOAT);
-
-	setMode(OPMODE_NAVMODE);
 }
 
 SpimRegistrationApp::~SpimRegistrationApp()
@@ -138,9 +135,6 @@ void SpimRegistrationApp::draw()
 
 			glEnable(GL_DEPTH_TEST);
 			glDepthMask(GL_TRUE);
-
-
-
 
 		}
 	}
@@ -1490,7 +1484,7 @@ void SpimRegistrationApp::TEST_beginAutoAlign()
 	if (stacks.size() < 2 || currentStack == -1)
 		return;
 
-	std::cout << "[Debug] Aligning stack " << currentStack << " ... " << std::endl;
+	std::cout << "[Debug] Aligning stack " << currentStack << " to stack 0 ... " << std::endl;
 
 	runAlignment = true;
 
@@ -1501,6 +1495,7 @@ void SpimRegistrationApp::TEST_endAutoAlign()
 {
 	runAlignment = false;
 	lastSamplesPass = 0;
+	
 }
 
 void SpimRegistrationApp::TEST_alignStack(const Viewport* vp)
@@ -1595,7 +1590,6 @@ void SpimRegistrationApp::updateGlobalBbox()
 
 void SpimRegistrationApp::update(float dt)
 {
-
 }
 
 void SpimRegistrationApp::maximizeViews()
@@ -1613,18 +1607,4 @@ void SpimRegistrationApp::maximizeViews()
 	}
 	
 	
-}
-
-void SpimRegistrationApp::setMode(OpMode newMode)
-{
-	mode = newMode;
-
-	if (newMode == OPMODE_NAVMODE)
-	{
-
-
-
-		
-
-	}
 }

@@ -75,6 +75,7 @@ public:
 	void setTopviewLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
 	void setThreeViewLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
 	void setContrastEditorLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
+	
 
 	void rotateCamera(const glm::vec2& delta);
 	void zoomCamera(float dt);
@@ -98,18 +99,6 @@ public:
 	inline void toggleSlices() { drawSlices = !drawSlices; }
 	
 
-
-	enum OpMode
-	{
-		OPMODE_NAVMODE,
-		OPMODE_AUTOALIGN
-	}	opMode;
-
-
-	void setMode(OpMode mode);
-
-
-
 	inline void setConfigPath(const std::string& p) { configPath = p; }
 
 private:
@@ -119,7 +108,6 @@ private:
 	std::map<std::string, ILayout*>	prevLayouts;
 
 
-	OpMode		mode;
 
 	std::vector<SpimStack*>	stacks;
 
@@ -154,7 +142,7 @@ private:
 	Shader*					volumeDifferenceShader;
 	Shader*					volumeRaycaster;
 	Shader*					drawQuad;;
-
+	
 	// for contrast mapping
 	Shader*					tonemapper;
 
@@ -221,5 +209,6 @@ private:
 	inline bool currentStackValid() const { return currentStack > -1 && currentStack < stacks.size();  }
 
 	void saveStackTransform(unsigned int n);
+	
 
 };

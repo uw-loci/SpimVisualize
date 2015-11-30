@@ -224,6 +224,7 @@ static void special(int key, int x, int y)
 	
 	if (key == GLUT_KEY_F4)
 		regoApp->setContrastEditorLayout(winRes, mouse.coordinates);
+	
 
 	if (key == GLUT_KEY_DOWN)
 	{
