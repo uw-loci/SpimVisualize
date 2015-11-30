@@ -179,26 +179,40 @@ private:
 
 	
 	// auto-stack alignment
-	void createAutoAlignments();
-	
 	unsigned int			lastSamplesPass;
 	glm::mat4				lastPassMatrix;
 		
 	bool					runAlignment;
 
-	struct AutoAlignPass
+	struct OcclusionQueryResult
 	{
-		glm::mat4		matrix;
-		unsigned int	queryId[4];
-		unsigned long	queryResult[4];
-		bool			enabledMask[4];
-		bool			ready;
+		glm::mat4			matrix;
+		unsigned long long	result[4];
+		bool				ready;
 
-		inline bool operator < (const AutoAlignPass& rhs) const { return queryResult < rhs.queryResult; }
+		inline unsigned long long getScore() const
+		{
+			return result[0] + result[1] + result[2] + result[3];
+		}
+
+		inline bool operator < (const OcclusionQueryResult& rhs) const
+		{
+			return getScore() < rhs.getScore();
+		}
 	};
 
-	std::vector<AutoAlignPass>	autoAlignPasses;
-	unsigned int				currentPass;
+	std::vector<glm::mat4>				candidateTransforms;
+	std::vector<OcclusionQueryResult>	occlusionQueryResults;
+	OcclusionQueryResult				currentResult;
+
+	bool				occlusionQueryMask[4];
+	unsigned int		occlusionQueries[4];
+	unsigned int		singleOcclusionQuery;
+
+
+	void createCandidateTransforms();
+	void selectAndApplyBestTransform();
+
 
 	static glm::vec3 getRandomColor(int n);
 

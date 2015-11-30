@@ -34,6 +34,10 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(0)
 	reloadShaders();
 		
 	volumeRenderTarget = new Framebuffer(512, 512, GL_RGBA, GL_FLOAT);
+
+
+	glGenQueries(4, occlusionQueries);
+	glGenQueries(1, &singleOcclusionQuery);
 }
 
 SpimRegistrationApp::~SpimRegistrationApp()
@@ -49,8 +53,8 @@ SpimRegistrationApp::~SpimRegistrationApp()
 	delete volumeRaycaster;
 
 
-	for (size_t i = 0; i < autoAlignPasses.size(); ++i)
-		glDeleteQueries(4, autoAlignPasses[i].queryId);
+	glDeleteQueries(4, occlusionQueries);
+	glDeleteQueries(1, &singleOcclusionQuery);
 
 	for (size_t i = 0; i < stacks.size(); ++i)
 		delete stacks[i];
@@ -92,6 +96,9 @@ void SpimRegistrationApp::reloadShaders()
 void SpimRegistrationApp::draw()
 {
 
+	for (int i = 0; i < 4; ++i)
+		occlusionQueryMask[i] = false;
+
 	for (size_t i = 0; i < layout->getViewCount(); ++i)
 	{
 		const Viewport* vp = layout->getView(i);
@@ -104,36 +111,31 @@ void SpimRegistrationApp::draw()
 
 			if (runAlignment)
 			{
+
 				int query = vp->name;
 				assert(query < 4);
 
-				std::cout << "[Debug] Running auto alignment for view " << query << std::endl;
+				occlusionQueryMask[i] = true;
 
-				AutoAlignPass& pass = autoAlignPasses[currentPass];
-
-				pass.enabledMask[query] = true;		
-				glm::mat4 mat = pass.matrix;
-				
+				const glm::mat4& mat = candidateTransforms.back();
 
 				saveStackTransform(currentStack);
 				stacks[currentStack]->applyTransform(mat);
-				
+
 				volumeRenderTarget->bind();
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-				glBeginQuery(GL_SAMPLES_PASSED, pass.queryId[query]);
+				glBeginQuery(GL_SAMPLES_PASSED, singleOcclusionQuery);
+				glBeginQuery(GL_SAMPLES_PASSED, occlusionQueries[query]);
 
 				drawScene(vp);
 
 				glEndQuery(GL_SAMPLES_PASSED);
 
 				volumeRenderTarget->disable();
-				
+
 				undoLastTransform();
-				
-
 			}
-
 
 			volumeRenderTarget->bind();
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -144,11 +146,62 @@ void SpimRegistrationApp::draw()
 
 			drawTonemappedQuad(volumeRenderTarget->getColorbuffer());
 
+
+
+			// the query result should be done by now
+			if (runAlignment)
+			{
+				GLint queryStatus = GL_FALSE;
+				while (queryStatus == GL_FALSE)
+					glGetQueryObjectiv(singleOcclusionQuery, GL_QUERY_RESULT_AVAILABLE, &queryStatus);
+
+				GLuint64 result = 0;
+				glGetQueryObjectui64v(singleOcclusionQuery, GL_QUERY_RESULT, &result);
+
+				currentResult.result[vp->name] = result;
+				currentResult.ready = true;
+			}
 		}
 
 		vp->drawBorder();
-		
+
 	}
+
+
+
+	/*
+	// gather all occlusion queries here
+	if (runAlignment)
+	{
+		
+		auto start = std::chrono::high_resolution_clock::now();
+
+		for (int i = 0; i < 4; ++i)
+		{
+
+			// read back occlusion result
+			if (occlusionQueryMask[i])
+			{
+				GLint queryStatus = GL_FALSE;
+				while (queryStatus == GL_FALSE)
+					glGetQueryObjectiv(singleOcclusionQuery, GL_QUERY_RESULT_AVAILABLE, &queryStatus);
+
+				GLuint64 result = 0;
+				glGetQueryObjectui64v(singleOcclusionQuery, GL_QUERY_RESULT, &result);
+
+				currentResult.result[i] = result;
+			}
+		}
+		
+		
+		auto end = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<double, std::milli> elapsed = end - start;
+		std::cout << "[Debug] Read back occlusion query in " << elapsed.count() << " ms.\n";
+
+
+
+	}
+	*/
 
 }
 
@@ -1125,13 +1178,16 @@ void SpimRegistrationApp::beginAutoAlign()
 	if (stacks.size() < 2 || currentStack == -1)
 		return;
 
+	if (runAlignment)
+		return;
+
+
 	std::cout << "[Debug] Aligning stack " << currentStack << " to stack 0 ... " << std::endl;
 	
 
-	createAutoAlignments();
 	runAlignment = true;      
-	currentPass = 0;
-
+	createCandidateTransforms();
+	
 
 	saveStackTransform(currentStack);
 }
@@ -1140,6 +1196,13 @@ void SpimRegistrationApp::endAutoAlign()
 {
 	runAlignment = false;
 	lastSamplesPass = 0;
+
+	
+	// clear all pending stuff
+	candidateTransforms.clear();
+	occlusionQueryResults.clear();
+
+	
 	
 }
 
@@ -1197,91 +1260,37 @@ void SpimRegistrationApp::updateGlobalBbox()
 
 void SpimRegistrationApp::update(float dt)
 {
-	if (runAlignment || currentPass < autoAlignPasses.size())
+	using namespace std;
+
+	if (runAlignment)
 	{
-		if (currentPass < autoAlignPasses.size())
-		{
-			std::cout << "[Debug] Next alignment pass.\n";
-			++currentPass;
-		}
-		else
-		{
-			std::cout << "[Debug] Collecting all queries ... \n";
+		// remove the last frame's transform
+		candidateTransforms.pop_back();
 
-			// collect all results here			
-			auto start = std::chrono::high_resolution_clock::now();
-
-			int loops = 0;
-			bool allReady = false;
-			while (!allReady)
-			{
-				allReady = true;
-
-				for (size_t i = 0; i < autoAlignPasses.size(); ++i)
-				{
-					AutoAlignPass& pass = autoAlignPasses[i];
-
-					if (!pass.ready)
-					{				
-
-						pass.ready = true;
-						for (int j = 0; j < 4; ++j)
-						{
-							// only check the queries we actually rendered to (ortho .. perspective)
-							//if (pass.enabledMask[j])
-							{
-								GLint queryStatus = GL_FALSE;
-								glGetQueryObjectiv(pass.queryId[j], GL_QUERY_RESULT_AVAILABLE, &queryStatus);
-
-								if (queryStatus == GL_TRUE)
-								{
-									GLuint64 result = 0;
-
-									glGetQueryObjectui64v(pass.queryId[j], GL_QUERY_RESULT, &result);
-									pass.queryResult[j] = result;
-								}
-								else
-									pass.ready = false;
-							}						
-							
-						}
-						
-						allReady = allReady & pass.ready;
-						++loops;
-
-					}
-				}
-			
-
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
-				
-			}
-
-			auto end = std::chrono::high_resolution_clock::now();
-			std::chrono::duration<double, std::milli> elapsed = end - start;
-			
-			std::cout << "[Debug] Collected all queries in " << loops << " loops, " << elapsed.count() << " ms.\n";
-			
-
-
-			std::sort(autoAlignPasses.begin(), autoAlignPasses.end());
-			auto bestResult = autoAlignPasses.back();
-			unsigned long totalScore = bestResult.queryResult[0] + bestResult.queryResult[0] + +bestResult.queryResult[2] + bestResult.queryResult[3];
-			std::cout << "[Debug] Selected best pass, score: " << totalScore << " [" << bestResult.queryResult[0] << ", " << bestResult.queryResult[1] << ", " << bestResult.queryResult[2] << ", " << bestResult.queryResult[3] << "]\n";
-
-
-
-			stacks[currentStack]->applyTransform(bestResult.matrix);
-
-
-		}
-
-		// if we are still going, create a new set of transforms to find ... 
-		if (runAlignment)
-			createAutoAlignments();
+		if (candidateTransforms.empty())
+			createCandidateTransforms();
 		
+		if (currentResult.ready)
+		{
+			occlusionQueryResults.push_back(currentResult);
 
+			// reset the current result
+			currentResult.result[0] = 0;
+			currentResult.result[1] = 0;
+			currentResult.result[2] = 0;
+			currentResult.result[3] = 0;
+			currentResult.ready = false;
+			currentResult.matrix = candidateTransforms.back();
+		}
+		
+		// first process all existing transforms
+		if (occlusionQueryResults.size() >= 10)
+			selectAndApplyBestTransform();
+
+		
 	}
+
+
 
 
 }
@@ -1304,431 +1313,42 @@ void SpimRegistrationApp::maximizeViews()
 }
 
 
-void SpimRegistrationApp::createAutoAlignments()
+void SpimRegistrationApp::createCandidateTransforms()
 {
 	const unsigned int PASSES = 10;
 
-	if (autoAlignPasses.empty())
+	for (unsigned int i = 0; i < PASSES; ++i)
 	{
-		// test different transformations
-		autoAlignPasses.resize(PASSES);
+		// create matrix here
+		glm::mat4 mat(1.f);
 
-		for (size_t i = 0; i < autoAlignPasses.size(); ++i)
-			glGenQueries(4, autoAlignPasses[i].queryId);
-
-		std::cout << "[Debug] Created " << autoAlignPasses.size() << " new auto align passes.\n";
+		candidateTransforms.push_back(mat);
 	}
 
-
-	// reset auto alignments
-	for (size_t i = 0; i < autoAlignPasses.size(); ++i)
-	{
-		for (int j = 0; j < 4; ++j)
-		{
-			autoAlignPasses[i].queryResult[j] = 0;
-			autoAlignPasses[i].enabledMask[j] = false;
-		}
-
-		// create new matrix here
-		autoAlignPasses[i].matrix = glm::mat4(1.f);
-		autoAlignPasses[i].ready = false;
-
-
-	}
-	//std::cout << "[Debug] Resetted " << autoAlignPasses.size() << " auto align passes.\n";
-
-
+	// reset the current result
+	currentResult.result[0] = 0;
+	currentResult.result[1] = 0;
+	currentResult.result[2] = 0;
+	currentResult.result[3] = 0;
+	currentResult.ready = false;
+	currentResult.matrix = candidateTransforms.back();
 }
 
 
-
-
-#undef near
-#undef far
-
-/*
-void SpimRegistrationApp::TEST_occlusionQueryStackOverlap(const Viewport* vp, OcclusionPass pass)
+void SpimRegistrationApp::selectAndApplyBestTransform()
 {
-using namespace glm;
+	if (occlusionQueryResults.empty())
+		return;
 
-orthoRenderTarget[pass]->bind();
+	sort(occlusionQueryResults.begin(), occlusionQueryResults.end());
+	const OcclusionQueryResult& bestResult = occlusionQueryResults.back();
+	
+	// apply transform
+	stacks[currentStack]->applyTransform(bestResult.matrix);
 
-vec3 clearColor = getRandomColor(pass);
-glClearColor(clearColor.r, clearColor.g, clearColor.b, 1.0);
+	std::cout << "[Debug] Selected transform with a score of " << bestResult.getScore() << std::endl;
 
-glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-drawGroundGrid(vp);
-drawBoundingBoxes();
-
-glBeginQuery(GL_SAMPLES_PASSED, samplesPassedQuery[pass]);
-
-
-// setup the matrix based on the pass direction
-vec3 center = globalBBox.getCentroid();
-
-OrthoCamera* cam = dynamic_cast<OrthoCamera*>(vp->camera);
-cam->target = center;
-
-
-drawViewplaneSlices(vp, volumeDifferenceShader);
-
-glEndQuery(GL_SAMPLES_PASSED);
-
-orthoRenderTarget[pass]->disable();
-glClearColor(0, 0, 0, 0);
+	occlusionQueryResults.clear();
 }
 
 
-unsigned long SpimRegistrationApp::TEST_occlusionQuery(OcclusionPass pass)
-{
-GLint queryStatus = GL_FALSE;
-while (queryStatus == GL_FALSE)
-{
-glGetQueryObjectiv(samplesPassedQuery[pass], GL_QUERY_RESULT_AVAILABLE, &queryStatus);
-}
-
-
-GLuint64 samplesPassed = 0;
-glGetQueryObjectui64v(samplesPassedQuery[pass], GL_QUERY_RESULT, &samplesPassed);
-
-
-return samplesPassed;
-}
-
-
-void SpimRegistrationApp::TEST_alignStack(const Viewport* vp)
-{
-if (currentStack == -1)
-return;
-
-static std::mt19937 rng;
-static std::uniform_real<float> rngDist(-0.5f, 0.5f);
-
-
-
-// 1) get camera frame
-
-
-// 2) create delta matrix
-float dx = rngDist(rng);
-float dz = rngDist(rng);
-float ry = rngDist(rng);
-
-glm::mat4 R = glm::rotate(ry, glm::vec3(0, 1, 0));
-glm::mat4 T = glm::translate(glm::vec3(dx, 0, dz));
-glm::mat4 M = R * T;
-
-
-
-std::cout << "[Debug] Delta T: " << M << std::endl;
-
-
-lastPassMatrix = stacks[currentStack]->transform;
-
-// 3) apply matrix to stack
-assert(stacks.size() > 1);
-stacks[currentStack]->applyTransform(M);
-
-
-// 4) render frame stack and record value
-
-}
-
-
-
-
-void SpimRegistrationApp::TEST_alignStacksSeries(const Viewport* vp)
-{
-if (currentStack == -1)
-return;
-
-
-std::cout << "[Align] Auto-aligning stack " << currentStack << " ... ";
-
-struct AlignResult
-{
-float			delta;
-unsigned long	samplesPassed;
-
-
-inline bool operator < (const AlignResult& rhs) const
-{
-return samplesPassed < rhs.samplesPassed;
-}
-};
-
-std::vector<AlignResult> series;
-
-AlignResult bestX;
-glm::mat4 originalTransform = stacks[currentStack]->transform;
-
-// test for x movement
-for (int i = -200; i <= 200; ++i)
-{
-
-// reset transform for this iteration
-stacks[currentStack]->transform = originalTransform;
-
-float x = (float)i / 2.f;
-
-glm::mat4 T = glm::translate(glm::vec3(x, 0, 0));
-stacks[currentStack]->applyTransform(T);
-
-AlignResult result;
-result.delta = x;
-TEST_occlusionQueryStackOverlap(vp, OCCLUSION_QUERY_PASS_Y);
-result.samplesPassed = TEST_occlusionQuery(OCCLUSION_QUERY_PASS_Y);
-
-series.push_back(result);
-}
-
-std::ofstream file(configPath + "/series_x.csv");
-assert(file.is_open());
-for (size_t i = 0; i < series.size(); ++i)
-file << series[i].delta << ", " << series[i].samplesPassed << std::endl;
-file.close();
-
-// save the best result
-sort(series.begin(), series.end());
-bestX = series.back();
-
-series.clear();
-
-
-// test for z movement
-for (int i = -200; i <= 200; ++i)
-{
-
-// reset transform for this iteration
-stacks[currentStack]->transform = originalTransform;
-
-float z = (float)i / 2.f;
-
-glm::mat4 T = glm::translate(glm::vec3(0, 0, z));
-stacks[currentStack]->applyTransform(T);
-
-AlignResult result;
-result.delta = z;
-TEST_occlusionQueryStackOverlap(vp, OCCLUSION_QUERY_PASS_Y);
-result.samplesPassed = TEST_occlusionQuery(OCCLUSION_QUERY_PASS_Y);
-
-series.push_back(result);
-}
-
-file.open(configPath + "/series_z.csv");
-assert(file.is_open());
-for (size_t i = 0; i < series.size(); ++i)
-file << series[i].delta << ", " << series[i].samplesPassed << std::endl;
-file.close();
-series.clear();
-
-
-// test for y rotation
-for (int i = -45; i <= 45; ++i)
-{
-// reset transform for this iteration
-stacks[currentStack]->transform = originalTransform;
-
-float a = (float)i * 0.5;
-
-glm::mat4 T = glm::rotate(a, glm::vec3(0, 1, 0));
-stacks[currentStack]->applyTransform(T);
-
-AlignResult result;
-result.delta = a;
-TEST_occlusionQueryStackOverlap(vp, OCCLUSION_QUERY_PASS_Y);
-result.samplesPassed = TEST_occlusionQuery(OCCLUSION_QUERY_PASS_Y);
-
-series.push_back(result);
-}
-
-file.open(configPath + "/series_ry.csv");
-assert(file.is_open());
-for (size_t i = 0; i < series.size(); ++i)
-file << series[i].delta << ", " << series[i].samplesPassed << std::endl;
-
-file.close();
-series.clear();
-
-stacks[currentStack]->transform = originalTransform;
-std::cout << "done.\n";
-
-
-bool autoAlign = true;
-if (autoAlign)
-{
-saveStackTransform(currentStack);
-
-// use the prev. found best X transform
-std::cout << "[Align] Rerunning best result ... ";
-glm::mat4 T = glm::translate(glm::vec3(bestX.delta, 0, 0));
-stacks[currentStack]->applyTransform(T);
-
-originalTransform = stacks[currentStack]->transform;
-
-
-// rerun the test for z movement on the best x axis
-for (int i = -200; i <= 200; ++i)
-{
-
-// reset transform for this iteration
-stacks[currentStack]->transform = originalTransform;
-
-float z = (float)i / 2.f;
-
-glm::mat4 T = glm::translate(glm::vec3(0, 0, z));
-stacks[currentStack]->applyTransform(T);
-
-AlignResult result;
-result.delta = z;
-TEST_occlusionQueryStackOverlap(vp, OCCLUSION_QUERY_PASS_Y);
-result.samplesPassed = TEST_occlusionQuery(OCCLUSION_QUERY_PASS_Y);
-
-series.push_back(result);
-}
-
-// find and apply the best result here
-std::sort(series.begin(), series.end());
-AlignResult bestZ = series.back();
-series.clear();
-
-stacks[currentStack]->transform = originalTransform;
-stacks[currentStack]->applyTransform(glm::translate(glm::vec3(0, 0, bestZ.delta)));
-
-
-
-// rerun the test for y rotation
-// test for y rotation
-originalTransform = stacks[currentStack]->transform;
-
-for (int i = -45; i <= 45; ++i)
-{
-// reset transform for this iteration
-stacks[currentStack]->transform = originalTransform;
-
-float a = (float)i * 0.5;
-
-glm::mat4 T = glm::rotate(a, glm::vec3(0, 1, 0));
-stacks[currentStack]->applyTransform(T);
-
-AlignResult result;
-result.delta = a;
-TEST_occlusionQueryStackOverlap(vp, OCCLUSION_QUERY_PASS_Y);
-result.samplesPassed = TEST_occlusionQuery(OCCLUSION_QUERY_PASS_Y);
-
-series.push_back(result);
-}
-
-
-// find and apply the best result here
-std::sort(series.begin(), series.end());
-AlignResult bestRY = series.back();
-
-stacks[currentStack]->transform = originalTransform;
-stacks[currentStack]->applyTransform(glm::rotate(bestRY.delta, glm::vec3(0, 1, 0)));
-
-std::cout << "done.\n";
-
-updateGlobalBbox();
-}
-
-
-
-
-
-
-
-
-
-
-}
-
-#if 0
-void SpimRegistrationApp::TEST_alignStacksVolume(const Viewport* vp)
-{
-
-
-using namespace std;
-using namespace glm;
-
-if (currentStack == -1)
-return;
-
-
-cout << "[Align] Auto-aligning stack " << currentStack << " ... \n";
-
-
-
-const unsigned int ANGLES = 120;
-const float ANGLE_STEP = 360.f / ANGLES;
-
-const int X_BOUND = 15;
-const int Z_BOUND = 15;
-const float PLANAR_STEP = 4.f;
-
-unsigned short* resultSpace = new unsigned short[ANGLES * (X_BOUND*2+1) * (Z_BOUND*2+1)];
-
-mat4 originalTransform = stacks[currentStack]->transform;
-
-
-for (int a = 0; a < ANGLES; ++a)
-{
-mat4 R = glm::rotate((float)(a - ANGLES/2) * ANGLE_STEP, vec3(0, 1, 0));
-
-cout << "[Align] " << a << "/" << ANGLES << " ... ";
-
-unsigned int startTime = glutGet(GLUT_ELAPSED_TIME);
-
-unsigned short maxVal = 0;
-unsigned short minVal = numeric_limits<unsigned short>::max();
-
-for (int x = -X_BOUND; x <= X_BOUND; ++x)
-{
-float dx = (float)x * PLANAR_STEP; // / 2.f;
-unsigned int ix = x + X_BOUND;
-
-for (int z = -Z_BOUND; z <= Z_BOUND; ++z)
-{
-float dz = (float)z * PLANAR_STEP; // / 2.f;
-unsigned int iz = z + Z_BOUND;
-mat4 T = translate(vec3(dx, 0, dz));
-
-// reset transform for this iteration
-stacks[currentStack]->transform = originalTransform;
-
-stacks[currentStack]->applyTransform(R*T);
-unsigned short result = (unsigned short)TEST_occlusionQueryStackOverlap(vp);
-
-maxVal = std::max(maxVal, result);
-minVal = std::min(minVal, result);
-
-unsigned int index = ix + iz * (X_BOUND * 2 + 1) + a * (X_BOUND * 2 + 1) * (Z_BOUND * 2 + 1);
-resultSpace[index] = result;
-}
-
-
-
-}
-
-unsigned int endTime = glutGet(GLUT_ELAPSED_TIME);
-float seconds = (float)(endTime - startTime) / 1000.f;
-
-cout << "done (" << seconds << "s). [" << minVal << " -- " << maxVal << "]\n";
-
-}
-
-char filename[256];
-sprintf(filename, "result_%dx%dx%d.bin", (X_BOUND * 2 + 1), (Z_BOUND * 2 + 1), ANGLES);
-ofstream file(configPath + string(filename));
-
-file.write(reinterpret_cast<const char*>(resultSpace), (X_BOUND * 2 + 1) * (Z_BOUND * 2 + 1) * ANGLES* sizeof(unsigned short));
-
-delete[] resultSpace;
-
-
-}
-#endif
-
-
-*/
