@@ -164,7 +164,6 @@ private:
 	void updateGlobalBbox();
 
 	void drawContrastEditor(const Viewport* vp);
-	void drawScene(const Viewport* vp);
 	
 	void drawGroundGrid(const Viewport* vp) const;
 	void drawBoundingBoxes() const;

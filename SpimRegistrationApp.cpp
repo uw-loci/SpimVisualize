@@ -128,23 +128,54 @@ void SpimRegistrationApp::draw()
 				glBeginQuery(GL_SAMPLES_PASSED, singleOcclusionQuery);
 				glBeginQuery(GL_SAMPLES_PASSED, occlusionQueries[query]);
 
-				drawScene(vp);
+				if (drawGrid)
+					drawGroundGrid(vp);
+
+				drawViewplaneSlices(vp, volumeDifferenceShader);
+
+				if (drawBboxes)
+					drawBoundingBoxes();
+
 
 				glEndQuery(GL_SAMPLES_PASSED);
 
 				volumeRenderTarget->disable();
 
 				undoLastTransform();
+
+				drawTexturedQuad(volumeRenderTarget->getColorbuffer());
+			}
+			else
+			{
+				volumeRenderTarget->bind();
+				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+
+				// draw scene here
+				if (drawGrid)
+					drawGroundGrid(vp);
+
+
+				drawViewplaneSlices(vp, volumeDifferenceShader);
+
+
+				/*
+				if (drawSlices)
+					drawAxisAlignedSlices(vp, sliceShader);
+				
+				else
+					drawViewplaneSlices(vp, volumeShader);
+				*/
+
+				if (drawBboxes)
+					drawBoundingBoxes();
+
+				volumeRenderTarget->disable();
+
+				drawTonemappedQuad(volumeRenderTarget->getColorbuffer());
+
 			}
 
-			volumeRenderTarget->bind();
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-			drawScene(vp);
-
-			volumeRenderTarget->disable();
-
-			drawTonemappedQuad(volumeRenderTarget->getColorbuffer());
 
 
 
@@ -328,31 +359,6 @@ void SpimRegistrationApp::drawTonemappedQuad(unsigned int texture) const
 }
 
 
-void SpimRegistrationApp::drawScene(const Viewport* vp)
-{
-
-	if (drawGrid)
-		drawGroundGrid(vp);
-		
-
-	drawViewplaneSlices(vp, volumeShader);
-
-
-
-	/*
-	if (drawSlices)
-	{
-		drawAxisAlignedSlices(vp, sliceShader);
-	}
-	else
-	{
-		drawViewplaneSlices(vp, volumeShader);
-	}
-	*/
-
-	if (drawBboxes)
-		drawBoundingBoxes();
-}
 
 
 glm::vec3 SpimRegistrationApp::getRandomColor(int n)
@@ -545,7 +551,7 @@ void SpimRegistrationApp::moveStack(const glm::vec2& delta)
 		return;
 
 	Viewport* vp = layout->getActiveViewport();
-	if (vp)// && vp->name != Viewport::PERSPECTIVE)
+	if (vp && vp->name != Viewport::CONTRAST_EDITOR)
 	{
 		stacks[currentStack]->move(vp->camera->calculatePlanarMovement(delta));
 	}
@@ -903,8 +909,8 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 
 
 	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	//glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
 
 	shader->bind();
@@ -1189,6 +1195,10 @@ void SpimRegistrationApp::beginAutoAlign()
 	createCandidateTransforms();
 	
 
+	lastSamplesPass = 0;
+	lastPassMatrix = stacks[currentStack]->transform;
+
+
 	saveStackTransform(currentStack);
 }
 
@@ -1315,16 +1325,36 @@ void SpimRegistrationApp::maximizeViews()
 
 void SpimRegistrationApp::createCandidateTransforms()
 {
-	const unsigned int PASSES = 10;
-
-	for (unsigned int i = 0; i < PASSES; ++i)
+	for (int x = -5; x <= 5; ++x)
 	{
-		// create matrix here
-		glm::mat4 mat(1.f);
+		for (int z = -5; z <= 5; ++z)
+		{
+			glm::vec3 v(x, 0.f, z);
+			v /= 5.f;
 
-		candidateTransforms.push_back(mat);
+			glm::mat4 T = glm::translate(v);
+
+
+			for (int ry = -3; ry <= 3; ++ry)
+			{
+				float angle = ry / 10.f;
+				glm::mat4 R = glm::rotate(angle, glm::vec3(0, 1, 0));
+
+				candidateTransforms.push_back(R*T);
+			}
+
+			
+
+
+		}
+
 	}
 
+	std::mt19937 rng;
+	std::shuffle(candidateTransforms.begin(), candidateTransforms.end(), rng);
+
+	std::cout << "[Debug] Created " << candidateTransforms.size() << " new candidate transforms.\n";
+	
 	// reset the current result
 	currentResult.result[0] = 0;
 	currentResult.result[1] = 0;
@@ -1343,11 +1373,19 @@ void SpimRegistrationApp::selectAndApplyBestTransform()
 	sort(occlusionQueryResults.begin(), occlusionQueryResults.end());
 	const OcclusionQueryResult& bestResult = occlusionQueryResults.back();
 	
-	// apply transform
-	stacks[currentStack]->applyTransform(bestResult.matrix);
 
-	std::cout << "[Debug] Selected transform with a score of " << bestResult.getScore() << std::endl;
+	if (bestResult.getScore() > lastSamplesPass)
+	{
+		// apply transform
+		stacks[currentStack]->applyTransform(bestResult.matrix);
+		std::cout << "[Debug] Selected transform with a score of " << bestResult.getScore() << std::endl;
 
+
+		lastSamplesPass = bestResult.getScore();
+	}
+	else
+		std::cout << "[Debug] No transform with better samples passed than before!\n";
+	
 	occlusionQueryResults.clear();
 }
 
