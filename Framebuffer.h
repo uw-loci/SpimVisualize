@@ -52,7 +52,7 @@ public:
 		@param filter the mag/min filter to use
 		@param depthTexture Is the depth buffer readable or not (default: not readable)
 	*/	
-	Framebuffer(unsigned int width, unsigned int height, GLenum channels = GL_RGBA, GLenum type = GL_UNSIGNED_BYTE, unsigned int colorbufferCount = 1, GLenum filter=GL_NEAREST_MIPMAP_LINEAR, bool depthTexture=false);
+	Framebuffer(unsigned int width, unsigned int height, GLenum internatlFormat = GL_RGBA, GLenum type = GL_UNSIGNED_BYTE, unsigned int colorbufferCount = 1, GLenum filter=GL_NEAREST_MIPMAP_LINEAR, bool depthTexture=false);
 	/// D'Tor
 	~Framebuffer();
 	
@@ -78,8 +78,6 @@ public:
 	unsigned int getWidth() const;
 	unsigned int getHeight() const;
 	
-	GLenum getChannels() const;
-	GLenum getDataType() const;
 	GLenum getMinFilterType() const;
 		
 	/// \}
@@ -88,7 +86,7 @@ private:
 	unsigned int 	mWidth, mHeight;
 	unsigned int	mBuffer;
 	
-	GLenum			mChannels;
+	GLenum			mInternalFormat;
 	GLenum			mType;
 	GLenum			mFilter;
 	
@@ -157,16 +155,6 @@ inline unsigned int Framebuffer::getWidth() const
 inline unsigned int Framebuffer::getHeight() const
 {
 	return mHeight;
-}
-
-inline GLenum Framebuffer::getChannels() const
-{
-	return mChannels;
-}
-
-inline GLenum Framebuffer::getDataType() const
-{
-	return mType;
 }
 
 inline GLenum Framebuffer::getMinFilterType() const

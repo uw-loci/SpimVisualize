@@ -56,22 +56,27 @@ static void validate(unsigned int buffer) throw(std::string)
 	}
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
-	
-Framebuffer::Framebuffer(unsigned int width, unsigned int height, GLenum channels, GLenum type, unsigned int colorbufferCount, GLenum filter, bool depthTexture) :
-	mWidth(width), mHeight(height), mChannels(channels), mType(type), mFilter(filter), mColorbufferCount(colorbufferCount), mDepthBuffer(0), mDepthTexture(depthTexture)
+
+Framebuffer::Framebuffer(unsigned int width, unsigned int height, GLenum internalFormat, GLenum type, unsigned int colorbufferCount, GLenum filter, bool depthTexture) :
+	mWidth(width), mHeight(height), mInternalFormat(internalFormat), mType(type), mFilter(filter), mColorbufferCount(colorbufferCount), mDepthBuffer(0), mDepthTexture(depthTexture)
 {	
 	glGenFramebuffers(1, &mBuffer);
 	glBindFramebuffer( GL_FRAMEBUFFER, mBuffer );
 
 	mColorbuffer = new unsigned int[mColorbufferCount];
 	
+
+	//mChannels = getChannelConfig(channels, type);
+
 	// create the color buffers
 	glGenTextures( mColorbufferCount, mColorbuffer );
 	for (unsigned int i = 0; i < mColorbufferCount; ++i)
 	{		
 		glBindTexture( GL_TEXTURE_2D, mColorbuffer[i] );
-		glTexImage2D(GL_TEXTURE_2D, 0, mChannels, mWidth, mHeight, 0, channels, type, 0);
 		
+				
+		glTexImage2D(GL_TEXTURE_2D, 0, mInternalFormat, mWidth, mHeight, 0, GL_RGBA, type, 0);
+
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP); 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
