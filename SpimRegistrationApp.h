@@ -29,6 +29,7 @@ public:
 
 
 	void reloadShaders();
+	void switchRenderMode();
 
 	void update(float dt);
 	void draw();
@@ -46,6 +47,7 @@ public:
 
 	void moveStack(const glm::vec2& delta);
 	void rotateCurrentStack(float rotY);
+	void inspectOutputImage(const glm::ivec2& cursor);
 
 	void changeContrast(const glm::ivec2& cursor);
 	void calculateHistograms();
@@ -93,8 +95,7 @@ public:
 
 	inline void toggleGrid() { drawGrid = !drawGrid; }
 	inline void toggleBboxes() { drawBboxes = !drawBboxes; }
-	inline void toggleSlices() { drawSlices = !drawSlices; }
-	
+	void toggleSlices();
 
 	inline void setConfigPath(const std::string& p) { configPath = p; }
 
@@ -131,6 +132,7 @@ private:
 
 	// how many planes/slices to draw for the volume
 	unsigned int			sliceCount;
+	bool					subsampleOnCameraMove;
 	
 	Shader*					pointShader;
 	Shader*					volumeShader;
@@ -138,12 +140,17 @@ private:
 
 	Shader*					volumeDifferenceShader;
 	Shader*					volumeRaycaster;
-	Shader*					drawQuad;;
+	Shader*					drawQuad;
 	
 	// for contrast mapping
 	Shader*					tonemapper;
 
-	
+	enum RenderMode
+	{
+		RENDER_VIEWPLANE_SLICES,
+		RENDER_ALIGN
+
+	}						renderMode;
 
 	// stores undo transformations for all stacks
 	struct StackTransform
@@ -154,12 +161,7 @@ private:
 		
 	std::vector<StackTransform> transformUndoChain;
 		
-	Framebuffer*			volumeRenderTarget;
-	
-	
-
-
-
+	Framebuffer*			volumeRenderTarget;	
 
 	void updateGlobalBbox();
 
@@ -169,7 +171,7 @@ private:
 	void drawBoundingBoxes() const;
 
 	void drawTexturedQuad(unsigned int texture) const;
-	void drawTonemappedQuad(unsigned int texture) const;
+	void drawTonemappedQuad(Framebuffer* fbo) const;
 
 	void drawAxisAlignedSlices(const glm::mat4& mvp, const glm::vec3& axis, const Shader* shader) const;
 	void drawAxisAlignedSlices(const Viewport* vp, const Shader* shader) const;
@@ -211,6 +213,8 @@ private:
 
 	void createCandidateTransforms();
 	void selectAndApplyBestTransform();
+
+	float calculateScore( Framebuffer* fbo) const;
 
 
 	static glm::vec3 getRandomColor(int n);

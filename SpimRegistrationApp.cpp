@@ -21,7 +21,8 @@
 
 SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(0), sliceShader(0), volumeShader(0), layout(0), 
 	drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), currentStack(-1), sliceCount(400), 
-	configPath("./"), cameraMoving(false), runAlignment(false), histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f)
+	configPath("./"), cameraMoving(false), runAlignment(false), histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f),
+	subsampleOnCameraMove(false), renderMode(RENDER_VIEWPLANE_SLICES)
 {
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
@@ -32,19 +33,19 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(0)
 	globalThreshold.max = 130; // std::numeric_limits<unsigned short>::max();
 
 	reloadShaders();
-		
-	volumeRenderTarget = new Framebuffer(512, 512, GL_RGBA, GL_FLOAT);
 
+	volumeRenderTarget = new Framebuffer(512, 512, GL_RGBA32F, GL_FLOAT);
 
 	glGenQueries(4, occlusionQueries);
 	glGenQueries(1, &singleOcclusionQuery);
+
 }
 
 SpimRegistrationApp::~SpimRegistrationApp()
 {
 	
 	delete volumeRenderTarget;
-
+	
 	delete drawQuad;
 	delete pointShader;
 	delete sliceShader;
@@ -72,7 +73,7 @@ void SpimRegistrationApp::reloadShaders()
 	pointShader = new Shader("shaders/points2.vert", "shaders/points2.frag");
 
 	delete sliceShader;
-	sliceShader = new Shader("shaders/volume.vert", "shaders/volume.frag");
+	sliceShader = new Shader("shaders/slices.vert", "shaders/slices.frag");
 
 	delete volumeShader;
 	volumeShader = new Shader("shaders/volume2.vert", "shaders/volume2.frag");
@@ -89,6 +90,25 @@ void SpimRegistrationApp::reloadShaders()
 	delete tonemapper;
 	tonemapper = new Shader("shaders/drawQuad.vert", "shaders/tonemapper.frag");
 
+}
+
+void SpimRegistrationApp::switchRenderMode()
+{
+	switch (renderMode)
+	{
+	case RENDER_ALIGN:
+		std::cout << "[Render] Now rendering viewplane slices\n";
+		renderMode = RENDER_VIEWPLANE_SLICES;
+		break;
+	case RENDER_VIEWPLANE_SLICES:
+		std::cout << "[Render] Now rendering alignment volumes.\n";
+		renderMode = RENDER_ALIGN;
+		break;
+
+	default:
+		std::cout << "[Render] Invalid rendermode.\n";
+		renderMode = RENDER_ALIGN;
+	}
 
 }
 
@@ -125,19 +145,19 @@ void SpimRegistrationApp::draw()
 				volumeRenderTarget->bind();
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-				glBeginQuery(GL_SAMPLES_PASSED, singleOcclusionQuery);
-				glBeginQuery(GL_SAMPLES_PASSED, occlusionQueries[query]);
 
 				if (drawGrid)
 					drawGroundGrid(vp);
 
+				glBeginQuery(GL_SAMPLES_PASSED, singleOcclusionQuery);
+				//glBeginQuery(GL_SAMPLES_PASSED, occlusionQueries[query]);
+
 				drawViewplaneSlices(vp, volumeDifferenceShader);
+
+				glEndQuery(GL_SAMPLES_PASSED);
 
 				if (drawBboxes)
 					drawBoundingBoxes();
-
-
-				glEndQuery(GL_SAMPLES_PASSED);
 
 				volumeRenderTarget->disable();
 
@@ -147,35 +167,59 @@ void SpimRegistrationApp::draw()
 			}
 			else
 			{
+
 				volumeRenderTarget->bind();
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-
-				// draw scene here
 				if (drawGrid)
 					drawGroundGrid(vp);
 
-
-				drawViewplaneSlices(vp, volumeDifferenceShader);
-
-
-				/*
-				if (drawSlices)
-					drawAxisAlignedSlices(vp, sliceShader);
-				
-				else
+				if (renderMode == RENDER_ALIGN)
+					drawViewplaneSlices(vp, volumeDifferenceShader);
+				else if (renderMode == RENDER_VIEWPLANE_SLICES)
 					drawViewplaneSlices(vp, volumeShader);
-				*/
 
 				if (drawBboxes)
 					drawBoundingBoxes();
 
 				volumeRenderTarget->disable();
+				
 
-				drawTonemappedQuad(volumeRenderTarget->getColorbuffer());
-
+				drawTexturedQuad(volumeRenderTarget->getColorbuffer());
 			}
 
+
+
+
+			// FIXME!
+			/*
+			else
+			{
+				volumeRenderTarget->bind();
+				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+
+				// draw scene here
+				if (drawSlices)
+					drawAxisAlignedSlices(vp, sliceShader);
+				else
+					drawViewplaneSlices(vp, volumeShader);
+				
+				volumeRenderTarget->disable();
+
+
+				if (drawGrid)
+					drawGroundGrid(vp);
+				
+				drawTonemappedQuad(volumeRenderTarget);
+
+
+				if (drawBboxes)
+					drawBoundingBoxes();
+
+
+			}
+			*/
 
 
 
@@ -334,15 +378,41 @@ void SpimRegistrationApp::drawTexturedQuad(unsigned int texture) const
 }
 
 
-void SpimRegistrationApp::drawTonemappedQuad(unsigned int texture) const
+void SpimRegistrationApp::drawTonemappedQuad(Framebuffer* fbo) const
 {
+
+	// read back render target to determine largest and smallest value
+	bool readback = false;
+	if (readback)
+	{
+		fbo->bind();
+		glReadBuffer(GL_COLOR_ATTACHMENT0);
+
+		std::vector<glm::vec4> pixels(fbo->getWidth()*fbo->getHeight());
+		glReadPixels(0, 0, fbo->getWidth(), fbo->getHeight(), GL_RGBA, GL_FLOAT, glm::value_ptr(pixels[0]));
+		fbo->disable();
+
+		glm::vec4 minVal(std::numeric_limits<float>::max());
+		glm::vec4 maxVal(std::numeric_limits<float>::lowest());
+
+		for (size_t i = 0; i < pixels.size(); ++i)
+		{
+			minVal = glm::min(minVal, pixels[i]);
+			maxVal = glm::max(maxVal, pixels[i]);
+		}
+
+		std::cout << "[Debug] Read back min: " << minVal << ", max: " << maxVal << std::endl;
+
+		glReadBuffer(GL_BACK);
+	}
+
 	glDisable(GL_DEPTH_TEST);
 	glDepthMask(GL_FALSE);
 
 	tonemapper->bind();
-	tonemapper->setUniform("maxThreshold", (int)globalThreshold.max);
-	tonemapper->setUniform("minThreshold", (int)globalThreshold.min);
-	tonemapper->setTexture2D("colormap", texture);
+	tonemapper->setUniform("maxThreshold", (float)globalThreshold.max);
+	tonemapper->setUniform("minThreshold", (float)globalThreshold.min);
+	tonemapper->setTexture2D("colormap", fbo->getColorbuffer());
 
 	glBegin(GL_QUADS);
 	glVertex2i(0, 1);
@@ -476,7 +546,7 @@ void SpimRegistrationApp::centerCamera()
 		if (currentStack == -1)
 			vp->camera->target = globalBBox.getCentroid();
 		else
-			vp->camera->target = stacks[currentStack]->getBBox().getCentroid();
+			vp->camera->target = stacks[currentStack]->getTransformedBBox().getCentroid();
 	}
 }
 
@@ -909,13 +979,16 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 
 
 	glEnable(GL_BLEND);
-	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+	//glBlendFunc(GL_ONE, GL_ONE);
+	//glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	
+	//glBlendEquation(GL_MAX);
 
 
 	shader->bind();
-	shader->setUniform("minThreshold", globalThreshold.min);
-	shader->setUniform("maxThreshold", globalThreshold.max);
+	shader->setUniform("minThreshold", (float)globalThreshold.min);
+	shader->setUniform("maxThreshold", (float)globalThreshold.max);
 	
 	const glm::vec3 camPos = vp->camera->getPosition();
 	const glm::vec3 viewDir = glm::normalize(vp->camera->target - camPos);
@@ -977,11 +1050,12 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 
 
 	unsigned int slices = sliceCount;
-	if (cameraMoving)
+	if (subsampleOnCameraMove && cameraMoving)
 		slices = sliceCount / 5;
 
 	shader->setUniform("sliceCount", (float)slices);
-	
+	//std::cout << "[Debug] Slicecount: " << slices << std::endl;
+
 	// draw all slices
 	glBegin(GL_QUADS);	
 	for (int z = 0; z < slices; ++z)
@@ -1047,9 +1121,7 @@ void SpimRegistrationApp::drawAxisAlignedSlices(const Viewport* vp, const Shader
 	// additive blending
 	glEnable(GL_BLEND);
 	glBlendEquation(GL_FUNC_ADD);
-	glBlendFunc(GL_ONE, GL_ONE); // GL_ONE_MINUS_SRC_ALPHA);
-	//glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
 	glDisable(GL_DEPTH_TEST);
 	glDepthMask(GL_FALSE);
@@ -1057,8 +1129,8 @@ void SpimRegistrationApp::drawAxisAlignedSlices(const Viewport* vp, const Shader
 	shader->bind();
 	shader->setUniform("mvpMatrix", mvp);
 
-	shader->setUniform("maxThreshold", (int)globalThreshold.max);
-	shader->setUniform("minThreshold", (int)globalThreshold.min);
+	shader->setUniform("maxThreshold", (float)globalThreshold.max);
+	shader->setUniform("minThreshold", (float)globalThreshold.min);
 
 	for (size_t i = 0; i < stacks.size(); ++i)
 	{
@@ -1299,9 +1371,7 @@ void SpimRegistrationApp::update(float dt)
 
 		
 	}
-
-
-
+	
 
 }
 
@@ -1330,7 +1400,7 @@ void SpimRegistrationApp::createCandidateTransforms()
 		for (int z = -5; z <= 5; ++z)
 		{
 			glm::vec3 v(x, 0.f, z);
-			v /= 5.f;
+			v /= 10.f;
 
 			glm::mat4 T = glm::translate(v);
 
@@ -1390,3 +1460,71 @@ void SpimRegistrationApp::selectAndApplyBestTransform()
 }
 
 
+void SpimRegistrationApp::toggleSlices()
+{
+	drawSlices = !drawSlices;
+	std::cout << "[Render] Drawing " << (drawSlices ? "slices" : "volumes") << std::endl;
+}
+
+float SpimRegistrationApp::calculateScore(Framebuffer* fbo) const
+{
+	fbo->bind();
+	glReadBuffer(GL_COLOR_ATTACHMENT0);
+
+	std::vector<glm::vec4> pixels(fbo->getWidth()*fbo->getHeight());
+	glReadPixels(0, 0, fbo->getWidth(), fbo->getHeight(), GL_RGBA, GL_FLOAT, glm::value_ptr(pixels[0]));
+	fbo->disable();
+
+	float value = 0.f;
+
+	for (size_t i = 0; i < pixels.size(); ++i)
+	{
+		value += pixels[i].g;
+	}
+
+	std::cout << "[Debug] Read back score: " << value << std::endl;
+	glReadBuffer(GL_BACK);
+
+	return value;
+}
+
+void SpimRegistrationApp::inspectOutputImage(const glm::ivec2& cursor)
+{
+	using namespace glm;
+
+	// only work with fullscreen layouts for now 
+	if (!layout->isSingleView())
+		return;
+
+	if (currentStackValid())
+		return;
+
+
+	// read back last render target
+	// TODO: change me to the _correct_ render target
+	volumeRenderTarget->bind();
+	glReadBuffer(GL_COLOR_ATTACHMENT0);
+
+	std::vector<vec4> pixels(volumeRenderTarget->getWidth()*volumeRenderTarget->getHeight());
+	glReadPixels(0, 0, volumeRenderTarget->getWidth(), volumeRenderTarget->getHeight(), GL_RGBA, GL_FLOAT, glm::value_ptr(pixels[0]));
+	volumeRenderTarget->disable();
+
+	// calculate relative coordinates
+	Viewport* vp = layout->getActiveViewport();
+	if (vp)
+	{
+		vec2 relCoords = vp->getRelativeCoords(cursor);
+
+		// calculate image coords and index
+		ivec2 imgCoords(relCoords * vec2(volumeRenderTarget->getWidth(), volumeRenderTarget->getHeight()));
+
+		// clamp
+		imgCoords = max(imgCoords, ivec2(0));
+		imgCoords = min(imgCoords, ivec2(volumeRenderTarget->getWidth() - 1, volumeRenderTarget->getHeight() - 1));
+
+		size_t index = imgCoords.x + imgCoords.y * volumeRenderTarget->getWidth();
+
+		//std::cout << "[Debug] " << cursor << " -> " << relCoords << " -> " << imgCoords << std::endl;
+		std::cout << "[Image] " << pixels[index] << std::endl;
+	}
+}

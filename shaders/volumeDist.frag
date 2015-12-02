@@ -10,31 +10,31 @@ struct Volume
 	bool			enabled;
 };
 
-#define VOLUMES 2
+#define VOLUMES 3
 uniform Volume volume[VOLUMES];
 
 uniform float sliceCount;
 uniform float sliceWeight;
 
-uniform int minThreshold;
-uniform int maxThreshold;
+uniform float minThreshold;
+uniform float maxThreshold;
 
 uniform bool enableDiscard = true;
 int value[VOLUMES];
 
 vec3 colors[VOLUMES];
 
+
 in vec4 vertex;
 out vec4 fragColor;
 
 void main()
-{
-	vec3 color = vec3(0.0);
-
+{	
 
 	// init colors here
 	colors[0] = vec3(1.0, 0.0, 0.0);
 	colors[1] = vec3(0.0, 1.0, 0.0);
+	colors[2] = vec3(0.0, 0.0, 1.0);
 
 	/*
 	if (VOLUMES > 1)
@@ -50,7 +50,7 @@ void main()
 	int count = 0;
 
 
-	// total sum of all points
+	// total intensity of all volumes
 	float sum = 0.0;
 
 	for (int i = 0; i < VOLUMES; ++i)
@@ -69,7 +69,6 @@ void main()
 	
 		int t = texture(volume[i].texture, texcoord).r;
 
-
 		value[i] = 0;
 
 		// check if the value is inside
@@ -78,11 +77,8 @@ void main()
 			worldPosition.z > volume[i].bboxMin.z && worldPosition.z < volume[i].bboxMax.z) 
 		{			
 
-
 			value[i] = t;
-
 			++count;
-
 			sum += float(t);
 
 		}
@@ -90,11 +86,14 @@ void main()
 
 	}
 
-
 	
+
+
 	if (count == 0 && enableDiscard)
 		discard;
 
+
+	vec3 color = vec3(0.0);
 	bool anyGreater = false;
 	for (int i = 0; i < VOLUMES; ++i)
 	{
@@ -113,24 +112,25 @@ void main()
 	if (!anyGreater)
 		discard;
 	
-
 	color = normalize(color);
 
+#if 0
 
-	/*
+
 	sum /= float(VOLUMES);
-
 	sum -= minThreshold;
+
+	if (sum < 0.0)
+		discard;
+
 	sum /= float(maxThreshold - minThreshold);
 	
 
-	color = vec3(sum);
-	*/
+	vec3 color = vec3(sum);
+#endif
 
-	float alpha = 1.0 / sliceCount;
-	
+	float alpha = 1.0 / sliceCount; //0.04;//float(VOLUMES) /sliceCount;
 
 	fragColor = vec4(color, alpha);
-
 
 }

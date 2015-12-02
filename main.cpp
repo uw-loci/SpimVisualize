@@ -93,7 +93,10 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == ']')
 		regoApp->rotateCurrentStack(1);
 	
-	if (key == 'S')
+	if (key == 'r')
+		regoApp->switchRenderMode();
+
+	if (key == 's')
 		regoApp->reloadShaders();
 
 	if (key == 'u')
@@ -141,6 +144,7 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == 'c')
 		regoApp->centerCamera();
 
+	/*
 	if (key == 'w')
 		regoApp->panCamera(glm::vec2(0, 10));
 	if (key == 's')
@@ -149,7 +153,7 @@ static void keyboard(unsigned char key, int x, int y)
 		regoApp->panCamera(glm::vec2(-10, 0));
 	if (key == 'd')
 		regoApp->panCamera(glm::vec2(10, 0));
-
+	*/
 }
 
 static void keyboardUp(unsigned char key, int x, int y)
@@ -195,6 +199,8 @@ static void motion(int x, int y)
 		// change contrast in the editor
 		regoApp->changeContrast(glm::ivec2(x, h - y));
 
+
+		regoApp->inspectOutputImage(glm::ivec2(x, h - y));
 
 	}
 
@@ -312,13 +318,17 @@ int main(int argc, const char** argv)
 	glCullFace(GL_BACK);
 			
 
+	glClampColor(GL_CLAMP_READ_COLOR, GL_FALSE);
+	glClampColor(GL_CLAMP_VERTEX_COLOR, GL_FALSE);
+	glClampColor(GL_CLAMP_FRAGMENT_COLOR, GL_FALSE);
+
 	regoApp = new SpimRegistrationApp(glm::ivec2(1024,768));
 	regoApp->setConfigPath("e:/regoApp/");
 
 	try
 	{
 
-		for (int i = 0; i < 2; ++i)
+		for (int i = 0; i < 3; ++i)
 		{
 			char filename[256];
 			//sprintf(filename, "e:/spim/test/spim_TL00_Angle%d.tif", i);

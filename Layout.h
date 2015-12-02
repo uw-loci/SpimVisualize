@@ -65,6 +65,8 @@ public:
 
 	virtual void maximizeView(const AABB& bbox) = 0;
 
+	virtual bool isSingleView() const = 0;
+
 	/*
 	virtual void saveState(const std::string& filename) const = 0;
 	virtual void loadState(const std::string& filename) = 0;
@@ -85,6 +87,7 @@ public:
 	inline size_t getViewCount() const { return 4; }
 	inline Viewport* getView(unsigned int n) { return &views[n]; }
 
+	inline bool isSingleView() const { return false; }
 
 	virtual void panActiveViewport(const glm::vec2& delta);
 	virtual void maximizeView(const AABB& bbox);
@@ -111,6 +114,7 @@ public:
 
 	virtual void panActiveViewport(const glm::vec2& delta);
 
+	inline bool isSingleView() const { return true; }
 
 protected:
 	Viewport			viewport;
@@ -145,6 +149,8 @@ public:
 	
 	virtual void maximizeView(const AABB& bbox);
 	virtual void panActiveViewport(const glm::vec2& delta);
+
+	inline bool isSingleView() const { return false; }
 
 protected:
 	Viewport		views[2];
