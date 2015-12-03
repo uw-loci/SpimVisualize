@@ -19,10 +19,15 @@
 #include <glm/gtx/transform2.hpp>
 #include <GL/glut.h>
 
+const unsigned int MIN_SLICE_COUNT = 20;
+const unsigned int MAX_SLICE_COUNT = 1500;
+const unsigned int STD_SLICE_COUNT = 100;
+
 SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(0), sliceShader(0), volumeShader(0), layout(0), 
-	drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), currentStack(-1), sliceCount(400), 
+	drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), currentStack(-1), sliceCount(100), 
 	configPath("./"), cameraMoving(false), runAlignment(false), histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f),
-	subsampleOnCameraMove(false), renderMode(RENDER_VIEWPLANE_SLICES)
+	subsampleOnCameraMove(false), renderMode(RENDER_VIEWPLANE_SLICES), useOcclusionQuery(false), blendMode(BLEND_ADD), 
+	useImageAutoContrast(false)
 {
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
@@ -32,6 +37,7 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(0)
 	globalThreshold.min = 100;
 	globalThreshold.max = 130; // std::numeric_limits<unsigned short>::max();
 
+	resetSliceCount();
 	reloadShaders();
 
 	volumeRenderTarget = new Framebuffer(512, 512, GL_RGBA32F, GL_FLOAT);
@@ -112,6 +118,20 @@ void SpimRegistrationApp::switchRenderMode()
 
 }
 
+void SpimRegistrationApp::switchBlendMode()
+{
+	if (blendMode == BLEND_ADD)
+	{
+		blendMode = BLEND_MAX;
+		std::cout << "[Render] Blend mode max\n";
+	}
+	else
+	{
+		blendMode = BLEND_ADD;
+		std::cout << "[Render] Blend mode add\n";
+	}
+}
+
 
 void SpimRegistrationApp::draw()
 {
@@ -148,13 +168,23 @@ void SpimRegistrationApp::draw()
 
 				if (drawGrid)
 					drawGroundGrid(vp);
-
-				glBeginQuery(GL_SAMPLES_PASSED, singleOcclusionQuery);
-				//glBeginQuery(GL_SAMPLES_PASSED, occlusionQueries[query]);
-
+				
+				if (useOcclusionQuery)
+				{
+					glBeginQuery(GL_SAMPLES_PASSED, singleOcclusionQuery);
+					//glBeginQuery(GL_SAMPLES_PASSED, occlusionQueries[query]);
+				}
+				
+				glEnable(GL_BLEND);
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+				
 				drawViewplaneSlices(vp, volumeDifferenceShader);
 
-				glEndQuery(GL_SAMPLES_PASSED);
+				glDisable(GL_BLEND);
+
+				if (useOcclusionQuery)
+					glEndQuery(GL_SAMPLES_PASSED);
+
 
 				if (drawBboxes)
 					drawBoundingBoxes();
@@ -162,6 +192,14 @@ void SpimRegistrationApp::draw()
 				volumeRenderTarget->disable();
 
 				undoLastTransform();
+				
+				if (!useOcclusionQuery)
+				{
+					// image-based metric
+					float score = calculateScore(volumeRenderTarget);
+					currentResult.result[vp->name] = score;
+					currentResult.ready = true;
+				}
 
 				drawTexturedQuad(volumeRenderTarget->getColorbuffer());
 			}
@@ -170,61 +208,50 @@ void SpimRegistrationApp::draw()
 
 				volumeRenderTarget->bind();
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-				if (drawGrid)
-					drawGroundGrid(vp);
+				
+				glEnable(GL_BLEND);
+				glBlendFunc(GL_ONE, GL_ONE);
+				//glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+				//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				
+				if (blendMode == BLEND_ADD)
+					glBlendEquation(GL_FUNC_ADD);
+				else
+					glBlendEquation(GL_MAX);
+				
+				/*
+				glBlendEquationSeparate(GL_MAX, GL_FUNC_ADD);
+				glBlendFuncSeparate(GL_ONE, GL_ONE, GL_ONE, GL_ONE);
+				*/
 
 				if (renderMode == RENDER_ALIGN)
 					drawViewplaneSlices(vp, volumeDifferenceShader);
 				else if (renderMode == RENDER_VIEWPLANE_SLICES)
 					drawViewplaneSlices(vp, volumeShader);
 
-				if (drawBboxes)
-					drawBoundingBoxes();
+				glDisable(GL_BLEND);
+				glBlendEquation(GL_FUNC_ADD);
 
 				volumeRenderTarget->disable();
-				
-
-				drawTexturedQuad(volumeRenderTarget->getColorbuffer());
-			}
 
 
-
-
-			// FIXME!
-			/*
-			else
-			{
-				volumeRenderTarget->bind();
-				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-
-				// draw scene here
-				if (drawSlices)
-					drawAxisAlignedSlices(vp, sliceShader);
-				else
-					drawViewplaneSlices(vp, volumeShader);
-				
-				volumeRenderTarget->disable();
+				drawTonemappedQuad(volumeRenderTarget);
 
 
 				if (drawGrid)
 					drawGroundGrid(vp);
-				
-				drawTonemappedQuad(volumeRenderTarget);
-
 
 				if (drawBboxes)
 					drawBoundingBoxes();
 
 
+				//drawTexturedQuad(volumeRenderTarget->getColorbuffer());
 			}
-			*/
 
 
-
+			
 			// the query result should be done by now
-			if (runAlignment)
+			if (runAlignment && useOcclusionQuery)
 			{
 				GLint queryStatus = GL_FALSE;
 				while (queryStatus == GL_FALSE)
@@ -341,7 +368,7 @@ void SpimRegistrationApp::addSpimStack(const std::string& filename)
 {
 	SpimStack* stack = new SpimStack(filename);
 
-	stack->subsample(false);
+	//stack->subsample(false);
 	stack->subsample();
 
 	stacks.push_back(stack);
@@ -412,6 +439,15 @@ void SpimRegistrationApp::drawTonemappedQuad(Framebuffer* fbo) const
 	tonemapper->bind();
 	tonemapper->setUniform("maxThreshold", (float)globalThreshold.max);
 	tonemapper->setUniform("minThreshold", (float)globalThreshold.min);
+
+	if (useImageAutoContrast)
+	{
+		tonemapper->setUniform("minThreshold", minImageContrast);
+		tonemapper->setUniform("maxThreshold", maxImageContrast);
+	}
+
+
+	tonemapper->setUniform("sliceCount", (float)sliceCount);
 	tonemapper->setTexture2D("colormap", fbo->getColorbuffer());
 
 	glBegin(GL_QUADS);
@@ -618,6 +654,9 @@ void SpimRegistrationApp::rotateCurrentStack(float rotY)
 void SpimRegistrationApp::moveStack(const glm::vec2& delta)
 {
 	if (!currentStackValid())
+		return;
+
+	if (runAlignment)
 		return;
 
 	Viewport* vp = layout->getActiveViewport();
@@ -924,9 +963,11 @@ void SpimRegistrationApp::drawBoundingBoxes() const
 
 void SpimRegistrationApp::drawGroundGrid(const Viewport* vp) const
 {
+	glColor4f(0.3f, 0.3f, 0.3f, 1.f);
+
+
 	if (vp->name == Viewport::PERSPECTIVE || vp->name == Viewport::ORTHO_Y)
 	{
-		glColor3f(0.3f, 0.3f, 0.3f);
 		glBegin(GL_LINES);
 		for (int i = -1000; i <= 1000; i += 100)
 		{
@@ -941,7 +982,6 @@ void SpimRegistrationApp::drawGroundGrid(const Viewport* vp) const
 
 	if (vp->name == Viewport::ORTHO_X)
 	{
-		glColor3f(0.3f, 0.3f, 0.3f);
 		glBegin(GL_LINES);
 		for (int i = -1000; i <= 1000; i += 100)
 		{
@@ -956,7 +996,6 @@ void SpimRegistrationApp::drawGroundGrid(const Viewport* vp) const
 
 	if (vp->name == Viewport::ORTHO_Z)
 	{
-		glColor3f(0.3f, 0.3f, 0.3f);
 		glBegin(GL_LINES);
 		for (int i = -1000; i <= 1000; i += 100)
 		{
@@ -975,21 +1014,9 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 {
 	glm::mat4 mvp;// = vp.proj * vp.view;
 	vp->camera->getMVP(mvp);
-
-
-
-	glEnable(GL_BLEND);
-	//glBlendFunc(GL_ONE, GL_ONE);
-	//glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	
-	//glBlendEquation(GL_MAX);
-
-
 	shader->bind();
-	shader->setUniform("minThreshold", (float)globalThreshold.min);
-	shader->setUniform("maxThreshold", (float)globalThreshold.max);
-	
+
 	const glm::vec3 camPos = vp->camera->getPosition();
 	const glm::vec3 viewDir = glm::normalize(vp->camera->target - camPos);
 
@@ -1024,6 +1051,8 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 	maxPVal = glm::min(maxPVal, glm::vec3(1.f));
 	minPVal = glm::max(minPVal, glm::vec3(-1.f));
 
+	shader->setUniform("minThreshold", (float)globalThreshold.min);
+	shader->setUniform("maxThreshold", (float)globalThreshold.max);
 
 	for (size_t i = 0; i < stacks.size(); ++i)
 	{
@@ -1047,21 +1076,12 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 		shader->setMatrix4(uname, glm::inverse(mvp * stacks[i]->transform));
 	}
 
-
-
-	unsigned int slices = sliceCount;
-	if (subsampleOnCameraMove && cameraMoving)
-		slices = sliceCount / 5;
-
-	shader->setUniform("sliceCount", (float)slices);
-	//std::cout << "[Debug] Slicecount: " << slices << std::endl;
-
 	// draw all slices
 	glBegin(GL_QUADS);	
-	for (int z = 0; z < slices; ++z)
+	for (int z = 0; z < sliceCount; ++z)
 	{
 		// render back-to-front
-		float zf = glm::mix(maxPVal.z, minPVal.z, (float)z / slices);
+		float zf = glm::mix(maxPVal.z, minPVal.z, (float)z / sliceCount);
 
 		glVertex3f(minPVal.x, maxPVal.y, zf);
 		glVertex3f(minPVal.x, minPVal.y, zf);
@@ -1074,8 +1094,7 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 	glActiveTexture(GL_TEXTURE0);
 
 	shader->disable();
-	glDisable(GL_BLEND);
-
+	
 }
 
 void SpimRegistrationApp::drawAxisAlignedSlices(const glm::mat4& mvp, const glm::vec3& viewAxis, const Shader* shader) const
@@ -1264,7 +1283,8 @@ void SpimRegistrationApp::beginAutoAlign()
 	
 
 	runAlignment = true;      
-	createCandidateTransforms();
+	if (candidateTransforms.empty())
+		createCandidateTransforms();
 	
 
 	lastSamplesPass = 0;
@@ -1276,14 +1296,14 @@ void SpimRegistrationApp::beginAutoAlign()
 
 void SpimRegistrationApp::endAutoAlign()
 {
+
 	runAlignment = false;
 	lastSamplesPass = 0;
 
 	
 	// clear all pending stuff
-	candidateTransforms.clear();
+	//candidateTransforms.clear();
 	occlusionQueryResults.clear();
-
 	
 	
 }
@@ -1346,12 +1366,22 @@ void SpimRegistrationApp::update(float dt)
 
 	if (runAlignment)
 	{
+		std::cout << "[Align] Testing transform " << candidateTransforms.size() << " ... \n";
+
 		// remove the last frame's transform
 		candidateTransforms.pop_back();
 
 		if (candidateTransforms.empty())
-			createCandidateTransforms();
+		{		
+			std::cout << "[Debug] Selecting best transform ... \n";
+			selectAndApplyBestTransform();
 		
+		
+			createCandidateTransforms();
+			runAlignment = false;
+		}
+
+
 		if (currentResult.ready)
 		{
 			occlusionQueryResults.push_back(currentResult);
@@ -1365,13 +1395,32 @@ void SpimRegistrationApp::update(float dt)
 			currentResult.matrix = candidateTransforms.back();
 		}
 		
+		/*
 		// first process all existing transforms
 		if (occlusionQueryResults.size() >= 10)
 			selectAndApplyBestTransform();
-
+		*/
 		
 	}
+
+
+	static float time = 2.f;
+	time -= dt;
 	
+	if (time <= 0.f && useImageAutoContrast)
+	{
+		time = 2.f;
+
+		// TODO: change me to the _correct_ render target
+		volumeRenderTarget->bind();
+		glReadBuffer(GL_COLOR_ATTACHMENT0);
+
+		std::vector<glm::vec4> pixels(volumeRenderTarget->getWidth()*volumeRenderTarget->getHeight());
+		glReadPixels(0, 0, volumeRenderTarget->getWidth(), volumeRenderTarget->getHeight(), GL_RGBA, GL_FLOAT, glm::value_ptr(pixels[0]));
+		volumeRenderTarget->disable();
+
+		calculateImageContrast(pixels);
+	}
 
 }
 
@@ -1395,30 +1444,35 @@ void SpimRegistrationApp::maximizeViews()
 
 void SpimRegistrationApp::createCandidateTransforms()
 {
-	for (int x = -5; x <= 5; ++x)
+	for (int y = -2; y <= 2; ++y)
 	{
-		for (int z = -5; z <= 5; ++z)
+
+		for (int x = -5; x <= 5; ++x)
 		{
-			glm::vec3 v(x, 0.f, z);
-			v /= 10.f;
-
-			glm::mat4 T = glm::translate(v);
-
-
-			for (int ry = -3; ry <= 3; ++ry)
+			for (int z = -5; z <= 5; ++z)
 			{
-				float angle = ry / 10.f;
-				glm::mat4 R = glm::rotate(angle, glm::vec3(0, 1, 0));
+				glm::vec3 v(x, y, z);
+				v /= 10.f;
 
-				candidateTransforms.push_back(R*T);
+				glm::mat4 T = glm::translate(v);
+
+
+				for (int ry = -3; ry <= 3; ++ry)
+				{
+					float angle = ry / 10.f;
+					glm::mat4 R = glm::rotate(angle, glm::vec3(0, 1, 0));
+
+					candidateTransforms.push_back(R*T);
+				}
+
+
+
+
 			}
 
-			
-
-
 		}
-
 	}
+
 
 	std::mt19937 rng;
 	std::shuffle(candidateTransforms.begin(), candidateTransforms.end(), rng);
@@ -1466,7 +1520,7 @@ void SpimRegistrationApp::toggleSlices()
 	std::cout << "[Render] Drawing " << (drawSlices ? "slices" : "volumes") << std::endl;
 }
 
-float SpimRegistrationApp::calculateScore(Framebuffer* fbo) const
+double SpimRegistrationApp::calculateScore(Framebuffer* fbo) const
 {
 	fbo->bind();
 	glReadBuffer(GL_COLOR_ATTACHMENT0);
@@ -1475,11 +1529,12 @@ float SpimRegistrationApp::calculateScore(Framebuffer* fbo) const
 	glReadPixels(0, 0, fbo->getWidth(), fbo->getHeight(), GL_RGBA, GL_FLOAT, glm::value_ptr(pixels[0]));
 	fbo->disable();
 
-	float value = 0.f;
+	double value = 0;
 
 	for (size_t i = 0; i < pixels.size(); ++i)
 	{
-		value += pixels[i].g;
+		glm::vec3 color(pixels[i]);
+		value += glm::dot(color, color);
 	}
 
 	std::cout << "[Debug] Read back score: " << value << std::endl;
@@ -1527,4 +1582,86 @@ void SpimRegistrationApp::inspectOutputImage(const glm::ivec2& cursor)
 		//std::cout << "[Debug] " << cursor << " -> " << relCoords << " -> " << imgCoords << std::endl;
 		std::cout << "[Image] " << pixels[index] << std::endl;
 	}
+
+	/*
+	static unsigned oldTime = 0;
+	// TODO: change me!
+	unsigned time = glutGet(GLUT_ELAPSED_TIME);
+	if (time - oldTime > 1000)
+	{
+		vec4 minVal(std::numeric_limits<float>::max());
+		vec4 maxVal(std::numeric_limits<float>::lowest());
+
+		for (size_t i = 0; i < pixels.size(); ++i)
+		{
+			minVal = min(minVal, pixels[i]);
+			maxVal = max(maxVal, pixels[i]);
+
+		}
+		oldTime = time;
+
+		std::cout << "[Image] " << minVal << " -> " << maxVal << std::endl;
+	}
+	*/
+}
+
+void SpimRegistrationApp::increaseSliceCount()
+{
+	sliceCount *= 1.4;
+	sliceCount = std::min(sliceCount, MAX_SLICE_COUNT);
+	std::cout << "[Slices] Slicecount: " << sliceCount << std::endl;
+}
+
+
+void SpimRegistrationApp::decreaseSliceCount()
+{
+	sliceCount /= 1.4;
+	sliceCount = std::max(sliceCount, MIN_SLICE_COUNT);
+	std::cout << "[Slices] Slicecount: " << sliceCount << std::endl;
+}
+
+void SpimRegistrationApp::resetSliceCount()
+{
+	sliceCount = STD_SLICE_COUNT;
+	std::cout << "[Slices] Slicecount: " << sliceCount << std::endl;
+}
+
+
+void SpimRegistrationApp::calculateImageContrast(const std::vector<glm::vec4>& img)
+{
+	float mean = 0.f;
+
+	minImageContrast = std::numeric_limits<float>::max();
+	maxImageContrast = std::numeric_limits<float>::lowest();
+	
+	for (size_t i = 0; i < img.size(); ++i)
+	{
+		mean += img[i].r;
+
+		minImageContrast = std::min(minImageContrast, img[i].r);
+		maxImageContrast = std::max(maxImageContrast, img[i].r);
+	}
+	mean /= img.size();
+
+	
+	float variance = 0.f;
+	for (size_t i = 0; i < img.size(); ++i)
+	{
+		float v = (img[i].r - mean);
+		variance += (v*v);
+	}
+	
+	variance /= img.size();
+
+	float stdDev = sqrtf(variance);
+
+
+	float high = mean + 3 * stdDev;
+	float low = mean - 3 * stdDev;
+
+	std::cout << "[Image] Auto-contrast: [" << minImageContrast << "->" << maxImageContrast << "], mean: " << mean << ", std dev: " << stdDev << std::endl;
+	minImageContrast = low;
+	maxImageContrast = high;
+	std::cout << "[Image] Auto-contrast: [" << minImageContrast << "->" << maxImageContrast << "]\n";
+
 }

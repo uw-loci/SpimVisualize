@@ -62,8 +62,8 @@ static void keyboard(unsigned char key, int x, int y)
 
 	if (key == 'b')
 		regoApp->toggleBboxes();
-
 	
+
 	// backspace
 	if (key == '\b')
 		regoApp->undoLastTransform();
@@ -86,6 +86,11 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == 't')
 		regoApp->contrastEditorApplyThresholds();
 
+	if (key == ';')
+		regoApp->decreaseSliceCount();
+	if (key == '\'')
+		regoApp->increaseSliceCount();
+
 	
 	if (key == '[')
 		regoApp->rotateCurrentStack(-1);
@@ -95,6 +100,8 @@ static void keyboard(unsigned char key, int x, int y)
 	
 	if (key == 'r')
 		regoApp->switchRenderMode();
+	if (key == 'R')
+		regoApp->switchBlendMode();
 
 	if (key == 's')
 		regoApp->reloadShaders();

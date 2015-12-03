@@ -5,10 +5,15 @@ varying vec2 texcoord;
 
 uniform float maxThreshold;
 uniform float minThreshold;
+uniform float sliceCount;
 
 uniform sampler2D colormap;
 
-#define VOLUMES 2
+uniform bool enableDiscard = true;
+
+#define VOLUMES 3
+
+
 
 void main()
 {
@@ -16,27 +21,35 @@ void main()
 	float weight = texture2D(colormap, texcoord).a;
 
 
-	float avgWeight = weight / VOLUMES;
-	float w = (avgWeight - minThreshold) / (maxThreshold - minThreshold);
+	if (weight == 0.0)
+		discard;
 
-	w = avgWeight / (maxThreshold - minThreshold);
 
-	w = weight / 0.5;
+	// normalize along ray length
+	float intensity = color.r / weight;
+
+	intensity -= minThreshold;
+
+	if (intensity < 0.0 && enableDiscard)
+		discard;
+
+	intensity /= (maxThreshold - minThreshold);
 
 
 
 	vec3 blu = vec3(0.0, 0.0, 0.8);
 	vec3 red = vec3(0.8, 0.0, 0.0);
-	color = mix(blu, red, w);
+
+
+
+	color = mix(blu, red, intensity);
+
+
+	if (intensity < 0.01)
+		color = vec3(0.0, 1.0, 0.0);
 
 
 	gl_FragColor = vec4(color, 1.0);
-
-
-
-	if (w < 0.1)
-		discard;//color =vec3(0.0);
-
 
 
 

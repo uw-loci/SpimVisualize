@@ -13,17 +13,12 @@ struct Volume
 #define VOLUMES 3
 uniform Volume volume[VOLUMES];
 
-uniform float sliceCount;
-uniform float sliceWeight;
+uniform bool enableDiscard = true;
+int value[VOLUMES];
+vec3 colors[VOLUMES];
 
 uniform float minThreshold;
 uniform float maxThreshold;
-
-uniform bool enableDiscard = true;
-int value[VOLUMES];
-
-vec3 colors[VOLUMES];
-
 
 in vec4 vertex;
 out vec4 fragColor;
@@ -49,7 +44,6 @@ void main()
 	// count of the number volumes this pixel is contained int
 	int count = 0;
 
-
 	// total intensity of all volumes
 	float sum = 0.0;
 
@@ -62,7 +56,6 @@ void main()
 		v /= v.w;
 
 		vec3 worldPosition = v.xyz;
-
 
 		vec3 texcoord = worldPosition - volume[i].bboxMin; 
 		texcoord /= (volume[i].bboxMax - volume[i].bboxMin);
@@ -77,22 +70,21 @@ void main()
 			worldPosition.z > volume[i].bboxMin.z && worldPosition.z < volume[i].bboxMax.z) 
 		{			
 
-			value[i] = t;
-			++count;
-			sum += float(t);
-
+			if (float(t) >= minThreshold)
+			{
+				value[i] = t;
+				++count;
+				sum += float(t);
+			}
 		}
 	
 
 	}
 
-	
-
-
 	if (count == 0 && enableDiscard)
 		discard;
 
-
+	/*
 	vec3 color = vec3(0.0);
 	bool anyGreater = false;
 	for (int i = 0; i < VOLUMES; ++i)
@@ -113,24 +105,10 @@ void main()
 		discard;
 	
 	color = normalize(color);
+	*/
 
-#if 0
+	vec3 color = vec3(sum / VOLUMES);
 
-
-	sum /= float(VOLUMES);
-	sum -= minThreshold;
-
-	if (sum < 0.0)
-		discard;
-
-	sum /= float(maxThreshold - minThreshold);
-	
-
-	vec3 color = vec3(sum);
-#endif
-
-	float alpha = 1.0 / sliceCount; //0.04;//float(VOLUMES) /sliceCount;
-
-	fragColor = vec4(color, alpha);
+	fragColor = vec4(color, 1.0);
 
 }

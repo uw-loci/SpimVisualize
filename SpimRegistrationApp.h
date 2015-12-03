@@ -30,6 +30,7 @@ public:
 
 	void reloadShaders();
 	void switchRenderMode();
+	void switchBlendMode();
 
 	void update(float dt);
 	void draw();
@@ -76,6 +77,10 @@ public:
 	void setThreeViewLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
 	void setContrastEditorLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
 	
+
+	void increaseSliceCount();
+	void decreaseSliceCount();
+	void resetSliceCount();
 
 	void rotateCamera(const glm::vec2& delta);
 	void zoomCamera(float dt);
@@ -141,7 +146,7 @@ private:
 	Shader*					volumeDifferenceShader;
 	Shader*					volumeRaycaster;
 	Shader*					drawQuad;
-	
+		
 	// for contrast mapping
 	Shader*					tonemapper;
 
@@ -151,6 +156,13 @@ private:
 		RENDER_ALIGN
 
 	}						renderMode;
+
+	enum BlendMode
+	{
+		BLEND_ADD,
+		BLEND_MAX
+
+	}						blendMode;
 
 	// stores undo transformations for all stacks
 	struct StackTransform
@@ -179,6 +191,13 @@ private:
 	void raycastVolumes(const Viewport* vp, const Shader* shader) const;
 
 	
+	bool useImageAutoContrast;
+	float minImageContrast;
+	float maxImageContrast;
+
+	void calculateImageContrast(const std::vector<glm::vec4>& rgbaImage);
+
+
 	// auto-stack alignment
 	unsigned int			lastSamplesPass;
 	glm::mat4				lastPassMatrix;
@@ -206,6 +225,8 @@ private:
 	std::vector<OcclusionQueryResult>	occlusionQueryResults;
 	OcclusionQueryResult				currentResult;
 
+	bool				useOcclusionQuery;
+
 	bool				occlusionQueryMask[4];
 	unsigned int		occlusionQueries[4];
 	unsigned int		singleOcclusionQuery;
@@ -214,7 +235,7 @@ private:
 	void createCandidateTransforms();
 	void selectAndApplyBestTransform();
 
-	float calculateScore( Framebuffer* fbo) const;
+	double calculateScore( Framebuffer* fbo) const;
 
 
 	static glm::vec3 getRandomColor(int n);
