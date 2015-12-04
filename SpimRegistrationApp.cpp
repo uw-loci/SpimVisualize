@@ -149,6 +149,56 @@ void SpimRegistrationApp::draw()
 		else
 		{
 
+
+
+
+// test alignment shader
+#if 0
+			volumeRenderTarget->bind();
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+
+			if (drawGrid)
+				drawGroundGrid(vp);
+
+			if (useOcclusionQuery)
+			{
+				glBeginQuery(GL_SAMPLES_PASSED, singleOcclusionQuery);
+				//glBeginQuery(GL_SAMPLES_PASSED, occlusionQueries[query]);
+			}
+
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+
+			drawViewplaneSlices(vp, volumeDifferenceShader);
+
+			glDisable(GL_BLEND);
+
+			if (useOcclusionQuery)
+				glEndQuery(GL_SAMPLES_PASSED);
+
+
+			if (drawBboxes)
+				drawBoundingBoxes();
+
+			volumeRenderTarget->disable();
+
+			if (!useOcclusionQuery)
+			{
+				// image-based metric
+				float score = calculateScore(volumeRenderTarget);
+				currentResult.result[vp->name] = score;
+				currentResult.ready = true;
+			}
+
+			drawTexturedQuad(volumeRenderTarget->getColorbuffer());
+
+
+
+
+#else
+
+
 			if (runAlignment)
 			{
 
@@ -248,6 +298,8 @@ void SpimRegistrationApp::draw()
 				//drawTexturedQuad(volumeRenderTarget->getColorbuffer());
 			}
 
+
+#endif
 
 			
 			// the query result should be done by now
@@ -1053,6 +1105,7 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 
 	shader->setUniform("minThreshold", (float)globalThreshold.min);
 	shader->setUniform("maxThreshold", (float)globalThreshold.max);
+	shader->setUniform("sliceCount", (float)sliceCount);
 
 	for (size_t i = 0; i < stacks.size(); ++i)
 	{

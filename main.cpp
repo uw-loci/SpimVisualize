@@ -341,8 +341,8 @@ int main(int argc, const char** argv)
 			//sprintf(filename, "e:/spim/test/spim_TL00_Angle%d.tif", i);
 			//sprintf(filename, "E:/spim/091015 SPIM various size beads/091015 20micron beads/spim_TL01_Angle%d.ome.tiff", i);
 			//sprintf(filename, "e:/spim/zebra/spim_TL01_Angle%d.ome.tiff", i);
-			//sprintf(filename, "e:/spim/zebra_beads/spim_TL01_Angle%d.ome.tiff", i);
-			sprintf(filename, "e:/spim/121514 Fish2 no beads-selected/spim_TL01_Angle%d.ome.tiff", i);
+			sprintf(filename, "e:/spim/zebra_beads/spim_TL01_Angle%d.ome.tiff", i);
+			//sprintf(filename, "e:/spim/121514 Fish2 no beads-selected/spim_TL01_Angle%d.ome.tiff", i);
 			
 			
 			regoApp->addSpimStack(filename);

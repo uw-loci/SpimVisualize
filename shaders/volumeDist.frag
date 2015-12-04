@@ -20,6 +20,8 @@ vec3 colors[VOLUMES];
 uniform float minThreshold;
 uniform float maxThreshold;
 
+uniform float sliceCount;
+
 in vec4 vertex;
 out vec4 fragColor;
 
@@ -84,7 +86,6 @@ void main()
 	if (count == 0 && enableDiscard)
 		discard;
 
-	/*
 	vec3 color = vec3(0.0);
 	bool anyGreater = false;
 	for (int i = 0; i < VOLUMES; ++i)
@@ -100,15 +101,12 @@ void main()
 			discard;
 	}
 
-	
 	if (!anyGreater)
 		discard;
 	
 	color = normalize(color);
-	*/
 
-	vec3 color = vec3(sum / VOLUMES);
 
-	fragColor = vec4(color, 1.0);
+	fragColor = vec4(color, float(count) / sliceCount);
 
 }

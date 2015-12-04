@@ -59,6 +59,7 @@ void main()
 	if (weight == 0)
 		discard;
 
+
 	// normalize value based on how many volumes it is in
 	intensity /= weight;
 	fragColor = vec4(vec3(intensity), 1.0);
