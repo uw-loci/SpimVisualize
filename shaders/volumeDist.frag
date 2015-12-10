@@ -83,10 +83,20 @@ void main()
 
 	}
 
-	if (count == 0 && enableDiscard)
+
+	if (count == 0)
 		discard;
 
+	
 	vec3 color = vec3(0.0);
+	for (int i = 0; i < VOLUMES; ++i)
+	{
+		if (value[i] > minThreshold)
+			color += colors[i];
+	}
+
+
+	/*
 	bool anyGreater = false;
 	for (int i = 0; i < VOLUMES; ++i)
 	{
@@ -103,10 +113,19 @@ void main()
 
 	if (!anyGreater)
 		discard;
-	
-	color = normalize(color);
+	*/
+
+	// average value
+	sum /= float(count);
 
 
-	fragColor = vec4(color, float(count) / sliceCount);
+	// scale value by contrast settings
+	sum -= minThreshold;
+	sum /= (maxThreshold - minThreshold);
+
+	color *= sum;
+	float alpha = 1.0 / (sliceCount);
+
+	fragColor = vec4(color, alpha);
 
 }

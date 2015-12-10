@@ -26,7 +26,7 @@ const unsigned int STD_SLICE_COUNT = 100;
 SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(0), sliceShader(0), volumeShader(0), layout(0), 
 	drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), currentStack(-1), sliceCount(100), 
 	configPath("./"), cameraMoving(false), runAlignment(false), histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f),
-	subsampleOnCameraMove(false), renderMode(RENDER_VIEWPLANE_SLICES), useOcclusionQuery(false), blendMode(BLEND_ADD), 
+	subsampleOnCameraMove(false), renderMode(RENDER_VIEWPLANE_SLICES), useOcclusionQuery(true), blendMode(BLEND_ADD), 
 	useImageAutoContrast(false)
 {
 	globalBBox.reset();
@@ -149,56 +149,7 @@ void SpimRegistrationApp::draw()
 		else
 		{
 
-
-
-
-// test alignment shader
-#if 0
-			volumeRenderTarget->bind();
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-
-			if (drawGrid)
-				drawGroundGrid(vp);
-
-			if (useOcclusionQuery)
-			{
-				glBeginQuery(GL_SAMPLES_PASSED, singleOcclusionQuery);
-				//glBeginQuery(GL_SAMPLES_PASSED, occlusionQueries[query]);
-			}
-
-			glEnable(GL_BLEND);
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-
-			drawViewplaneSlices(vp, volumeDifferenceShader);
-
-			glDisable(GL_BLEND);
-
-			if (useOcclusionQuery)
-				glEndQuery(GL_SAMPLES_PASSED);
-
-
-			if (drawBboxes)
-				drawBoundingBoxes();
-
-			volumeRenderTarget->disable();
-
-			if (!useOcclusionQuery)
-			{
-				// image-based metric
-				float score = calculateScore(volumeRenderTarget);
-				currentResult.result[vp->name] = score;
-				currentResult.ready = true;
-			}
-
-			drawTexturedQuad(volumeRenderTarget->getColorbuffer());
-
-
-
-
-#else
-
-
+			// apply new transform
 			if (runAlignment)
 			{
 
@@ -211,39 +162,61 @@ void SpimRegistrationApp::draw()
 
 				saveStackTransform(currentStack);
 				stacks[currentStack]->applyTransform(mat);
-
-				volumeRenderTarget->bind();
-				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			}
 
 
-				if (drawGrid)
-					drawGroundGrid(vp);
-				
-				if (useOcclusionQuery)
-				{
-					glBeginQuery(GL_SAMPLES_PASSED, singleOcclusionQuery);
-					//glBeginQuery(GL_SAMPLES_PASSED, occlusionQueries[query]);
-				}
-				
-				glEnable(GL_BLEND);
+
+			/// actual drawing block begins
+			/// --------------------------------------------------------
+
+			volumeRenderTarget->bind();
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+			if (runAlignment && useOcclusionQuery)
+			{
+				glBeginQuery(GL_SAMPLES_PASSED, singleOcclusionQuery);
+				//glBeginQuery(GL_SAMPLES_PASSED, occlusionQueries[query]);
+			}
+			
+			glEnable(GL_BLEND);
+			if (blendMode == BLEND_ADD)
+				glBlendEquation(GL_FUNC_ADD);
+			else
+				glBlendEquation(GL_MAX);
+
+
+			if (renderMode == RENDER_ALIGN)
+			{
 				glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-				
+				glBlendFunc(GL_ONE, GL_ONE);
+
 				drawViewplaneSlices(vp, volumeDifferenceShader);
 
-				glDisable(GL_BLEND);
 
+			}
+			else if (renderMode == RENDER_VIEWPLANE_SLICES)
+			{				
+				drawViewplaneSlices(vp, volumeShader);
+
+			}
+
+
+			drawViewplaneSlices(vp, volumeDifferenceShader);
+
+			glDisable(GL_BLEND);
+			
+
+			
+			/// --------------------------------------------------------
+			/// drawing block ends
+
+
+
+			if (runAlignment)
+			{
 				if (useOcclusionQuery)
 					glEndQuery(GL_SAMPLES_PASSED);
-
-
-				if (drawBboxes)
-					drawBoundingBoxes();
-
-				volumeRenderTarget->disable();
-
-				undoLastTransform();
-				
-				if (!useOcclusionQuery)
+				else
 				{
 					// image-based metric
 					float score = calculateScore(volumeRenderTarget);
@@ -251,69 +224,44 @@ void SpimRegistrationApp::draw()
 					currentResult.ready = true;
 				}
 
-				drawTexturedQuad(volumeRenderTarget->getColorbuffer());
-			}
-			else
-			{
-
-				volumeRenderTarget->bind();
-				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-				
-				glEnable(GL_BLEND);
-				glBlendFunc(GL_ONE, GL_ONE);
-				//glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-				//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-				
-				if (blendMode == BLEND_ADD)
-					glBlendEquation(GL_FUNC_ADD);
-				else
-					glBlendEquation(GL_MAX);
-				
-				/*
-				glBlendEquationSeparate(GL_MAX, GL_FUNC_ADD);
-				glBlendFuncSeparate(GL_ONE, GL_ONE, GL_ONE, GL_ONE);
-				*/
-
-				if (renderMode == RENDER_ALIGN)
-					drawViewplaneSlices(vp, volumeDifferenceShader);
-				else if (renderMode == RENDER_VIEWPLANE_SLICES)
-					drawViewplaneSlices(vp, volumeShader);
-
-				glDisable(GL_BLEND);
-				glBlendEquation(GL_FUNC_ADD);
-
-				volumeRenderTarget->disable();
-
-
-				drawTonemappedQuad(volumeRenderTarget);
-
-
-				if (drawGrid)
-					drawGroundGrid(vp);
-
-				if (drawBboxes)
-					drawBoundingBoxes();
-
-
-				//drawTexturedQuad(volumeRenderTarget->getColorbuffer());
 			}
 
-
-#endif
-
+			glDisable(GL_BLEND);
+			glBlendEquation(GL_FUNC_ADD);
 			
+			volumeRenderTarget->disable();
+			
+
+			if (renderMode == RENDER_ALIGN)
+				drawTexturedQuad(volumeRenderTarget->getColorbuffer());
+			else if (renderMode == RENDER_VIEWPLANE_SLICES)
+				drawTonemappedQuad(volumeRenderTarget);
+			
+
+
+			if (drawGrid)
+				drawGroundGrid(vp);
+			if (drawBboxes)
+				drawBoundingBoxes();
+
+
 			// the query result should be done by now
-			if (runAlignment && useOcclusionQuery)
+			if (runAlignment)
 			{
-				GLint queryStatus = GL_FALSE;
-				while (queryStatus == GL_FALSE)
-					glGetQueryObjectiv(singleOcclusionQuery, GL_QUERY_RESULT_AVAILABLE, &queryStatus);
+				undoLastTransform();
 
-				GLuint64 result = 0;
-				glGetQueryObjectui64v(singleOcclusionQuery, GL_QUERY_RESULT, &result);
+				if (useOcclusionQuery)
+				{
+					GLint queryStatus = GL_FALSE;
+					while (queryStatus == GL_FALSE)
+						glGetQueryObjectiv(singleOcclusionQuery, GL_QUERY_RESULT_AVAILABLE, &queryStatus);
 
-				currentResult.result[vp->name] = result;
-				currentResult.ready = true;
+					GLuint64 result = 0;
+					glGetQueryObjectui64v(singleOcclusionQuery, GL_QUERY_RESULT, &result);
+
+					currentResult.result[vp->name] = result;
+					currentResult.ready = true;
+				}
 			}
 		}
 
