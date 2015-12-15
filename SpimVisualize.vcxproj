@@ -63,15 +63,15 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -84,12 +84,12 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\edges3D-2012-02-22\src;C:\dev\eigen\source;C:\dev\flann\include;C:\dev\pcl\include\pcl-1.8;C:\dev\opencv\build\include;C:\Users\mbroecker\Documents\code\sparseicp;C:\Users\mbroecker\Documents\code\sparseicp\include;C:\Users\mbroecker\Documents\code\sparseicp\include\Eigen;C:\opencv\build\include;C:\Users\mbroecker\Documents\code\ffmpeg\include;C:\boost\include;c:\dev\opengl\include;C:\Users\mbroecker\Documents\code\transformDetection\VaryingPointClouds;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\inc;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\boost\lib64;C:\dev\flann\lib;C:\dev\pcl\lib;C:\dev\opencv\build\x64\vc12\staticlib;C:\opencv\sources\build\lib\Release;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\lib;c:\dev\opengl\lib64;c:\dev\opengl\lib64\Release\x64;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\dev\boost_1_59_0;C:\dev\opengl\include;C:\dev\freeimage\include</IncludePath>
+    <LibraryPath>C:\dev\freeimage\include;C:\dev\boost_1_59_0;C:\dev\opengl\include</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\edges3D-2012-02-22\src;C:\dev\eigen\source;C:\dev\flann\include;C:\dev\pcl\include\pcl-1.8;C:\dev\opencv\build\include;C:\opencv\build\include;C:\Users\mbroecker\Documents\code\ffmpeg\include;C:\boost\include;c:\dev\opengl\include;C:\Users\mbroecker\Documents\code\transformDetection\VaryingPointClouds;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\inc;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\dev\flann\lib;C:\dev\pcl\lib;C:\dev\opencv\build\x64\vc12\staticlib;C:\opencv\sources\build\lib\Release;C:\Users\mbroecker\Documents\code\SpimVisualize\sdk\lib;c:\dev\opengl\lib64;c:\dev\opengl\lib64\Release\x64;C:\boost\lib64;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\dev\boost_1_59_0;C:\dev\opengl\include;C:\dev\freeimage\include</IncludePath>
+    <LibraryPath>C:\dev\freeimage\include;C:\dev\boost_1_59_0;C:\dev\opengl\include</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>

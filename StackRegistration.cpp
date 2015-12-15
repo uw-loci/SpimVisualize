@@ -4,17 +4,15 @@
 #include <stdexcept>
 #include <iostream>
 
+#ifdef ENABLE_PCL
+
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
-
-
-
 #include <pcl/point_representation.h>
 #include <pcl/search/kdtree.h>
 #include <pcl/search/flann_search.h>
 #include <pcl/registration/transformation_estimation_svd.h>
 #include <pcl/registration/transformation_estimation_svd_scale.h>
-
 
 /*
 //convenient typedefs
@@ -23,6 +21,8 @@ typedef pcl::PointCloud<PointT> PointCloud;
 typedef pcl::PointNormal PointNormalT;
 typedef pcl::PointCloud<PointNormalT> PointCloudWithNormals;
 */
+
+#endif
 
 #include <glm/gtx/io.hpp>
 #include <glm/gtc/type_ptr.hpp>

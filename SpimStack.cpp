@@ -10,6 +10,11 @@
 #include <fstream>
 #include <cstdio>
 
+
+
+//#define ENABLE_PCL
+
+
 #include <boost/smart_ptr.hpp>
 
 
@@ -21,6 +26,7 @@
 #include <FreeImage.h>
 #include <GL/glew.h>
 
+#ifdef ENABLE_PCL
 #include <pcl/common/common.h>
 #include <pcl/point_types.h>
 #include <pcl/features/feature.h>
@@ -29,19 +35,19 @@
 #include <pcl/features/boundary.h>
 #include <pcl/search/kdtree.h>
 
-#include <extrema.h>
-
-#include <opencv2/imgproc.hpp>
-
-
 /*
 #include <pcl/registration/icp.h>
 #include <pcl/registration/transformation_estimation.h>
 */
 
+#endif
+
+#ifdef ENABLE_OPENCV
+#include <opencv2/imgproc.hpp>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/opencv.hpp>
+#endif
 
 using namespace std;
 using namespace glm;
@@ -663,6 +669,9 @@ vector<vec4> SpimStack::extractTransformedPoints(const SpimStack* clip, const Th
 
 void SpimStack::extractTransformedFeaturePoints(const Threshold& t, ReferencePoints& result) const
 {
+#ifdef ENABLE_PCL
+
+
 	using namespace pcl;
 	
 
@@ -873,6 +882,10 @@ void SpimStack::extractTransformedFeaturePoints(const Threshold& t, ReferencePoi
 	std::cout << "done.\n";
 	*/
 
+
+#else
+	std::cerr << "[Error] ExtractTransformedFeaturePoints disabled, due to missing PCL!\n";
+#endif
 }
 
 
@@ -1092,6 +1105,7 @@ vector<Hourglass> SpimStack::detectHourglasses() const
 }
 */
 
+/*
 cv::Mat SpimStack::getImagePlane(unsigned int z) const
 {
 	using namespace cv;
@@ -1113,6 +1127,7 @@ cv::Mat SpimStack::getImagePlane(unsigned int z) const
 
 	return std::move(result);
 }
+*/
 
 AABB SpimStack::getTransformedBBox() const
 {

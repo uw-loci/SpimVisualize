@@ -1,6 +1,5 @@
 
 #include "SpimRegistrationApp.h"
-#include "Viewport.h"
 
 #include <GL/glew.h>
 #include <GL/freeglut.h>

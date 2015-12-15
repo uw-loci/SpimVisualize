@@ -7,8 +7,6 @@
 
 #include <boost/utility.hpp>
 
-#include <opencv2/core/mat.hpp>
-
 struct AABB;
 class Shader;
 class ReferencePoints;
@@ -103,7 +101,7 @@ private:
 
 	std::vector<glm::vec3> calculateVolumeNormals() const;
 
-	cv::Mat getImagePlane(unsigned int z) const;
+	//cv::Mat getImagePlane(unsigned int z) const;
 
 };
 
