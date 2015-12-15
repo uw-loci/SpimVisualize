@@ -7,8 +7,9 @@
 class ICamera;
 struct AABB;
 
-struct Viewport : boost::noncopyable
+class Viewport : boost::noncopyable
 {
+public:
 	// window coordinates
 	glm::ivec2		position, size;
 

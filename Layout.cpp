@@ -265,7 +265,7 @@ void ContrastEditLayout::resize(const glm::ivec2& size)
 	const float ASPECT = ((float)size.x / 2.f) / size.y;
 
 
-	int top = size.y * 0.1;
+	int top = (int)(size.y * 0.1f);
 
 	// setup the 2 views
 	views[0].position = ivec2(0, 0);

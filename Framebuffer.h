@@ -134,7 +134,7 @@ inline unsigned int Framebuffer::getColorbufferCount() const
 	return mColorbufferCount;
 }
 
-inline unsigned int Framebuffer::getColorbuffer(unsigned int i) const throw(std::out_of_range)
+inline unsigned int Framebuffer::getColorbuffer(unsigned int i) const
 {
 	if (i >= mColorbufferCount)
 		throw std::out_of_range("Index exceeds number of color buffers");

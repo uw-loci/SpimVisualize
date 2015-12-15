@@ -381,14 +381,20 @@ void SpimStack::loadRegistration(const string& filename)
 void SpimStack::saveTransform(const std::string& filename) const
 {
 	ofstream file(filename);
-	assert(file.is_open());
 
-	const float* m = glm::value_ptr(transform);
+	if (file.is_open())
+	{
 
-	for (int i = 0; i < 16; ++i)
-		file << m[i] << std::endl;
+		const float* m = glm::value_ptr(transform);
 
-	std::cout << "[SpimStack] Saved transform to \"" << filename << "\"\n";
+		for (int i = 0; i < 16; ++i)
+			file << m[i] << std::endl;
+
+		std::cout << "[SpimStack] Saved transform to \"" << filename << "\"\n";
+	}
+	else
+		throw std::runtime_error("[SpimStack] Unable to open file \"" + filename + "\"!");
+
 }
 
 void SpimStack::loadTransform(const std::string& filename)

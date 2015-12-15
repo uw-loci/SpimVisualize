@@ -76,9 +76,9 @@ vec3 OrbitCamera::getOffset() const
 	double t = deg2rad(theta);
 	double p = deg2rad(phi);
 
-	off.x = sin(t) * sin(p);
-	off.z = sin(t) * cos(p);
-	off.y = cos(t);
+	off.x = (float)(sin(t) * sin(p));
+	off.z = (float)(sin(t) * cos(p));
+	off.y = (float)cos(t);
 
 	return off * radius;
 }
