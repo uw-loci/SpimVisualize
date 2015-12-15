@@ -19,6 +19,8 @@
 #include <glm/gtx/transform2.hpp>
 #include <GL/glut.h>
 
+#include <boost/lexical_cast.hpp>
+
 const unsigned int MIN_SLICE_COUNT = 20;
 const unsigned int MAX_SLICE_COUNT = 1500;
 const unsigned int STD_SLICE_COUNT = 100;
@@ -76,6 +78,11 @@ SpimRegistrationApp::~SpimRegistrationApp()
 
 void SpimRegistrationApp::reloadShaders()
 {
+	
+	int numberOfVolumes = std::max(1, (int)stacks.size());
+	std::vector<std::string> defines;
+	defines.push_back("#define VOLUMES " + boost::lexical_cast<std::string>(numberOfVolumes) + "\n");
+
 	delete pointShader;
 	pointShader = new Shader("shaders/points2.vert", "shaders/points2.frag");
 
@@ -83,7 +90,7 @@ void SpimRegistrationApp::reloadShaders()
 	sliceShader = new Shader("shaders/slices.vert", "shaders/slices.frag");
 
 	delete volumeShader;
-	volumeShader = new Shader("shaders/volume2.vert", "shaders/volume2.frag");
+	volumeShader = new Shader("shaders/volume2.vert", "shaders/volume2.frag", defines);
 		
 	delete volumeRaycaster;
 	volumeRaycaster = new Shader("shaders/volumeRaycast.vert", "shaders/volumeRaycast.frag");
@@ -92,10 +99,10 @@ void SpimRegistrationApp::reloadShaders()
 	drawQuad = new Shader("shaders/drawQuad.vert", "shaders/drawQuad.frag");
 
 	delete volumeDifferenceShader;
-	volumeDifferenceShader = new Shader("shaders/volumeDist.vert", "shaders/volumeDist.frag");
+	volumeDifferenceShader = new Shader("shaders/volumeDist.vert", "shaders/volumeDist.frag", defines);
 
 	delete tonemapper;
-	tonemapper = new Shader("shaders/drawQuad.vert", "shaders/tonemapper.frag");
+	tonemapper = new Shader("shaders/drawQuad.vert", "shaders/tonemapper.frag", defines);
 
 }
 
@@ -140,7 +147,7 @@ void SpimRegistrationApp::draw()
 	for (int i = 0; i < 4; ++i)
 		occlusionQueryMask[i] = false;
 
-	for (size_t i = 0; i < layout->getViewCount(); ++i)
+	for (unsigned int i = 0; i < layout->getViewCount(); ++i)
 	{
 		const Viewport* vp = layout->getView(i);
 		vp->setup();
@@ -247,7 +254,7 @@ void SpimRegistrationApp::draw()
 				if (!useOcclusionQuery)
 				{
 					// image-based metric
-					float score = calculateScore(volumeRenderTarget);
+					double score = calculateScore(volumeRenderTarget);
 					currentResult.result[vp->name] = score;
 					currentResult.ready = true;
 				}
@@ -938,11 +945,11 @@ void SpimRegistrationApp::drawContrastEditor(const Viewport* vp)
 	glVertex2f(maxCursor, 0.f);
 	glVertex2f(maxCursor, 1.f);
 
-	glColor3f(1, 1, 0);
+	glColor3f(1.f, 1.f, 0.f);
 	glVertex2f(minCursor, 0.f);
 	glVertex2f(minCursor, 1.f);
 
-	glColor3f(0.1, 0.1, 0.1);
+	glColor3f(0.1f, 0.1f, 0.1f);
 	glVertex2f(minCursor, 0.f);
 	glColor3f(1, 1, 1);
 	glVertex2f(maxCursor, 1.f);
@@ -1669,7 +1676,7 @@ void SpimRegistrationApp::inspectOutputImage(const glm::ivec2& cursor)
 
 void SpimRegistrationApp::increaseSliceCount()
 {
-	sliceCount *= 1.4;
+	sliceCount *= 1.4f;
 	sliceCount = std::min(sliceCount, MAX_SLICE_COUNT);
 	std::cout << "[Slices] Slicecount: " << sliceCount << std::endl;
 }
@@ -1677,7 +1684,7 @@ void SpimRegistrationApp::increaseSliceCount()
 
 void SpimRegistrationApp::decreaseSliceCount()
 {
-	sliceCount /= 1.4;
+	sliceCount /= 1.4f;
 	sliceCount = std::max(sliceCount, MIN_SLICE_COUNT);
 	std::cout << "[Slices] Slicecount: " << sliceCount << std::endl;
 }
