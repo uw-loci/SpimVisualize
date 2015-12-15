@@ -199,7 +199,7 @@ private:
 
 
 	// auto-stack alignment
-	unsigned int			lastSamplesPass;
+	unsigned long long		lastSamplesPass;
 	glm::mat4				lastPassMatrix;
 		
 	bool					runAlignment;
@@ -238,7 +238,7 @@ private:
 	double calculateScore( Framebuffer* fbo) const;
 
 
-	static glm::vec3 getRandomColor(int n);
+	static glm::vec3 getRandomColor(unsigned int n);
 
 	inline bool currentStackValid() const { return currentStack > -1 && currentStack < stacks.size();  }
 
