@@ -30,7 +30,7 @@
 #include <iostream>
 
 /// validates the framebuffer configuration
-static void validate(unsigned int buffer) throw(std::string)
+static void validate(unsigned int buffer)
 {
 	glBindFramebuffer( GL_FRAMEBUFFER, buffer );
 	GLenum err = glCheckFramebufferStatus( GL_FRAMEBUFFER );

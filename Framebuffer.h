@@ -72,7 +72,7 @@ public:
 	/// \{
 	
 	unsigned int getColorbufferCount() const;
-	unsigned int getColorbuffer(unsigned int index=0) const throw(std::out_of_range);
+	unsigned int getColorbuffer(unsigned int index = 0) const;
 	unsigned int getDepthbuffer() const;
 
 	unsigned int getWidth() const;

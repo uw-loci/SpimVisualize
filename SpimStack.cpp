@@ -91,7 +91,7 @@ SpimStack::SpimStack(const string& name, unsigned int subsampleSteps) : filename
 	
 	if (subsampleSteps> 0)
 	{
-		for (int s = 0; s < subsampleSteps; ++s)
+		for (unsigned int s = 0; s < subsampleSteps; ++s)
 			this->subsample(false);
 	}
 
@@ -359,7 +359,11 @@ void SpimStack::loadRegistration(const string& filename)
 		std::string buffer;
 		std::getline(file, buffer);
 
+#ifdef _WIN32
+		int result = sscanf_s(buffer.c_str(), "m%*2s: %f", &glm::value_ptr(transform)[i]);
+#else
 		int result = sscanf(buffer.c_str(), "m%*2s: %f", &glm::value_ptr(transform)[i]);
+#endif
 	}
 
 	/*

@@ -82,7 +82,7 @@ void GeometryImage::calculate(const Pointcloud& points, const glm::vec3& bias, c
 {
 	this->bias = bias;
 	this->scale = scale;
-	this->pointCount = points.size();
+	this->pointCount = (unsigned int)points.size();
 
 	calculateDimensions(pot);
 
@@ -174,7 +174,12 @@ void GeometryImage::loadPPM(const std::string& filename)
 
 	width = 0, height = 0;
 	//sscanf(header[1].c_str(), "%u %u", &width, &height);
+
+#ifdef _WIN32
+	sscanf_s(header[1].c_str(), "%u %u", &width, &height);
+#else
 	sscanf(header[1].c_str(), "%u %u", &width, &height);
+#endif
 	unsigned int size = width*height * 3;
 
 	std::cout << "[GeoImg] Resolution: " << width << "x" << height << ", size: " << size << std::endl;
@@ -259,7 +264,11 @@ void GeometryImage::savePPM(const std::string& filename) const
 	std::ofstream file(filename.c_str(), std::ios::trunc | std::ios::binary);
 	assert(file.is_open());
 	char header[256];
+#ifdef _WIN32
+	sprintf_s(header, "P6\n%u %u\n255\n", width, height);
+#else
 	sprintf(header, "P6\n%u %u\n255\n", width, height);
+#endif	
 	file.write(header, strlen(header));
 	file.write(reinterpret_cast<const char*>(&temp[0]), temp.size());
 	file.close();
@@ -346,7 +355,7 @@ std::vector<glm::vec3> GeometryImage::getPixelIndex() const
 
 	for (size_t i = 0; i < std::min((unsigned int)data.size(), pointCount); ++i)
 	{
-		int k = (float)i*8 / data.size();
+		int k = (int)(((float)i*8.f) / data.size());
 		indices.push_back(getRandomColor(k));
 	}
 
@@ -373,15 +382,15 @@ void GeometryImage::loadScale(const std::string& filename)
 			}
 			else if (tokens[0] == "Bias")
 			{
-				bias.x = atof(tokens[1].c_str());
-				bias.y = atof(tokens[2].c_str());
-				bias.z = atof(tokens[3].c_str());
+				bias.x = (float)atof(tokens[1].c_str());
+				bias.y = (float)atof(tokens[2].c_str());
+				bias.z = (float)atof(tokens[3].c_str());
 			}
 			else if (tokens[0] == "Scale")
 			{
-				scale.x = atof(tokens[1].c_str());
-				scale.y = atof(tokens[2].c_str());
-				scale.z = atof(tokens[3].c_str());
+				scale.x = (float)atof(tokens[1].c_str());
+				scale.y = (float)atof(tokens[2].c_str());
+				scale.z = (float)atof(tokens[3].c_str());
 			}
 		}
 		
@@ -461,7 +470,7 @@ void MultiScaleGeometryImage::addPoints(const std::vector<glm::vec3>& points, co
 	ScaleBand band;
 	band.bias = bias;
 	band.scale = scale;
-	band.pointcount = points.size();
+	band.pointcount = (unsigned int)points.size();
 	scaleInfo.push_back(band);
 
 	for (size_t i = 0; i < points.size(); ++i)
@@ -480,7 +489,7 @@ void MultiScaleGeometryImage::addPoints(const std::vector<glm::vec3>& points, co
 		data.push_back(px);
 	}
 	
-	pointCount += points.size();
+	pointCount += (unsigned int)points.size();
 
 	this->calculateDimensions(false);
 
@@ -555,19 +564,19 @@ void MultiScaleGeometryImage::loadScale(const string& filename)
 			if (tokens[0] == "Points")
 			{
 				band.pointcount = atoi(tokens[1].c_str());
-				pointCount += band.pointcount;
+				pointCount += (unsigned int)band.pointcount;
 			}
 			else if (tokens[0] == "Bias")
 			{
-				band.bias.x = atof(tokens[1].c_str());
-				band.bias.y = atof(tokens[2].c_str());
-				band.bias.z = atof(tokens[3].c_str());
+				band.bias.x = (float)atof(tokens[1].c_str());
+				band.bias.y = (float)atof(tokens[2].c_str());
+				band.bias.z = (float)atof(tokens[3].c_str());
 			}
 			else if (tokens[0] == "Scale")
 			{
-				band.scale.x = atof(tokens[1].c_str());
-				band.scale.y = atof(tokens[2].c_str());
-				band.scale.z = atof(tokens[3].c_str());
+				band.scale.x = (float)atof(tokens[1].c_str());
+				band.scale.y = (float)atof(tokens[2].c_str());
+				band.scale.z = (float)atof(tokens[3].c_str());
 
 				// scale should always be the last entry
 				scaleInfo.push_back(band);
