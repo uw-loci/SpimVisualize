@@ -333,7 +333,15 @@ int main(int argc, const char** argv)
 
 	try
 	{
+		for (int i = 1; i < argc; ++i)
+		{
+			regoApp->addSpimStack(argv[i]);
 
+		}
+
+
+
+		/*
 		for (int i = 0; i < 3; ++i)
 		{
 			char filename[256];
@@ -348,12 +356,12 @@ int main(int argc, const char** argv)
 		}
 
 		//regoApp->addSpimStack("e:/regoApp/result_31x31x360.bin");
-
+		*/
 		regoApp->centerCamera();
 		regoApp->loadStackTransformations();
 		regoApp->loadContrastSettings();
+		
 		/*
-
 		regoApp->addSpimStack("e:/spim/test_beads/spim_TL01_Angle0.ome.tiff");
 		regoApp->centerCamera(); 
 		*/
@@ -370,6 +378,11 @@ int main(int argc, const char** argv)
 	atexit(cleanup);
 
 	glutMainLoop();
+
+#ifdef _WIN32
+	system("pause");
+#endif
+
 
 	return 0;
 }
