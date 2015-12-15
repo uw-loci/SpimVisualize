@@ -23,7 +23,8 @@ const unsigned int MIN_SLICE_COUNT = 20;
 const unsigned int MAX_SLICE_COUNT = 1500;
 const unsigned int STD_SLICE_COUNT = 100;
 
-SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(0), sliceShader(0), volumeShader(0), layout(0), 
+SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(nullptr), sliceShader(nullptr), volumeShader(nullptr), 
+	volumeRaycaster(nullptr), drawQuad(nullptr), volumeDifferenceShader(nullptr), tonemapper(nullptr), layout(nullptr),
 	drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), currentStack(-1), sliceCount(100), 
 	configPath("./"), cameraMoving(false), runAlignment(false), histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f),
 	subsampleOnCameraMove(false), renderMode(RENDER_VIEWPLANE_SLICES), useOcclusionQuery(false), blendMode(BLEND_ADD), 
@@ -386,14 +387,22 @@ void SpimRegistrationApp::saveContrastSettings() const
 {
 	std::string filename(configPath + "contrast.txt");
 	std::ofstream file(filename);
-	assert(file.is_open());
 
-	std::cout << "[File] Saving contrast settings to \"" << filename << "\"\n";
+	if (file.is_open())
+	{
 
-	file << "min: " << (int)globalThreshold.min << std::endl;
-	file << "max: " << (int)globalThreshold.max << std::endl;
+		assert(file.is_open());
+
+		std::cout << "[File] Saving contrast settings to \"" << filename << "\"\n";
+
+		file << "min: " << (int)globalThreshold.min << std::endl;
+		file << "max: " << (int)globalThreshold.max << std::endl;
+	}
+	else
+	{
+		throw std::runtime_error("Unable to write contrast settings to file \"" + filename + "\"!");
+	}
 }
-
 void SpimRegistrationApp::loadContrastSettings()
 {
 	std::string filename(configPath + "contrast.txt");

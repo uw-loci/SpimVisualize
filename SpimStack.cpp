@@ -123,6 +123,10 @@ SpimStack::~SpimStack()
 void SpimStack::loadImage(const std::string& filename)
 {
 	FIMULTIBITMAP* fmb = FreeImage_OpenMultiBitmap(FIF_TIFF, filename.c_str(), FALSE, TRUE);
+
+	if (!fmb)
+		throw std::runtime_error("Unable to open image \"" + filename + "\"!");
+
 	assert(fmb);
 
 

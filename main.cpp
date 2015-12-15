@@ -284,9 +284,15 @@ static void reshape(int w, int h)
 static void cleanup()
 {
 
-	regoApp->saveStackTransformations();
-	regoApp->saveContrastSettings();
-
+	try
+	{
+		regoApp->saveStackTransformations();
+		regoApp->saveContrastSettings();
+	}
+	catch (std::runtime_error& e)
+	{
+		std::cerr << "[Error] " << e.what() << std::endl;
+	}
 
 	delete regoApp;
 }
