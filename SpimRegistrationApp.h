@@ -226,11 +226,7 @@ private:
 	OcclusionQueryResult				currentResult;
 
 	bool				useOcclusionQuery;
-
-	bool				occlusionQueryMask[4];
-	unsigned int		occlusionQueries[4];
 	unsigned int		singleOcclusionQuery;
-
 
 	void createCandidateTransforms();
 	void selectAndApplyBestTransform();
