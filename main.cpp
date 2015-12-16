@@ -369,6 +369,8 @@ int main(int argc, const char** argv)
 		regoApp->loadStackTransformations();
 		regoApp->loadContrastSettings();
 		
+		regoApp->reloadShaders();
+
 		/*
 		regoApp->addSpimStack("e:/spim/test_beads/spim_TL01_Angle0.ome.tiff");
 		regoApp->centerCamera(); 

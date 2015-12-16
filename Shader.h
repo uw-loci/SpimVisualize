@@ -44,14 +44,20 @@ public:
 		@param vpFile vertex shader file
 		@param gpFile geometry shader file
 		@param fpFile fragment shader file
+		@param defines a list of defines which whill be added before the first line of the source code
 	*/
 	Shader(const std::string& vpFile, const std::string& fpFile);
 	Shader(const std::string& vpFile, const std::string& gpFile, const std::string& fpFile);
 	
+	Shader(const std::string& vpFile, const std::string& fpFile, const std::vector<std::string>& defines);
+	Shader(const std::string& vpFile, const std::string& gpFile, const std::string& fpFile, const std::vector<std::string>& defines);
+
 	/// DTor
 	~Shader();
 
 	inline bool isReady() const { return linkedSuccessfully; }
+
+	void reload();
 
 
 	/// Bind this shader for rendering
@@ -122,6 +128,10 @@ public:
 private:
 	unsigned int	mVertexShader, mGeometryShader, mFragmentShader;
 	unsigned int	mProgram;
+
+	std::string		mVertexSource, mGeometrySource, mFragmentSource;
+	std::vector<std::string> mDefines;
+
 
 	typedef std::map<std::string, int> IntMap;
 	mutable IntMap	mUniformLocations;

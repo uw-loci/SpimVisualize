@@ -33,6 +33,8 @@
 #include <sstream>
 #include <string>
 #include <cassert>
+#include <iomanip>
+#include <algorithm>
 
 #include <glm/gtc/type_ptr.hpp>
 
@@ -92,16 +94,16 @@ std::vector<std::string>& split(const std::string &s, char delim, std::vector<st
 }
 
 
-static unsigned int loadShader(const std::string& fileName, GLenum type)
+static void compileShader(const std::string& fileName, GLint shader, const std::vector<std::string>& defines)
 {
 	std::vector<std::string>	contents;
+
 	std::ifstream file;
 	file.open( fileName.c_str() );
 
 	if (!file.is_open())
 	{
 		ShaderLog::error("Error opening file " + fileName + ".");
-		return 0;
 	}
 
 	std::string line;
@@ -114,46 +116,154 @@ static unsigned int loadShader(const std::string& fileName, GLenum type)
 
 	file.close();
 
-	int current = glCreateShader( type );
+	
+	// preprocessing
+	if (!defines.empty())
+	{
+
+		// find the #version token
+		auto it = contents.begin();
+		while (it->find("#version") == std::string::npos || it == contents.end())
+			++it;
+
+		// not found -- insert at the beginning
+		if (it == contents.end())
+		{
+			contents.insert(contents.end(), defines.begin(), defines.end());
+		}
+
+		// found -- insert after
+		contents.insert(++it, defines.begin(), defines.end());
+
+
+
+		it += defines.size();
+
+		// parse the rest of the lines
+		
+		// first create a map of all defines and tokens
+		std::vector<std::string> definedTokens;
+		for (auto d = defines.begin(); d != defines.end(); ++d)
+		{
+			std::string token = d->substr(d->find("#define ") + 8);
+			token = token.substr(0, token.find_first_of(" "));
+
+			//std::cout << "[Debug] Token: [" << token << "]\n";
+			definedTokens.push_back(token);
+
+		}
+
+
+		while (it != contents.end())
+		{
+			size_t loc = it->find("#define");
+			if (loc != std::string::npos)
+			{
+				// extract token
+				std::string token = it->substr(loc + 8);
+				token = token.substr(0, token.find_first_of(" "));
+
+				//std::cout << "[Debug] Found token: [" << token << "]\n";
+
+				if (std::find(definedTokens.begin(), definedTokens.end(), token) != definedTokens.end())
+				{
+					//std::cout << "[Preprocess] Erasing line " << std::distance(contents.begin(), it) << ": \"" << *it << "\"\n";
+					
+					it = contents.erase(it);
+				}
+			}
+			else
+				++it;
+
+			
+		}
+
+
+
+
+
+
+		
+	}
+
+
+	/*
+	std::cerr << "[Debug] Shader source:\n";
+	for (size_t i = 0; i < contents.size(); ++i)
+	{
+		std::cerr << "[Sauce] " << std::setw(2) << i << ": " << contents[i]; // << std::endl;
+	}
+	*/
+
 
 	const char *glLines[BUFFER_SIZE];
 	for (unsigned int i = 0; i < contents.size(); ++i)
 		glLines[i] = contents[i].c_str();
 
-	glShaderSource( current, (GLsizei)contents.size(), glLines , 0 );
-	glCompileShader( current );
+	glShaderSource( shader, (GLsizei)contents.size(), glLines , 0 );
+	glCompileShader( shader );
 
 	char buffer[BUFFER_SIZE];
 	memset( buffer, 0, BUFFER_SIZE );
 	int length = 0;
 
-	glGetShaderInfoLog( current, BUFFER_SIZE, &length, buffer );
+	glGetShaderInfoLog( shader, BUFFER_SIZE, &length, buffer );
 	if (length > 0)
 	{
 		std::vector <std::string> log;
 		ShaderLog::split(std::string(buffer), '\n', log);
+
+		if (log.size() > 1)
+			ShaderLog::compileInfo("File: " + fileName);
+
 		for (int i = 0; i < log.size(); ++i)
-			ShaderLog::compileInfo( log[i] );
+			ShaderLog::compileInfo(log[i]);
+
 	}
-
-	return current;
 }
 
-Shader::Shader(const std::string& vpFile, const std::string& fpFile) : mGeometryShader(0), linkedSuccessfully(false)
+Shader::Shader(const std::string& vpFile, const std::string& fpFile) : mGeometryShader(0), linkedSuccessfully(false), mVertexSource(vpFile), mFragmentSource(fpFile)
 {
-	mVertexShader = loadShader(vpFile, GL_VERTEX_SHADER );
-	mFragmentShader = loadShader(fpFile, GL_FRAGMENT_SHADER );
+	mProgram = glCreateProgram();
 
-	this->link();
+	mVertexShader = glCreateShader(GL_VERTEX_SHADER);
+	mFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+
+
+	reload();
 }
 
-Shader::Shader(const std::string& vpFile, const std::string& gpFile, const std::string& fpFile) : linkedSuccessfully(false)
+Shader::Shader(const std::string& vpFile, const std::string& gpFile, const std::string& fpFile) : linkedSuccessfully(false), mVertexSource(vpFile), mGeometrySource(gpFile), mFragmentSource(fpFile)
 {
-	mVertexShader = loadShader(vpFile, GL_VERTEX_SHADER );
-	mGeometryShader = loadShader(gpFile, GL_GEOMETRY_SHADER);
-	mFragmentShader = loadShader(fpFile, GL_FRAGMENT_SHADER );
+	mProgram = glCreateProgram();
 
-	this->link();
+	mVertexShader = glCreateShader(GL_VERTEX_SHADER);
+	mGeometryShader = glCreateShader(GL_GEOMETRY_SHADER);
+	mFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+
+	reload();
+}
+
+Shader::Shader(const std::string& vpFile, const std::string& fpFile, const std::vector<std::string>& defines) : mGeometryShader(0), linkedSuccessfully(false), mVertexSource(vpFile), mFragmentSource(fpFile), mDefines(defines)
+{
+	mProgram = glCreateProgram();
+
+	mVertexShader = glCreateShader(GL_VERTEX_SHADER);
+	mFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+
+
+	reload();
+}
+
+Shader::Shader(const std::string& vpFile, const std::string& gpFile, const std::string& fpFile, const std::vector<std::string>& defines) : linkedSuccessfully(false), mVertexSource(vpFile), mGeometrySource(gpFile), mFragmentSource(fpFile), mDefines(defines)
+{
+	mProgram = glCreateProgram();
+
+	mVertexShader = glCreateShader(GL_VERTEX_SHADER);
+	mGeometryShader = glCreateShader(GL_GEOMETRY_SHADER);
+	mFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+
+	reload();
 }
 
 Shader::~Shader()
@@ -165,11 +275,20 @@ Shader::~Shader()
 	glDeleteProgram( mProgram );
 }
 
+void Shader::reload()
+{
+	compileShader(mVertexSource, mVertexShader, mDefines);
+	if (glIsShader(mGeometryShader))
+		compileShader(mGeometrySource, mGeometryShader, mDefines);
+	compileShader(mFragmentSource, mFragmentShader, mDefines);
+
+
+	link();
+
+}
+
 void Shader::link()
 {
-	
-	mProgram = glCreateProgram();
-
 	// attach all shaders we have
 	glAttachShader( mProgram, mVertexShader );
 	if (glIsShader(mGeometryShader))

@@ -79,7 +79,7 @@ public:
 	virtual void loadScale(const std::string& filename);
 	virtual void saveScale(const std::string& filename) const;
 	
-	inline unsigned int getDataSize() const { return data.size();  }
+	inline size_t getDataSize() const { return data.size();  }
 
 private:
 	struct ScaleBand

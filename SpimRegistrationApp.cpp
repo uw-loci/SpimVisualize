@@ -22,6 +22,8 @@
 
 #include <GL/glut.h>
 
+#include <boost/lexical_cast.hpp>
+
 const unsigned int MIN_SLICE_COUNT = 20;
 const unsigned int MAX_SLICE_COUNT = 1500;
 const unsigned int STD_SLICE_COUNT = 100;
@@ -78,6 +80,11 @@ SpimRegistrationApp::~SpimRegistrationApp()
 
 void SpimRegistrationApp::reloadShaders()
 {
+	
+	int numberOfVolumes = std::max(1, (int)stacks.size());
+	std::vector<std::string> defines;
+	defines.push_back("#define VOLUMES " + boost::lexical_cast<std::string>(numberOfVolumes) + "\n");
+
 	delete pointShader;
 	pointShader = new Shader("shaders/points2.vert", "shaders/points2.frag");
 
@@ -85,7 +92,7 @@ void SpimRegistrationApp::reloadShaders()
 	sliceShader = new Shader("shaders/slices.vert", "shaders/slices.frag");
 
 	delete volumeShader;
-	volumeShader = new Shader("shaders/volume2.vert", "shaders/volume2.frag");
+	volumeShader = new Shader("shaders/volume2.vert", "shaders/volume2.frag", defines);
 		
 	delete volumeRaycaster;
 	volumeRaycaster = new Shader("shaders/volumeRaycast.vert", "shaders/volumeRaycast.frag");
@@ -94,10 +101,10 @@ void SpimRegistrationApp::reloadShaders()
 	drawQuad = new Shader("shaders/drawQuad.vert", "shaders/drawQuad.frag");
 
 	delete volumeDifferenceShader;
-	volumeDifferenceShader = new Shader("shaders/volumeDist.vert", "shaders/volumeDist.frag");
+	volumeDifferenceShader = new Shader("shaders/volumeDist.vert", "shaders/volumeDist.frag", defines);
 
 	delete tonemapper;
-	tonemapper = new Shader("shaders/drawQuad.vert", "shaders/tonemapper.frag");
+	tonemapper = new Shader("shaders/drawQuad.vert", "shaders/tonemapper.frag", defines);
 
 }
 
@@ -255,8 +262,8 @@ void SpimRegistrationApp::draw()
 				else
 				{
 					// image-based metric
-					float score = calculateScore(volumeRenderTarget);
-					currentResult.result[vp->name] = score;
+					double score = calculateScore(volumeRenderTarget);
+					currentResult.result[vp->name] = (unsigned long long)score;
 					currentResult.ready = true;
 
 				}
@@ -473,7 +480,7 @@ void SpimRegistrationApp::drawTonemappedQuad(Framebuffer* fbo) const
 
 
 
-glm::vec3 SpimRegistrationApp::getRandomColor(int n)
+glm::vec3 SpimRegistrationApp::getRandomColor(unsigned int n)
 {
 	static std::vector<glm::vec3> pool;
 	if (pool.empty() || n >= pool.size())
@@ -488,7 +495,7 @@ glm::vec3 SpimRegistrationApp::getRandomColor(int n)
 		pool.push_back(glm::vec3(1, 1, 1));
 
 
-		for (int i = 0; i < (n + 1) * 2; ++i)
+		for (unsigned int i = 0; i < (n + 1) * 2; ++i)
 		{
 			float r = (float)rand() / RAND_MAX;
 			float g = (float)rand() / RAND_MAX;
@@ -674,8 +681,8 @@ void SpimRegistrationApp::moveStack(const glm::vec2& delta)
 
 void SpimRegistrationApp::contrastEditorApplyThresholds()
 {
-	unsigned short newMin = globalThreshold.min + minCursor * globalThreshold.getSpread();
-	unsigned short newMax = globalThreshold.min + maxCursor * globalThreshold.getSpread();
+	unsigned short newMin = (unsigned short)(globalThreshold.min + minCursor * globalThreshold.getSpread());
+	unsigned short newMax = (unsigned short)(globalThreshold.min + maxCursor * globalThreshold.getSpread());
 
 	globalThreshold.min = newMin;
 	globalThreshold.max = newMax;
@@ -726,7 +733,7 @@ void SpimRegistrationApp::changeContrast(const glm::ivec2& cursor)
 			std::cout << "[Debug] Selected Contrast: " << value << "(" << currentContrastCursor << ")\n";
 
 
-			unsigned int index = currentContrastCursor * globalThreshold.getSpread();
+			unsigned int index = (unsigned int)(currentContrastCursor * globalThreshold.getSpread());
 			for (size_t i = 0; i < histograms.size(); ++i)
 			{
 				std::cout << "[Histo] " << i << ": " << histograms[i][index] << std::endl;
@@ -800,8 +807,8 @@ void SpimRegistrationApp::autoThreshold()
 
 	globalThreshold.mean /= stacks.size();
 
-	globalThreshold.min = globalThreshold.mean - 3 * globalThreshold.stdDeviation;
-	globalThreshold.max = globalThreshold.mean + 3 * globalThreshold.stdDeviation;
+	globalThreshold.min = (unsigned short)(globalThreshold.mean - 3 * globalThreshold.stdDeviation);
+	globalThreshold.max = (unsigned short)(globalThreshold.mean + 3 * globalThreshold.stdDeviation);
 
 	cout << "[Contrast] Global contrast: [" << globalThreshold.min << " -> " << globalThreshold.max << "], mean: " << globalThreshold.mean << ", std dev: " << globalThreshold.stdDeviation << std::endl;
 
@@ -827,7 +834,7 @@ void SpimRegistrationApp::calculateHistograms()
 {
 	histograms.clear();
 
-	size_t maxVal = 0.f;
+	size_t maxVal = 0;
 
 	for (size_t i = 0; i < stacks.size(); ++i)
 	{
@@ -837,7 +844,11 @@ void SpimRegistrationApp::calculateHistograms()
 			maxVal = std::max(maxVal, histoRaw[j]);
 
 
-		std::vector<float> histoFloat(histoRaw.begin(), histoRaw.end());
+		std::vector<float> histoFloat(histoRaw.size());
+		for (size_t j = 0; j < histoRaw.size(); ++j)
+			histoFloat[j] = (float)histoRaw[j];
+
+		//histoRaw.begin(), histoRaw.end());
 		histograms.push_back(histoFloat);
 	}
 
@@ -883,11 +894,11 @@ void SpimRegistrationApp::drawContrastEditor(const Viewport* vp)
 	glVertex2f(maxCursor, 0.f);
 	glVertex2f(maxCursor, 1.f);
 
-	glColor3f(1, 1, 0);
+	glColor3f(1.f, 1.f, 0.f);
 	glVertex2f(minCursor, 0.f);
 	glVertex2f(minCursor, 1.f);
 
-	glColor3f(0.1, 0.1, 0.1);
+	glColor3f(0.1f, 0.1f, 0.1f);
 	glVertex2f(minCursor, 0.f);
 	glColor3f(1, 1, 1);
 	glVertex2f(maxCursor, 1.f);
@@ -905,7 +916,7 @@ void SpimRegistrationApp::drawContrastEditor(const Viewport* vp)
 	glBegin(GL_LINES);
 	for (size_t i = 0; i < histograms.size(); ++i)
 	{
-		glm::vec3 rc = getRandomColor(i);
+		glm::vec3 rc = getRandomColor((unsigned int)i);
 		glColor3fv(glm::value_ptr(rc));
 	
 
@@ -915,7 +926,7 @@ void SpimRegistrationApp::drawContrastEditor(const Viewport* vp)
 
 			// offset each value slightly
 			//x += ((float)histograms.size() / (float)vp->size.x);
-			x += 0.1;
+			x += 0.1f;
 
 			glVertex2f(x, 0.f);
 			glVertex2f(x, histograms[i][ix]);
@@ -952,7 +963,7 @@ void SpimRegistrationApp::drawBoundingBoxes() const
 			if (i == currentStack)
 				glColor3f(1, 1, 0);
 			else
-				glColor3f(0.6, 0.6, 0.6);
+				glColor3f(0.6f, 0.6f, 0.6f);
 			stacks[i]->getBBox().draw();
 
 			glPopMatrix();
@@ -1063,9 +1074,27 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 
 	for (size_t i = 0; i < stacks.size(); ++i)
 	{
-		glActiveTexture(GL_TEXTURE0 + i);
+		glActiveTexture((GLenum)(GL_TEXTURE0 + i));
 		glBindTexture(GL_TEXTURE_3D, stacks[i]->getTexture());
 
+#ifdef _WIN32
+		char uname[256];
+		sprintf_s(uname, "volume[%d].texture", i);
+		shader->setUniform(uname, (int)i);
+
+		AABB bbox = stacks[i]->getBBox();
+		sprintf_s(uname, "volume[%d].bboxMax", i);
+		shader->setUniform(uname, bbox.max);
+		sprintf_s(uname, "volume[%d].bboxMin", i);
+		shader->setUniform(uname, bbox.min);
+
+		sprintf_s(uname, "volume[%d].enabled", i);
+		shader->setUniform(uname, stacks[i]->enabled);
+
+		sprintf_s(uname, "volume[%d].inverseMVP", i);
+		shader->setMatrix4(uname, glm::inverse(mvp * stacks[i]->transform));
+
+#else
 		char uname[256];
 		sprintf(uname, "volume[%d].texture", i);
 		shader->setUniform(uname, (int)i);
@@ -1081,11 +1110,12 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 
 		sprintf(uname, "volume[%d].inverseMVP", i);
 		shader->setMatrix4(uname, glm::inverse(mvp * stacks[i]->transform));
+#endif
 	}
 
 	// draw all slices
 	glBegin(GL_QUADS);	
-	for (int z = 0; z < sliceCount; ++z)
+	for (unsigned int z = 0; z < sliceCount; ++z)
 	{
 		// render back-to-front
 		float zf = glm::mix(maxPVal.z, minPVal.z, (float)z / sliceCount);
@@ -1230,9 +1260,34 @@ void SpimRegistrationApp::raycastVolumes(const Viewport* vp, const Shader* shade
 
 	for (size_t i = 0; i < stacks.size(); ++i)
 	{
-		glActiveTexture(GL_TEXTURE0 + i);
+		glActiveTexture((GLenum)(GL_TEXTURE0 + i));
 		glBindTexture(GL_TEXTURE_3D, stacks[i]->getTexture());
 
+#ifdef _WIN32
+
+		char uname[256];
+		sprintf_s(uname, "volume[%d].texture", i);
+		shader->setUniform(uname, (int)i);
+
+		AABB bbox = stacks[i]->getBBox();
+		sprintf_s(uname, "volume[%d].bboxMax", i);
+		shader->setUniform(uname, bbox.max);
+		sprintf_s(uname, "volume[%d].bboxMin", i);
+		shader->setUniform(uname, bbox.min);
+
+		sprintf_s(uname, "volume[%d].enabled", i);
+		shader->setUniform(uname, stacks[i]->enabled);
+
+		sprintf_s(uname, "volume[%d].inverseMVP", i);
+		shader->setMatrix4(uname, glm::inverse(mvp * stacks[i]->transform));
+
+		sprintf_s(uname, "volume[%d].transform", i);
+		shader->setMatrix4(uname, stacks[i]->transform);
+
+		sprintf_s(uname, "volume[%d].inverseTransform", i);
+		shader->setMatrix4(uname, glm::inverse(stacks[i]->transform));
+
+#else
 		char uname[256];
 		sprintf(uname, "volume[%d].texture", i);
 		shader->setUniform(uname, (int)i);
@@ -1254,6 +1309,7 @@ void SpimRegistrationApp::raycastVolumes(const Viewport* vp, const Shader* shade
 	
 		sprintf(uname, "volume[%d].inverseTransform", i);
 		shader->setMatrix4(uname, glm::inverse(stacks[i]->transform));
+#endif
 	}
 
 	shader->setUniform("minRayDist", minPVal.z);
@@ -1672,7 +1728,7 @@ void SpimRegistrationApp::inspectOutputImage(const glm::ivec2& cursor)
 
 void SpimRegistrationApp::increaseSliceCount()
 {
-	sliceCount *= 1.4;
+	sliceCount = (unsigned int)(sliceCount * 1.4f);
 	sliceCount = std::min(sliceCount, MAX_SLICE_COUNT);
 	std::cout << "[Slices] Slicecount: " << sliceCount << std::endl;
 }
@@ -1680,7 +1736,7 @@ void SpimRegistrationApp::increaseSliceCount()
 
 void SpimRegistrationApp::decreaseSliceCount()
 {
-	sliceCount /= 1.4;
+	sliceCount = (unsigned int)(sliceCount / 1.4f);
 	sliceCount = std::max(sliceCount, MIN_SLICE_COUNT);
 	std::cout << "[Slices] Slicecount: " << sliceCount << std::endl;
 }
