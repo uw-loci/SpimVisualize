@@ -141,7 +141,7 @@ void SpimRegistrationApp::draw()
 
 	for (size_t i = 0; i < layout->getViewCount(); ++i)
 	{
-		const Viewport* vp = layout->getView(i);
+		const Viewport* vp = layout->getView((unsigned int)i);
 		vp->setup();
 
 		if (vp->name == Viewport::CONTRAST_EDITOR)

@@ -28,9 +28,10 @@
 #include <vector>
 #include <cassert>
 #include <iostream>
+#include <stdexcept>
 
 /// validates the framebuffer configuration
-static void validate(unsigned int buffer) throw(std::string)
+static void validate(unsigned int buffer)
 {
 	glBindFramebuffer( GL_FRAMEBUFFER, buffer );
 	GLenum err = glCheckFramebufferStatus( GL_FRAMEBUFFER );
@@ -39,19 +40,19 @@ static void validate(unsigned int buffer) throw(std::string)
 		switch (err)
 		{
 			case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
-				throw(std::string("Incomplete framebuffer"));
+				throw(std::runtime_error("Incomplete framebuffer"));
 				break;
 			case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
-				throw(std::string("Incomplete drawing buffers"));
+				throw(std::runtime_error("Incomplete drawing buffers"));
 				break;
 			case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
-				throw(std::string("Missing attachments"));
+				throw(std::runtime_error("Missing attachments"));
 				break;
 			case GL_FRAMEBUFFER_UNSUPPORTED:
-				throw(std::string("Unsupported"));
+				throw(std::runtime_error("Unsupported"));
 				break;
 			default:
-				throw(std::string("Unknown error"));
+				throw(std::runtime_error("Unknown error"));
 		}
 	}
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
