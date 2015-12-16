@@ -23,7 +23,7 @@ find_package (FreeImage REQUIRED)
 include_directories("${PROJECT_BINARY_DIR}")
 
 
-add_executable(SpimVisualize main.cpp AABB.cpp Framebuffer.cpp GeometryImage.cpp Layout.cpp OrbitCamera.cpp Shader.cpp SpimPlane.cpp SpimRegistrationApp.cpp SpimStack.cpp stb_image.c stb_image_write.c)
+add_executable(SpimVisualize main.cpp AABB.h AABB.cpp Framebuffer.h Framebuffer.cpp GeometryImage.h GeometryImage.cpp glmIO.h Layout.h Layout.cpp nanoflann.hpp OrbitCamera.h OrbitCamera.cpp Shader.h Shader.cpp SpimPlane.h SpimPlane.cpp SpimRegistrationApp.h SpimRegistrationApp.cpp SpimStack.h SpimStack.cpp stb_image.h stb_image.c stb_image_write.c TinyStats.h)
 
 if (OPENGL_FOUND)
 	#include_directories(${OPENGL_INCLUDE_DIR})
