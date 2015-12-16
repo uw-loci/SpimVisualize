@@ -4,6 +4,9 @@ project (SpimVisualize)
 # disable boost auto-linking
 add_definitions( -DBOOST_ALL_NO_LIB )
 
+# enable C++11
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+
 set(Boost_USE_STATIC_LIBS OFF) 
 set(Boost_USE_MULTITHREADED ON)  
 set(Boost_USE_STATIC_RUNTIME OFF) 
