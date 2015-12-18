@@ -6,6 +6,7 @@
 #include "SpimStack.h"
 #include "OrbitCamera.h"
 #include "BeadDetection.h"
+#include "SimplePointcloud.h"
 
 #include <algorithm>
 #include <iostream>
@@ -30,10 +31,10 @@ const unsigned int STD_SLICE_COUNT = 100;
 
 SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(nullptr), sliceShader(nullptr), volumeShader(nullptr), 
 	volumeRaycaster(nullptr), drawQuad(nullptr), volumeDifferenceShader(nullptr), tonemapper(nullptr), layout(nullptr),
-	drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), currentStack(-1), sliceCount(100), 
+	drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), sliceCount(100), 
 	configPath("./"), cameraMoving(false), runAlignment(false), histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f),
 	subsampleOnCameraMove(false), renderMode(RENDER_VIEWPLANE_SLICES), useOcclusionQuery(false), blendMode(BLEND_ADD), 
-	useImageAutoContrast(false)
+	useImageAutoContrast(false), currentVolume(-1)
 {
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
@@ -71,6 +72,9 @@ SpimRegistrationApp::~SpimRegistrationApp()
 	for (size_t i = 0; i < stacks.size(); ++i)
 		delete stacks[i];
 
+	for (size_t i = 0; i < pointclouds.size(); ++i)
+		delete pointclouds[i];
+
 	for (auto l = prevLayouts.begin(); l != prevLayouts.end(); ++l)
 	{
 		assert(l->second);
@@ -85,6 +89,8 @@ void SpimRegistrationApp::reloadShaders()
 	std::vector<std::string> defines;
 	defines.push_back("#define VOLUMES " + boost::lexical_cast<std::string>(numberOfVolumes) + "\n");
 
+	bool enableShaderPreProcessing = false;
+
 	delete pointShader;
 	pointShader = new Shader("shaders/points2.vert", "shaders/points2.frag");
 
@@ -92,8 +98,11 @@ void SpimRegistrationApp::reloadShaders()
 	sliceShader = new Shader("shaders/slices.vert", "shaders/slices.frag");
 
 	delete volumeShader;
-	volumeShader = new Shader("shaders/volume2.vert", "shaders/volume2.frag", defines);
-		
+	if (enableShaderPreProcessing)
+		volumeShader = new Shader("shaders/volume2.vert", "shaders/volume2.frag", defines);
+	else
+		volumeShader = new Shader("shaders/volume2.vert", "shaders/volume2.frag");
+
 	delete volumeRaycaster;
 	volumeRaycaster = new Shader("shaders/volumeRaycast.vert", "shaders/volumeRaycast.frag");
 
@@ -101,10 +110,16 @@ void SpimRegistrationApp::reloadShaders()
 	drawQuad = new Shader("shaders/drawQuad.vert", "shaders/drawQuad.frag");
 
 	delete volumeDifferenceShader;
-	volumeDifferenceShader = new Shader("shaders/volumeDist.vert", "shaders/volumeDist.frag", defines);
+	if (enableShaderPreProcessing )
+		volumeDifferenceShader = new Shader("shaders/volumeDist.vert", "shaders/volumeDist.frag", defines);
+	else
+		volumeDifferenceShader = new Shader("shaders/volumeDist.vert", "shaders/volumeDist.frag");
 
 	delete tonemapper;
-	tonemapper = new Shader("shaders/drawQuad.vert", "shaders/tonemapper.frag", defines);
+	if (enableShaderPreProcessing)
+		tonemapper = new Shader("shaders/drawQuad.vert", "shaders/tonemapper.frag", defines);
+	else
+		tonemapper = new Shader("shaders/drawQuad.vert", "shaders/tonemapper.frag");
 
 }
 
@@ -165,8 +180,14 @@ void SpimRegistrationApp::draw()
 				
 				const glm::mat4& mat = candidateTransforms.back();
 
+				/*
 				saveStackTransform(currentStack);
 				stacks[currentStack]->applyTransform(mat);
+				*/
+
+				saveVolumeTransform(currentVolume);
+				interactionVolumes[currentVolume]->applyTransform(mat);
+
 			}
 
 
@@ -205,8 +226,14 @@ void SpimRegistrationApp::draw()
 
 			}
 
+			if (!pointclouds.empty())
+			{
+				drawPointclouds(vp);
+			}
 
-			drawViewplaneSlices(vp, volumeDifferenceShader);
+
+
+			//drawViewplaneSlices(vp, volumeDifferenceShader);
 
 			glDisable(GL_BLEND);
 			
@@ -228,12 +255,10 @@ void SpimRegistrationApp::draw()
 			
 			volumeRenderTarget->disable();
 			
-
 			if (renderMode == RENDER_ALIGN)
 				drawTexturedQuad(volumeRenderTarget->getColorbuffer());
 			else if (renderMode == RENDER_VIEWPLANE_SLICES)
 				drawTonemappedQuad(volumeRenderTarget);
-			
 
 
 			if (drawGrid)
@@ -323,9 +348,10 @@ void SpimRegistrationApp::saveStackTransformations() const
 
 void SpimRegistrationApp::loadStackTransformations()
 {
+	std::cout << "[Debug] WARNING loadStackTransformations _will_ break if there are stacks and point clouds in one scene!\n";
 	for (unsigned int i = 0; i < stacks.size(); ++i)
 	{
-		saveStackTransform(i);
+		saveVolumeTransform(i);
 
 		SpimStack* s = stacks[i];
 		std::string filename = s->getFilename() + ".registration.txt";
@@ -385,14 +411,28 @@ void SpimRegistrationApp::addSpimStack(const std::string& filename)
 	stack->subsample();
 
 	stacks.push_back(stack);
-	AABB bbox = stack->getBBox();
+	
+}
 
-	if (stacks.size() == 1)
+void SpimRegistrationApp::addPointcloud(const std::string& filename)
+{
+	SimplePointcloud* pc = new SimplePointcloud(filename);
+
+	pointclouds.push_back(pc);
+	addInteractionVolume(pc);
+}
+
+void SpimRegistrationApp::addInteractionVolume(InteractionVolume* v)
+{
+	interactionVolumes.push_back(v);
+
+	AABB bbox = v->getBBox();
+	
+	if (interactionVolumes.size() == 1)
 		globalBBox = bbox;
 	else
 		globalBBox.extend(bbox);
 }
-
 
 void SpimRegistrationApp::drawTexturedQuad(unsigned int texture) const
 {
@@ -592,10 +632,10 @@ void SpimRegistrationApp::centerCamera()
 
 	if (vp)
 	{
-		if (currentStack == -1)
+		if (currentVolume == -1)
 			vp->camera->target = globalBBox.getCentroid();
 		else
-			vp->camera->target = stacks[currentStack]->getTransformedBBox().getCentroid();
+			vp->camera->target = interactionVolumes[currentVolume]->getTransformedBBox().getCentroid();
 	}
 }
 
@@ -636,13 +676,13 @@ void SpimRegistrationApp::updateMouseMotion(const glm::ivec2& cursor)
 
 void SpimRegistrationApp::toggleSelectStack(int n)
 {
-	if (n >= stacks.size())
-		currentStack = -1;
+	if (n >= interactionVolumes.size())
+		currentVolume= -1;
 
-	if (currentStack == n)
-		currentStack = -1;
+	if (currentVolume == n)
+		currentVolume = -1;
 	else
-		currentStack = n;
+		currentVolume = n;
 }
 
 void SpimRegistrationApp::toggleStack(int n)
@@ -655,10 +695,10 @@ void SpimRegistrationApp::toggleStack(int n)
 
 void SpimRegistrationApp::rotateCurrentStack(float rotY)
 {
-	if (!currentStackValid())
+	if (!currentVolumeValid())
 		return;
 
-	stacks[currentStack]->rotate(rotY);
+	interactionVolumes[currentVolume]->rotate(rotY);
 	updateGlobalBbox();
 }
 
@@ -666,7 +706,7 @@ void SpimRegistrationApp::rotateCurrentStack(float rotY)
 
 void SpimRegistrationApp::moveStack(const glm::vec2& delta)
 {
-	if (!currentStackValid())
+	if (!currentVolumeValid())
 		return;
 
 	if (runAlignment)
@@ -675,7 +715,8 @@ void SpimRegistrationApp::moveStack(const glm::vec2& delta)
 	Viewport* vp = layout->getActiveViewport();
 	if (vp && vp->name != Viewport::CONTRAST_EDITOR)
 	{
-		stacks[currentStack]->move(vp->camera->calculatePlanarMovement(delta));
+		//stacks[currentStack]->move(vp->camera->calculatePlanarMovement(delta));
+		interactionVolumes[currentVolume]->move(vp->camera->calculatePlanarMovement(delta));
 	}
 }
 
@@ -819,9 +860,10 @@ void SpimRegistrationApp::autoThreshold()
 
 void SpimRegistrationApp::toggleAllStacks()
 {
-	bool stat = !stacks[0]->enabled;
-	for (size_t i = 0; i < stacks.size(); ++i)
-		stacks[i]->enabled = stat;
+
+	bool stat = !interactionVolumes[0]->enabled;
+	for (size_t i = 0; i < interactionVolumes.size(); ++i)
+		interactionVolumes[i]->enabled = stat;
 }
 
 void SpimRegistrationApp::subsampleAllStacks()
@@ -960,7 +1002,7 @@ void SpimRegistrationApp::drawBoundingBoxes() const
 			glMultMatrixf(glm::value_ptr(stacks[i]->transform));
 
 
-			if (i == currentStack)
+			if (i == currentVolume)
 				glColor3f(1, 1, 0);
 			else
 				glColor3f(0.6f, 0.6f, 0.6f);
@@ -968,6 +1010,21 @@ void SpimRegistrationApp::drawBoundingBoxes() const
 
 			glPopMatrix();
 		}
+	}
+
+	for (size_t i = 0; i < pointclouds.size(); ++i)
+	{
+		glPushMatrix();
+		glMultMatrixf(glm::value_ptr(pointclouds[i]->transform));
+
+
+		if (i == currentVolume)
+			glColor3f(1, 1, 0);
+		else
+			glColor3f(0.6f, 0.6f, 0.6f);
+		pointclouds[i]->getBBox().draw();
+
+		glPopMatrix();
 	}
 
 	glColor3f(0, 1, 1);
@@ -1335,14 +1392,14 @@ void SpimRegistrationApp::raycastVolumes(const Viewport* vp, const Shader* shade
 
 void SpimRegistrationApp::beginAutoAlign()
 {
-	if (stacks.size() < 2 || currentStack == -1)
+	if (interactionVolumes.size() < 2 || currentVolume== -1)
 		return;
 
 	if (runAlignment)
 		return;
 
 
-	std::cout << "[Debug] Aligning stack " << currentStack << " to stack 0 ... " << std::endl;
+	std::cout << "[Debug] Aligning volume" << currentVolume << " to volume 0 ... " << std::endl;
 	
 
 	runAlignment = true;      
@@ -1351,10 +1408,13 @@ void SpimRegistrationApp::beginAutoAlign()
 	
 
 	lastSamplesPass = 0;
-	lastPassMatrix = stacks[currentStack]->transform;
+	//lastPassMatrix = stacks[currentStack]->transform;
+	lastPassMatrix = interactionVolumes[currentVolume]->transform;
 
 
-	saveStackTransform(currentStack);
+	//saveStackTransform(currentStack);
+	saveVolumeTransform(currentVolume);
+
 }
 
 void SpimRegistrationApp::endAutoAlign()
@@ -1378,8 +1438,8 @@ void SpimRegistrationApp::undoLastTransform()
 		return;
 
 	
-	StackTransform st = transformUndoChain.back();
-	st.stack->transform = st.matrix;
+	VolumeTransform vt = transformUndoChain.back();
+	vt.volume->transform = vt.matrix;
 
 	transformUndoChain.pop_back();
 	updateGlobalBbox();
@@ -1387,10 +1447,11 @@ void SpimRegistrationApp::undoLastTransform()
 
 void SpimRegistrationApp::startStackMove()
 {
-	if (currentStack == -1)
+	if (currentVolume == -1)
 		return;
 
-	saveStackTransform(currentStack);
+	//saveStackTransform(currentStack);
+	saveVolumeTransform(currentVolume);
 }
 
 void SpimRegistrationApp::endStackMove()
@@ -1398,30 +1459,28 @@ void SpimRegistrationApp::endStackMove()
 	updateGlobalBbox();
 }
 
-void SpimRegistrationApp::saveStackTransform(unsigned int n)
+void SpimRegistrationApp::saveVolumeTransform(unsigned int n)
 {
-	assert(n < stacks.size());
+	assert(n < interactionVolumes.size());
 
-	StackTransform st;
-	st.matrix = stacks[n]->transform;
-	st.stack = stacks[n];
+	VolumeTransform vt;
+	vt.matrix = interactionVolumes[n]->transform;
+	vt.volume = interactionVolumes[n];
 
-	transformUndoChain.push_back(st);
+	transformUndoChain.push_back(vt);
 }
 
 void SpimRegistrationApp::updateGlobalBbox()
 {
-	if (stacks.empty())
+	if (interactionVolumes.empty())
 	{
 		globalBBox.reset();
 		return;
 	}
 	
-	globalBBox = stacks[0]->getTransformedBBox();
-	for (size_t i = 1; i < stacks.size(); ++i)
-		globalBBox.extend(stacks[i]->getTransformedBBox());
-
-
+	globalBBox = interactionVolumes[0]->getTransformedBBox();
+	for (size_t i = 0; i < interactionVolumes.size(); ++i)
+		globalBBox.extend(interactionVolumes[i]->getTransformedBBox());
 }
 
 void SpimRegistrationApp::update(float dt)
@@ -1487,10 +1546,10 @@ void SpimRegistrationApp::update(float dt)
 
 void SpimRegistrationApp::maximizeViews()
 {
-	if (currentStackValid())
+	if (currentVolumeValid())
 	{
 		for (auto it = prevLayouts.begin(); it != prevLayouts.end(); ++it)
-			it->second->maximizeView(stacks[currentStack]->getBBox());
+			it->second->maximizeView(interactionVolumes[currentVolume]->getBBox());
 
 	}
 	else
@@ -1505,7 +1564,7 @@ void SpimRegistrationApp::maximizeViews()
 
 void SpimRegistrationApp::createCandidateTransforms()
 {
-	assert(currentStackValid());
+	assert(currentVolumeValid());
 
 	using namespace glm;
 
@@ -1527,7 +1586,9 @@ void SpimRegistrationApp::createCandidateTransforms()
 
 	if (transform == 3)
 	{
-		vec3 d = stacks[currentStack]->getBBox().getCentroid();
+
+		//vec3 d = stacks[currentStack]->getBBox().getCentroid();
+		vec3 d = interactionVolumes[currentVolume]->getBBox().getCentroid();
 		mat4 T = glm::translate(vec3(d.x, 0.f, d.z));
 
 		// rotation
@@ -1623,7 +1684,11 @@ void SpimRegistrationApp::selectAndApplyBestTransform()
 	if (bestResult.getScore() > lastSamplesPass)
 	{
 		// apply transform
-		stacks[currentStack]->applyTransform(bestResult.matrix);
+		//stacks[currentStack]->applyTransform(bestResult.matrix);
+
+		interactionVolumes[currentVolume]->applyTransform(bestResult.matrix);
+
+
 		std::cout << "[Debug] Selected transform with a score of " << bestResult.getScore() << std::endl;
 		
 		lastSamplesPass = bestResult.getScore();
@@ -1672,7 +1737,7 @@ void SpimRegistrationApp::inspectOutputImage(const glm::ivec2& cursor)
 	if (!layout->isSingleView())
 		return;
 
-	if (currentStackValid())
+	if (currentVolumeValid())
 		return;
 
 
@@ -1785,4 +1850,20 @@ void SpimRegistrationApp::calculateImageContrast(const std::vector<glm::vec4>& i
 	maxImageContrast = high;
 	std::cout << "[Image] Auto-contrast: [" << minImageContrast << "->" << maxImageContrast << "]\n";
 
+}
+
+void SpimRegistrationApp::drawPointclouds(const Viewport* vp)
+{
+	glm::mat4 mvp(1.f);
+	vp->camera->getMVP(mvp);
+
+	pointShader->bind();
+	pointShader->setMatrix4("modelViewProjectionMatrix", mvp);
+
+	for (size_t i = 0; i < pointclouds.size(); ++i)
+	{
+		pointclouds[i]->draw(pointShader);
+	}
+
+	pointShader->disable();
 }

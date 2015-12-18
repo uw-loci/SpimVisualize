@@ -131,13 +131,12 @@ static void compileShader(const std::string& fileName, GLint shader, const std::
 		{
 			contents.insert(contents.end(), defines.begin(), defines.end());
 		}
-
+		
 		// found -- insert after
 		contents.insert(++it, defines.begin(), defines.end());
-
-
-
 		it += defines.size();
+		
+
 
 		// parse the rest of the lines
 		

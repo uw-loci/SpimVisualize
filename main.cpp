@@ -301,13 +301,14 @@ static void cleanup()
 
 int main(int argc, const char** argv)
 {
-
+	/*
 	if (argc < 2)
 	{
 		std::cerr << "[Error] No filename given!\n";
 		std::cerr << "[Usage] " << argv[0] << " <spimfile>\n";
 		return -1;
 	}
+	*/
 
 	
 	glutInit(&argc, const_cast<char**>(argv));
@@ -341,6 +342,7 @@ int main(int argc, const char** argv)
 
 	try
 	{
+		/*
 		for (int i = 1; i < argc; ++i)
 		{
 			regoApp->addSpimStack(argv[i]);
@@ -349,7 +351,6 @@ int main(int argc, const char** argv)
 
 
 
-		/*
 		for (int i = 0; i < 3; ++i)
 		{
 			char filename[256];
@@ -365,6 +366,11 @@ int main(int argc, const char** argv)
 
 		//regoApp->addSpimStack("e:/regoApp/result_31x31x360.bin");
 		*/
+
+		regoApp->addPointcloud("e:/urs/ES_20151111.txt");
+		regoApp->addPointcloud("e:/urs/ES_20151122.txt");
+	
+
 		regoApp->centerCamera();
 		regoApp->loadStackTransformations();
 		regoApp->loadContrastSettings();

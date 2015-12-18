@@ -5,7 +5,7 @@
 
 #include <glm/glm.hpp>
 
-#include <boost/utility.hpp>
+#include "InteractionVolume.h"
 
 struct AABB;
 class Shader;
@@ -14,20 +14,16 @@ struct Threshold;
 struct Hourglass;
 
 // a single stack of SPIM images
-class SpimStack : boost::noncopyable
+class SpimStack : public InteractionVolume
 {
 public:
 	SpimStack(const std::string& filename, unsigned int subsample=0);
-	~SpimStack();
+	virtual ~SpimStack();
 	
 	void draw() const;
 	void drawSlices(Shader* s, const glm::vec3& viewDir) const;
 
 	void loadRegistration(const std::string& filename);
-
-	void saveTransform(const std::string& filename) const;
-	void loadTransform(const std::string& filename);
-	void applyTransform(const glm::mat4& t);
 
 	// halfs the internal resolution of the dataset
 	void subsample(bool updateTexture=true);
@@ -39,28 +35,11 @@ public:
 
 	void extractTransformedFeaturePoints(const Threshold& t, ReferencePoints& result) const;
 
-	AABB getBBox() const;
-	AABB getTransformedBBox() const;
-
-	void setRotation(float angle);
-
-	void move(const glm::vec3& delta);
-	void rotate(float d);
-
-
-	glm::mat4				transform;
-
-
-
+	virtual AABB getTransformedBBox() const;
 	glm::vec3 getCentroid() const;
 
 	inline const unsigned int getTexture() const { return volumeTextureId; }
-
-
-	bool	enabled;
-	inline void toggle() { enabled = !enabled; }
-
-
+	
 	Threshold getLimits() const;
 	std::vector<size_t> calculateHistogram(const Threshold& t) const;
 

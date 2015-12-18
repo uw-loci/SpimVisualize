@@ -16,6 +16,8 @@ class SpimStack;
 class Viewport;
 class ReferencePoints;
 struct Hourglass;
+class InteractionVolume;
+class SimplePointcloud;
 
 class SpimRegistrationApp : boost::noncopyable
 {
@@ -28,6 +30,9 @@ public:
 	void subsampleAllStacks();
 
 
+	void addPointcloud(const std::string& filename);
+
+
 	void reloadShaders();
 	void switchRenderMode();
 	void switchBlendMode();
@@ -37,10 +42,10 @@ public:
 
 	void resize(const glm::ivec2& newSize);
 	
-	inline size_t getStacksCount() const { return stacks.size(); }
+	//inline size_t getStacksCount() const { return stacks.size(); }
 	void toggleSelectStack(int n);
 	void toggleStack(int n);
-	inline void toggleCurrentStack() { toggleStack(currentStack); }
+	inline void toggleCurrentStack() { toggleStack(currentVolume); }
 	
 	void startStackMove();
 	void endStackMove();
@@ -123,7 +128,8 @@ private:
 	std::vector<std::vector<float> > histograms;
 	bool					histogramsNeedUpdate;
 	float					minCursor, maxCursor;
-
+	
+	std::vector<SimplePointcloud*>	pointclouds;
 
 	bool					cameraMoving;
 
@@ -133,7 +139,9 @@ private:
 	bool					drawSlices;
 	bool					drawRegistrationPoints;
 
-	int						currentStack;
+
+	std::vector<InteractionVolume*>		interactionVolumes;
+	int									currentVolume;
 
 	// how many planes/slices to draw for the volume
 	unsigned int			sliceCount;
@@ -165,13 +173,13 @@ private:
 	}						blendMode;
 
 	// stores undo transformations for all stacks
-	struct StackTransform
+	struct VolumeTransform
 	{
-		SpimStack*		stack;
-		glm::mat4		matrix;
+		InteractionVolume*	volume;
+		glm::mat4			matrix;
 	};
 		
-	std::vector<StackTransform> transformUndoChain;
+	std::vector<VolumeTransform> transformUndoChain;
 		
 	Framebuffer*			volumeRenderTarget;	
 
@@ -190,6 +198,7 @@ private:
 	void drawViewplaneSlices(const Viewport* vp, const Shader* shader) const;
 	void raycastVolumes(const Viewport* vp, const Shader* shader) const;
 
+	void drawPointclouds(const Viewport* vp);
 	
 	bool useImageAutoContrast;
 	float minImageContrast;
@@ -236,9 +245,10 @@ private:
 
 	static glm::vec3 getRandomColor(unsigned int n);
 
-	inline bool currentStackValid() const { return currentStack > -1 && currentStack < stacks.size();  }
-
-	void saveStackTransform(unsigned int n);
+	inline bool currentVolumeValid() const { return currentVolume > -1 && currentVolume < interactionVolumes.size(); }
+	
+	void saveVolumeTransform(unsigned int n);
+	void addInteractionVolume(InteractionVolume* v);
 	
 
 };

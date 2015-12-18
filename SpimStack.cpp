@@ -55,7 +55,7 @@ using namespace glm;
 // voxel dimensions in microns
 static const vec3 DEFAULT_DIMENSIONS(0.625, 0.625, 3);
 
-SpimStack::SpimStack(const string& name, unsigned int subsampleSteps) : filename(name), dimensions(DEFAULT_DIMENSIONS), width(0), height(0), depth(0), volume(nullptr), volumeTextureId(0), transform(1.f), enabled(true)
+SpimStack::SpimStack(const string& name, unsigned int subsampleSteps) : filename(name), dimensions(DEFAULT_DIMENSIONS), width(0), height(0), depth(0), volume(nullptr), volumeTextureId(0)
 {
 	volumeList[0] = 0;
 	volumeList[1] = 0;
@@ -107,6 +107,13 @@ SpimStack::SpimStack(const string& name, unsigned int subsampleSteps) : filename
 
 	glTexImage3D(GL_TEXTURE_3D, 0, GL_R16I, width, height, depth, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, volume);
 
+	cout << "done.\n";
+
+
+	cout << "[Stack] Calculating bbox ... ";
+	vec3 vol = dimensions * vec3(width, height, depth);
+	bbox.min = vec3(0.f); // -vol * 0.5f;
+	bbox.max = vol;// *0.5f;
 	cout << "done.\n";
 }
 
@@ -265,32 +272,12 @@ std::vector<glm::vec4> SpimStack::extractRegistrationPoints(unsigned short thres
 }
 */
 
-AABB SpimStack::getBBox() const
-{
-	AABB bbox;
-	vec3 vol = dimensions * vec3(width, height, depth);
-	bbox.min = vec3(0.f); // -vol * 0.5f;
-	bbox.max = vol;// *0.5f;
-	
-	return std::move(bbox);
-}
-
 glm::vec3 SpimStack::getCentroid() const
 {
 	glm::vec3 center = dimensions * vec3(width, height, depth) * 0.5f;
 	glm::vec4 c = transform * glm::vec4(center, 1.f);
 	
 	return glm::vec3(c);
-}
-
-void SpimStack::move(const glm::vec3& delta)
-{
-	transform = glm::translate(delta) * transform;//  glm::translate(transform, delta);
-}
-
-void SpimStack::rotate(float d)
-{
-	transform = glm::rotate(transform, d, glm::vec3(0, 1, 0));
 }
 
 void SpimStack::drawSlices(Shader* s, const glm::vec3& view) const
@@ -378,55 +365,6 @@ void SpimStack::loadRegistration(const string& filename)
 	std::cout << "[SpimPlane] Read transform: " << transform << std::endl;
 }
 
-void SpimStack::saveTransform(const std::string& filename) const
-{
-	ofstream file(filename);
-
-	if (file.is_open())
-	{
-
-		const float* m = glm::value_ptr(transform);
-
-		for (int i = 0; i < 16; ++i)
-			file << m[i] << std::endl;
-
-		std::cout << "[SpimStack] Saved transform to \"" << filename << "\"\n";
-	}
-	else
-		throw std::runtime_error("[SpimStack] Unable to open file \"" + filename + "\"!");
-
-}
-
-void SpimStack::loadTransform(const std::string& filename)
-{
-	ifstream file(filename);
-	//assert(file.is_open());
-
-	if (!file.is_open())
-	{
-		std::cerr << "[SpimStack] Unable to load transformation from \"" << filename << "\"!\n";
-		return;
-	}
-
-	float* m = glm::value_ptr(transform);
-	for (int i = 0; i < 16; ++i)
-		file >> m[i];
-
-	std::cout << "[SpimStack] Read transform: " << transform << " from \"" << filename << "\"\n";
-}
-
-void SpimStack::applyTransform(const glm::mat4& t)
-{
-	transform = t * transform;
-}
-
-void SpimStack::setRotation(float angle)
-{
-	transform = translate(glm::mat4(1.f), getBBox().getCentroid());
-	transform = glm::rotate(transform, angle, vec3(0, 1, 0));
-	transform = translate(transform, getBBox().getCentroid() * -1.f);
-	
-}
 
 void SpimStack::drawZPlanes(const glm::vec3& view) const
 {
