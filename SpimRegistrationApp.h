@@ -7,6 +7,7 @@
 #include <boost/utility.hpp>
 
 #include "AABB.h"
+#include "Ray.h"
 #include "StackRegistration.h"
 
 class Framebuffer;
@@ -68,7 +69,7 @@ public:
 	void toggleAllStacks();
 
 
-	
+	inline void clearRays() { rays.clear(); }
 	
 	void beginAutoAlign();
 	void endAutoAlign();
@@ -123,6 +124,10 @@ private:
 
 	// global contrast settings
 	Threshold				globalThreshold;
+
+
+	// test interaction
+	std::vector<Ray>		rays;
 
 	// normalized histograms
 	std::vector<std::vector<float> > histograms;
@@ -200,6 +205,8 @@ private:
 
 	void drawPointclouds(const Viewport* vp);
 	
+	void drawRays(const Viewport* vp);
+
 	bool useImageAutoContrast;
 	float minImageContrast;
 	float maxImageContrast;

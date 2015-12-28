@@ -109,6 +109,8 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == 'u')
 		regoApp->subsampleAllStacks();
 
+	if (key == 'Y')
+		regoApp->clearRays();
 
 	if (key == '1')
 		regoApp->toggleSelectStack(0);
@@ -374,14 +376,9 @@ int main(int argc, const char** argv)
 		SimplePointcloud::resaveAsBin("e:/urs/ES_20151122.txt");
 		*/
 
-		/*
 		regoApp->addPointcloud("e:/urs/ES_20151111.bin");
 		regoApp->addPointcloud("e:/urs/ES_20151122.bin");
-		*/
-
-		regoApp->addPointcloud("e:/urs/ES_20151122.bin");
-
-
+		
 
 		regoApp->centerCamera();
 		regoApp->loadStackTransformations();

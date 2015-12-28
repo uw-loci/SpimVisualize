@@ -238,6 +238,7 @@ void SpimRegistrationApp::draw()
 				drawPointclouds(vp);
 			}
 
+			drawRays(vp);
 
 
 			
@@ -1771,6 +1772,36 @@ void SpimRegistrationApp::inspectOutputImage(const glm::ivec2& cursor)
 
 		//std::cout << "[Debug] " << cursor << " -> " << relCoords << " -> " << imgCoords << std::endl;
 		std::cout << "[Image] " << pixels[index] << std::endl;
+
+
+		
+
+		// shoot rays!
+		relCoords *= 2.f;
+		relCoords -= vec2(1.f);
+
+		std::cout << "[Debug] CoordS: " << relCoords << std::endl;
+
+		mat4 mvp;
+		vp->camera->getMVP(mvp);
+
+		Ray ray;
+		ray.createFromFrustum(mvp, relCoords);
+		rays.push_back(ray);
+
+
+		// test
+		ray.createFromFrustum(mvp, vec2(-1, -1)); rays.push_back(ray);
+		ray.createFromFrustum(mvp, vec2( 1, -1)); rays.push_back(ray);
+		ray.createFromFrustum(mvp, vec2( 1,  1)); rays.push_back(ray);
+		ray.createFromFrustum(mvp, vec2(-1,  1)); rays.push_back(ray);
+
+
+
+
+
+
+
 	}
 
 	/*
@@ -1793,6 +1824,9 @@ void SpimRegistrationApp::inspectOutputImage(const glm::ivec2& cursor)
 		std::cout << "[Image] " << minVal << " -> " << maxVal << std::endl;
 	}
 	*/
+
+
+
 }
 
 void SpimRegistrationApp::increaseSliceCount()
@@ -1865,4 +1899,19 @@ void SpimRegistrationApp::drawPointclouds(const Viewport* vp)
 	{
 		pointclouds[i]->draw();
 	}
+}
+
+void SpimRegistrationApp::drawRays(const Viewport* vp)
+{
+	glColor3f(1, 0, 0);
+	glLineWidth(2.f);
+	glBegin(GL_LINES);
+	for (size_t i = 0; i < rays.size(); ++i)
+	{
+		glVertex3fv(glm::value_ptr(rays[i].origin));
+		glVertex3fv(glm::value_ptr(rays[i].direction));
+
+	}
+	glEnd();
+	glLineWidth(1.f);
 }
