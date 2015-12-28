@@ -1858,7 +1858,7 @@ void SpimRegistrationApp::drawPointclouds(const Viewport* vp)
 	vp->camera->getMVP(mvp);
 
 	pointShader->bind();
-	pointShader->setMatrix4("modelViewProjectionMatrix", mvp);
+	pointShader->setMatrix4("mvpMatrix", mvp);
 
 	for (size_t i = 0; i < pointclouds.size(); ++i)
 	{

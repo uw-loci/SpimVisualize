@@ -1,5 +1,6 @@
 
 #include "SpimRegistrationApp.h"
+#include "SimplePointcloud.h"
 
 #include <GL/glew.h>
 #include <GL/freeglut.h>
@@ -367,9 +368,18 @@ int main(int argc, const char** argv)
 		//regoApp->addSpimStack("e:/regoApp/result_31x31x360.bin");
 		*/
 
-		regoApp->addPointcloud("e:/urs/ES_20151111.txt");
-		regoApp->addPointcloud("e:/urs/ES_20151122.txt");
+
+		/*
+		SimplePointcloud::resaveAsBin("e:/urs/ES_20151111.txt");
+		SimplePointcloud::resaveAsBin("e:/urs/ES_20151122.txt");
+		*/
+
+
+		regoApp->addPointcloud("e:/urs/ES_20151111.bin");
+		regoApp->addPointcloud("e:/urs/ES_20151122.bin");
 	
+
+
 
 		regoApp->centerCamera();
 		regoApp->loadStackTransformations();
