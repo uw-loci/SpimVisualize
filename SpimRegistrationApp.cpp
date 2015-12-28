@@ -1451,7 +1451,7 @@ void SpimRegistrationApp::undoLastTransform()
 
 void SpimRegistrationApp::startStackMove()
 {
-	if (currentVolume == -1)
+	if (!currentVolumeValid())
 		return;
 
 	//saveStackTransform(currentStack);
