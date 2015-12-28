@@ -1,18 +1,14 @@
 
-#version 330
-
-in vec3 vertexIn;
-in vec3 colorIn;
-in vec3 normalIn;
-
-out vec3 color;
+#version 120
 
 uniform mat4 mvpMatrix;
-uniform mat4 transform = mat4(1.0);
+uniform mat4 transform;
+
+varying vec3 color;
+
 void main()
 {
-
-	gl_Position = mvpMatrix * transform * vec4(vertexIn, 1.0);
-	color = colorIn;
+	gl_Position = mvpMatrix * transform * vec4(gl_Vertex.xyz, 1.0);
+	color = gl_Color.rgb;
 }
 

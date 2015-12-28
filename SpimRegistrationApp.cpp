@@ -191,6 +191,11 @@ void SpimRegistrationApp::draw()
 			}
 
 
+			if (runAlignment && useOcclusionQuery)
+			{
+				glBeginQuery(GL_SAMPLES_PASSED, singleOcclusionQuery);
+				//glBeginQuery(GL_SAMPLES_PASSED, occlusionQueries[query]);
+			}
 
 			/// actual drawing block begins
 			/// --------------------------------------------------------
@@ -198,12 +203,7 @@ void SpimRegistrationApp::draw()
 			volumeRenderTarget->bind();
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-			if (runAlignment && useOcclusionQuery)
-			{
-				glBeginQuery(GL_SAMPLES_PASSED, singleOcclusionQuery);
-				//glBeginQuery(GL_SAMPLES_PASSED, occlusionQueries[query]);
-			}
-			
+				
 			glEnable(GL_BLEND);
 			if (blendMode == BLEND_ADD)
 				glBlendEquation(GL_FUNC_ADD);
@@ -217,14 +217,21 @@ void SpimRegistrationApp::draw()
 				glBlendFunc(GL_ONE, GL_ONE);
 
 				drawViewplaneSlices(vp, volumeDifferenceShader);
-
-
 			}
-			else if (renderMode == RENDER_VIEWPLANE_SLICES)
+			
+
+			if (renderMode == RENDER_VIEWPLANE_SLICES)
 			{				
 				drawViewplaneSlices(vp, volumeShader);
 
 			}
+			
+			//drawViewplaneSlices(vp, volumeDifferenceShader);
+
+			glDisable(GL_BLEND);
+			
+
+
 
 			if (!pointclouds.empty())
 			{
@@ -232,11 +239,6 @@ void SpimRegistrationApp::draw()
 			}
 
 
-
-			//drawViewplaneSlices(vp, volumeDifferenceShader);
-
-			glDisable(GL_BLEND);
-			
 
 			
 			/// --------------------------------------------------------
@@ -334,7 +336,6 @@ void SpimRegistrationApp::draw()
 
 	}
 	*/
-
 }
 
 void SpimRegistrationApp::saveStackTransformations() const
@@ -416,7 +417,10 @@ void SpimRegistrationApp::addSpimStack(const std::string& filename)
 
 void SpimRegistrationApp::addPointcloud(const std::string& filename)
 {
-	SimplePointcloud* pc = new SimplePointcloud(filename);
+	const glm::mat4 scaleMatrix = glm::scale(glm::vec3(100.f));
+
+
+	SimplePointcloud* pc = new SimplePointcloud(filename, scaleMatrix);
 
 	pointclouds.push_back(pc);
 	addInteractionVolume(pc);
@@ -1856,14 +1860,9 @@ void SpimRegistrationApp::drawPointclouds(const Viewport* vp)
 {
 	glm::mat4 mvp(1.f);
 	vp->camera->getMVP(mvp);
-
-	pointShader->bind();
-	pointShader->setMatrix4("mvpMatrix", mvp);
-
+	
 	for (size_t i = 0; i < pointclouds.size(); ++i)
 	{
-		pointclouds[i]->draw(pointShader);
+		pointclouds[i]->draw();
 	}
-
-	pointShader->disable();
 }

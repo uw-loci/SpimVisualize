@@ -4,6 +4,7 @@
 #include <GL/glew.h>
 
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/io.hpp>
 
 #include <fstream>
 #include <algorithm>
@@ -11,21 +12,18 @@
 #include <string>
 #include <cstdio>
 
-SimplePointcloud::SimplePointcloud(const std::string& filename)
+SimplePointcloud::SimplePointcloud(const std::string& filename, const glm::mat4& t)
 {
-	// read file here
-	PointCloud	points;
-	PointCloud	colors;
-	PointCloud	normals;
+	this->transform = t;
 
 	std::string ext = filename.substr(filename.find_last_of("."));
 
 	//std::cout << "[Debug] Filename: \"" << filename << "\", extension: " << ext << std::endl;
 
 	if (ext == ".bin")
-		loadBin(filename, points, normals, colors);
+		loadBin(filename);
 	else if (ext == ".txt")
-		loadTxt(filename, points, normals, colors);
+		loadTxt(filename);
 	else
 		throw std::runtime_error("Unsupported point cloud \"" + ext + "\"");
 
@@ -34,23 +32,26 @@ SimplePointcloud::SimplePointcloud(const std::string& filename)
 	assert(points.size() == normals.size());
 	*/
 
-	pointCount = std::min(points.size(), std::min(colors.size(), normals.size()));
+	pointCount = std::min(vertices.size(), std::min(colors.size(), normals.size()));
 	std::cout << "[File] Read " << pointCount << " points.\n";
-
-	bbox.reset(points[0]);
-	for (size_t i = 1; i < points.size(); ++i)
-		bbox.extend(points[i]);
 	
+	bbox.reset(vertices[0]);
+	for (size_t i = 1; i < vertices.size(); ++i)
+		bbox.extend(vertices[i]);
+	
+	std::cout << "[Bbox] " << bbox.min << "->" << bbox.max << std::endl;
 
 	glGenBuffers(3, vertexBuffers);
 	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[0]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*points.size(), glm::value_ptr(points[0]), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertices.size(), glm::value_ptr(vertices[0]), GL_STATIC_DRAW);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[1]);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*colors.size(), glm::value_ptr(colors[0]), GL_STATIC_DRAW);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[2]);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*normals.size(), glm::value_ptr(normals[0]), GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 
@@ -63,8 +64,7 @@ void SimplePointcloud::draw() const
 {
 	glPushMatrix();
 	glMultMatrixf(glm::value_ptr(transform[0]));
-
-
+	
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
 	glEnableClientState(GL_NORMAL_ARRAY);
@@ -82,26 +82,22 @@ void SimplePointcloud::draw() const
 	
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
+	glDisableClientState(GL_VERTEX_ARRAY);
+	glDisableClientState(GL_COLOR_ARRAY);
+	glDisableClientState(GL_NORMAL_ARRAY);
+
 	glPopMatrix();
 }
 
-void SimplePointcloud::draw(Shader* sh) const
-{
-	// assume the shader is already bound ... 
-
-	sh->setMatrix4("transform", transform);
-	
-	this->draw();
-
-}
-
-void SimplePointcloud::loadBin(const std::string& filename, PointCloud& vertices, PointCloud& normals, PointCloud& colors)
+void SimplePointcloud::loadBin(const std::string& filename)
 {
 	std::ifstream file(filename, std::ios::binary);
 	assert(file.is_open());
 
 	uint32_t points = 0;
 	file.read(reinterpret_cast<char*>(&points), sizeof(size_t));
+
+	std::cout << "[Debug] Reading " << points << " points from \"" << filename << "\".\n";
 
 	vertices.resize(points);
 	normals.resize(points);
@@ -113,7 +109,7 @@ void SimplePointcloud::loadBin(const std::string& filename, PointCloud& vertices
 }
 
 
-void SimplePointcloud::saveBin(const std::string& filename, const PointCloud& vertices, const PointCloud& normals, const PointCloud& colors)
+void SimplePointcloud::saveBin(const std::string& filename)
 {
 	assert(vertices.size() == normals.size());
 	assert(vertices.size() == colors.size());
@@ -126,10 +122,14 @@ void SimplePointcloud::saveBin(const std::string& filename, const PointCloud& ve
 	file.write(reinterpret_cast<const char*>(glm::value_ptr(colors[0])), sizeof(glm::vec3)*points);
 }
 
-void SimplePointcloud::loadTxt(const std::string& filename, PointCloud& vertices, PointCloud& normals, PointCloud& colors)
+void SimplePointcloud::loadTxt(const std::string& filename)
 {
 	std::ifstream file(filename);
 	assert(file.is_open());
+
+	vertices.clear();
+	colors.clear();
+	normals.clear();
 
 	std::string tmp;
 	while (!file.eof())
@@ -152,29 +152,5 @@ void SimplePointcloud::loadTxt(const std::string& filename, PointCloud& vertices
 		colors.push_back(color / 255.f);
 		normals.push_back(glm::normalize(normal));
 	}
-
-}
-
-void SimplePointcloud::resaveAsBin(const std::string& filename)
-{
-	PointCloud	points;
-	PointCloud	colors;
-	PointCloud	normals;
-
-	std::string ext = filename.substr(filename.find_last_of("."));
-
-	std::cout << "[Debug] Filename: \"" << filename << "\", extension: " << ext << std::endl;
-
-	if (ext == ".bin")
-		loadBin(filename, points, normals, colors);
-	else if (ext == ".txt")
-		loadTxt(filename, points, normals, colors);
-	else
-		throw std::runtime_error("Unsupported point cloud \"" + ext + "\"");
-	
-	std::string newName = filename.substr(0, filename.find_last_of(".")) + ".bin";
-
-	std::cout << "[Debug] Resaving \"" << filename << "\" as \"" << newName << "\".\n"; 
-	saveBin(newName, points, normals, colors);
 
 }

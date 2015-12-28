@@ -374,10 +374,12 @@ int main(int argc, const char** argv)
 		SimplePointcloud::resaveAsBin("e:/urs/ES_20151122.txt");
 		*/
 
-
+		/*
 		regoApp->addPointcloud("e:/urs/ES_20151111.bin");
 		regoApp->addPointcloud("e:/urs/ES_20151122.bin");
-	
+		*/
+
+		regoApp->addPointcloud("e:/urs/ES_20151122.bin");
 
 
 

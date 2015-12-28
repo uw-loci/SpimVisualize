@@ -165,8 +165,8 @@ void AABB::extend(const glm::vec3& pt)
 void AABB::reset()
 {
 	min = glm::vec3(std::numeric_limits<float>::max());
-	//max = glm::vec3(std::numeric_limits<float>::lowest());
-	max = glm::vec3(-(FLT_MAX-2.f));	
+	max = glm::vec3(std::numeric_limits<float>::lowest());
+	//max = glm::vec3(-(FLT_MAX-2.f));	
 
 }
 
