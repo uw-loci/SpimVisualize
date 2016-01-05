@@ -408,10 +408,11 @@ void SpimRegistrationApp::addSpimStack(const std::string& filename)
 {
 	SpimStack* stack = new SpimStack(filename);
 
-	//stack->subsample(false);
+	stack->subsample(false);
 	stack->subsample();
 
 	stacks.push_back(stack);
+	addInteractionVolume(stack);
 	
 }
 
@@ -430,8 +431,8 @@ void SpimRegistrationApp::addInteractionVolume(InteractionVolume* v)
 {
 	interactionVolumes.push_back(v);
 
-	AABB bbox = v->getBBox();
-	
+	AABB bbox = v->getTransformedBBox();
+
 	if (interactionVolumes.size() == 1)
 		globalBBox = bbox;
 	else

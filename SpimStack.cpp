@@ -135,8 +135,7 @@ void SpimStack::loadImage(const std::string& filename)
 		throw std::runtime_error("Unable to open image \"" + filename + "\"!");
 
 	assert(fmb);
-
-
+	
 	// get the dimensions
 	depth = FreeImage_GetPageCount(fmb);
 	for (unsigned int z = 0; z < depth; ++z)
@@ -146,6 +145,17 @@ void SpimStack::loadImage(const std::string& filename)
 		int w = FreeImage_GetWidth(bm);
 		int h = FreeImage_GetHeight(bm);
 
+
+		
+		unsigned int bpp = FreeImage_GetBPP(bm);
+		if (bpp != 16)
+		{
+			// convert image
+			bm = FreeImage_ConvertToUINT16(bm);
+			assert(bm);
+		}
+		
+		
 		if (width == 0)
 		{
 			width = w;
