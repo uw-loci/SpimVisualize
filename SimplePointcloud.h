@@ -16,6 +16,7 @@ public:
 	void draw() const;
 	
 	inline size_t getPointcount() const { return pointCount; }
+	inline const std::vector<glm::vec3> getPoints() const { return vertices; }
 
 private:	
 	size_t						pointCount;

@@ -1788,17 +1788,16 @@ void SpimRegistrationApp::inspectOutputImage(const glm::ivec2& cursor)
 		Ray ray;
 		ray.createFromFrustum(mvp, relCoords);
 		rays.push_back(ray);
-
-
-		// test
+		
+		/*
 		ray.createFromFrustum(mvp, vec2(-1, -1)); rays.push_back(ray);
 		ray.createFromFrustum(mvp, vec2( 1, -1)); rays.push_back(ray);
 		ray.createFromFrustum(mvp, vec2( 1,  1)); rays.push_back(ray);
 		ray.createFromFrustum(mvp, vec2(-1,  1)); rays.push_back(ray);
+		*/
 
-
-
-
+		if (pointclouds.size() > 0)
+			inspectPointclouds(ray);
 
 
 
@@ -1914,4 +1913,24 @@ void SpimRegistrationApp::drawRays(const Viewport* vp)
 	}
 	glEnd();
 	glLineWidth(1.f);
+}
+
+void SpimRegistrationApp::inspectPointclouds(const Ray& r)
+{
+	for (size_t i = 0; i < pointclouds.size(); ++i)
+	{
+		const SimplePointcloud* spc = pointclouds[i];
+		if (r.intersectsAABB(spc->getTransformedBBox()))
+		{
+
+			float dist = -1.f;
+			size_t hit = r.getClosestPoint(spc->getPoints(), spc->transform, dist);
+
+			std::cout << "[Debug] Ray intersects point cloud " << i << " at point index: " <<hit  << ", dist: " << sqrtf(dist) << std::endl;
+
+
+		}
+
+
+	}
 }

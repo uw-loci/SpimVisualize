@@ -258,4 +258,5 @@ private:
 	void addInteractionVolume(InteractionVolume* v);
 	
 
+	void inspectPointclouds(const Ray& ray);
 };

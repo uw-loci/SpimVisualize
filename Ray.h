@@ -21,8 +21,10 @@ struct Ray
 	bool intersectsAABB(const AABB& bbox) const;
 	bool intersectsAABB(const AABB& bbox, const glm::mat4& boxTransform) const;
 
+	void transform(const glm::mat4& transform);
+
 	size_t getClosestPoint(const std::vector<glm::vec3>& points, float& distSqrd) const;
-	
+	size_t getClosestPoint(const std::vector<glm::vec3>& points, const glm::mat4& pointTransform, float& distSqrd) const;
 
 };
 
