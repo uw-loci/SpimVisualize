@@ -381,7 +381,7 @@ int main(int argc, const char** argv)
 
 	
 		regoApp->addSpimStack("e:/spim/zebra_beads/spim_TL01_Angle0.ome.tiff");
-		//regoApp->addSpimStack("e:/spim/drosophila_example_tiff/spim_TL18_Angle0.tif");
+		//regoApp->addSpimStack("e:/spim/drosophila_example_tiff/spim_TL18_Angle225.tif");
 		/*
 		regoApp->addSpimStack("e:/spim/drosophila_example_tiff/spim_TL18_Angle45.tif");
 		regoApp->addSpimStack("e:/spim/drosophila_example_tiff/spim_TL18_Angle90.tif");

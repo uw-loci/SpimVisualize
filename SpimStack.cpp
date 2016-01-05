@@ -55,46 +55,11 @@ using namespace glm;
 // voxel dimensions in microns
 static const vec3 DEFAULT_DIMENSIONS(0.625, 0.625, 3);
 
-SpimStack::SpimStack(const string& name, unsigned int subsampleSteps) : filename(name), dimensions(DEFAULT_DIMENSIONS), width(0), height(0), depth(0), volume(nullptr), volumeTextureId(0)
+SpimStack::SpimStack() : filename(""), dimensions(DEFAULT_DIMENSIONS), width(0), height(0), depth(0), volumeTextureId(0)
 {
 	volumeList[0] = 0;
 	volumeList[1] = 0;
-
-
-	if (filename.find(".bin") == string::npos)
-		loadImage(filename);
-	else
-	{
-
-		string s = filename.substr(filename.find_last_of("_"));
-	
-		cout << "[Debug] " << s << endl;
-		ivec3 res;
-		assert(sscanf(s.c_str(), "_%dx%dx%d.bin", &res.x, &res.y, &res.z) == 3);
-		cout << "[Debug] Reading binary volume with resolution " << res << endl;
-
-		loadBinary(filename, res);
-	}
-	
-	
-	cout << "[Stack] Updating stats ... ";
-	maxVal = 0;
-	minVal = std::numeric_limits<unsigned short>::max();
-	for (size_t i = 0; i < width*height*depth; ++i)
-	{
-		unsigned short val = volume[i];
-		maxVal = std::max(maxVal, val);
-		minVal = std::min(minVal, val);
-	}
-	cout << "done; range: " << minVal << "-" << maxVal << endl;
-
-	
-	if (subsampleSteps> 0)
-	{
-		for (unsigned int s = 0; s < subsampleSteps; ++s)
-			this->subsample(false);
-	}
-
+		
 	cout << "[Stack] Creating 3D texture ... ";
 	glGenTextures(1, &volumeTextureId);
 	glBindTexture(GL_TEXTURE_3D, volumeTextureId);
@@ -105,146 +70,43 @@ SpimStack::SpimStack(const string& name, unsigned int subsampleSteps) : filename
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
-	glTexImage3D(GL_TEXTURE_3D, 0, GL_R16I, width, height, depth, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, volume);
-
-	cout << "done.\n";
-
-
-	cout << "[Stack] Calculating bbox ... ";
-	vec3 vol = dimensions * vec3(width, height, depth);
-	bbox.min = vec3(0.f); // -vol * 0.5f;
-	bbox.max = vol;// *0.5f;
+	glTexImage3D(GL_TEXTURE_3D, 0, GL_R16I, width, height, depth, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, 0);
 	cout << "done.\n";
 }
 
 SpimStack::~SpimStack()
 {
-	delete volume;
-
 	glDeleteTextures(1, &volumeTextureId);
 	glDeleteLists(volumeList[0], 1);
 	glDeleteLists(volumeList[1], 1);
 
 }
 
-void SpimStack::loadImage(const std::string& filename)
+void SpimStack::load(const std::string& file)
 {
-	FIMULTIBITMAP* fmb = FreeImage_OpenMultiBitmap(FIF_TIFF, filename.c_str(), FALSE, TRUE);
-
-	if (!fmb)
-		throw std::runtime_error("Unable to open image \"" + filename + "\"!");
-
-	assert(fmb);
+	if (!filename.empty())
+		throw std::runtime_error("File already loaded: \"" + filename + "\"!");
 	
-	// get the dimensions
-	depth = FreeImage_GetPageCount(fmb);
-	for (unsigned int z = 0; z < depth; ++z)
+	filename = file;
+
+
+	if (filename.find(".bin") == string::npos)
+		loadImage(filename);
+	else
 	{
-		FIBITMAP* bm = FreeImage_LockPage(fmb, z);
 
-		int w = FreeImage_GetWidth(bm);
-		int h = FreeImage_GetHeight(bm);
+		string s = filename.substr(filename.find_last_of("_"));
 
+		cout << "[Debug] " << s << endl;
+		ivec3 res;
+		assert(sscanf(s.c_str(), "_%dx%dx%d.bin", &res.x, &res.y, &res.z) == 3);
+		cout << "[Debug] Reading binary volume with resolution " << res << endl;
 
-		
-		unsigned int bpp = FreeImage_GetBPP(bm);
-		if (bpp != 16)
-		{
-			// convert image
-			bm = FreeImage_ConvertToUINT16(bm);
-			assert(bm);
-		}
-		
-		
-		if (width == 0)
-		{
-			width = w;
-			height = h;
-			volume = new unsigned short[width*height*depth];
-		}
-		else
-		{
-			assert(width == w);
-			assert(height = h);
-		}
-
-
-		unsigned short* bits = reinterpret_cast<unsigned short*>(FreeImage_GetBits(bm));
-
-		size_t offset = width*height*z;
-		memcpy(&volume[offset], bits, sizeof(unsigned short)*width*height);
-
-		FreeImage_UnlockPage(fmb, bm, FALSE);
+		loadBinary(filename, res);
 	}
 
-	cout << "[Stack] Loaded image stack: " << width << "x" << height << "x" << depth << endl;
-
-
-	FreeImage_CloseMultiBitmap(fmb);
-
-}
-
-void SpimStack::loadBinary(const std::string& filename, const glm::ivec3& res)
-{
-	width = res.x;
-	height = res.y;
-	depth = res.z;
-
-	volume = new unsigned short[width*height*depth];
-
-	std::ifstream file(filename, ios::binary);
-	assert(file.is_open());
-
-	file.read(reinterpret_cast<char*>(volume), width*height*depth*sizeof(unsigned short));
-
-
-	cout << "[Stack] Loaded binary volume: " << width << "x" << height << "x" << depth << endl;
-
-}
-
-
-void SpimStack::subsample(bool updateTexture)
-{
-	assert(volume);
-
-
-	dimensions *= vec3(2.f, 2.f, 1.f);
-	
-	std::cout << "[Spimstack] Subsampling to " << width / 2 << "x" << height / 2 << "x" << depth << std::endl;
-
-	unsigned short* newData = new unsigned short[(width/2)*(height/2)*depth];
-	
-	for (unsigned int z = 0; z < depth; ++z)
-	{
-		for (unsigned int x = 0, nx = 0; x < width;  x+=2, ++nx)
-		{
-			for (unsigned int y = 0, ny = 0; y < height; y += 2, ++ny)
-			{
-				//std::cout << "x y z " << x << "," << y << "," << z << " -> " << (x * 2) << "," << (y * 2) << "," << z << std::endl;
-
-
-				const unsigned short val = volume[x + y*width + z*width*height];
-				newData[nx + ny*width / 2 + z*width / 2 * height / 2] = val;
-
-			}
-		}
-	}
-
-
-
-	delete volume;
-	volume = newData;
-	width /= 2;
-	height /= 2;
-
-	if (updateTexture)
-	{
-		if (!glIsTexture(volumeTextureId))
-			glGenTextures(1, &volumeTextureId);
-
-		glBindTexture(GL_TEXTURE_3D, volumeTextureId);
-		glTexImage3D(GL_TEXTURE_3D, 0, GL_R16I, width, height, depth, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, volume);
-	}
+	updateTexture();
+	updateStats();
 }
 
 /*
@@ -565,13 +427,14 @@ vector<vec4> SpimStack::extractTransformedPoints() const
 		{
 			for (unsigned int y = 0; y < height; ++y)
 			{
-				const unsigned short val = volume[x + y*width + z*width*height];
+				//const unsigned short val = volume[x + y*width + z*width*height];
 				vec3 coord(x, y, z);
 				vec4 point(coord * dimensions, 1.f);
 
 				// transform to world space
 				point = transform * point;
-				point.w = float(val) / std::numeric_limits<unsigned short>::max();
+				//point.w = float(val) / std::numeric_limits<unsigned short>::max();
+				point.w = (float)getRelativeValue(getIndex(x, y, z));
 				points.push_back(point);
 			}
 
@@ -598,9 +461,9 @@ vector<vec4> SpimStack::extractTransformedPoints(const SpimStack* clip, const Th
 		{
 			for (unsigned int y = 0; y < height; ++y)
 			{
-				const unsigned short val = volume[x + y*width + z*width*height];
-				
-				if (val >= t.min && val <= t.max)
+			
+				double v = getValue(getIndex(x, y, z));
+				if (v >= t.min && v <= t.max)
 				{
 
 
@@ -615,7 +478,7 @@ vector<vec4> SpimStack::extractTransformedPoints(const SpimStack* clip, const Th
 					vec4 pt = invMat * point;
 					if (bbox.isInside(vec3(pt)))
 					{
-						point.w = float(val) / std::numeric_limits<unsigned short>::max();
+						point.w = (float)getRelativeValue(getIndex(x, y, z));
 						points.push_back(point);
 					}
 				}
@@ -857,15 +720,15 @@ Threshold SpimStack::getLimits() const
 	Threshold t;
 
 	t.max = 0;
-	t.min = numeric_limits<unsigned short>::max();
-
+	t.min = numeric_limits<double>::max();
 	t.mean = 0;
 
-	const unsigned int count = width*height*depth;
+	const size_t count = width*height*depth;
 
-	for (unsigned int i = 0; i < count; ++i)
+	for (size_t i = 0; i < count; ++i)
 	{
-		const unsigned short& v = volume[i];
+		//const unsigned short& v = volume[i];
+		const double v = getValue(i);
 		t.max = std::max(t.max, v);
 		t.min = std::min(t.min, v);
 	
@@ -875,9 +738,9 @@ Threshold SpimStack::getLimits() const
 	t.mean /= count;
 
 	double variance = 0;
-	for (unsigned int i = 0; i < count; ++i)
+	for (size_t i = 0; i < count; ++i)
 	{
-		double v = (double)volume[i];
+		double v = (double)getValue(i);
 		variance = variance + (v - t.mean)*(v - t.mean);
 	}
 	
@@ -900,8 +763,9 @@ std::vector<glm::vec3> SpimStack::calculateVolumeNormals() const
 			normals[x + z*width*height].y = 0.f;
 			for (unsigned int y = 1; y < height; ++y)
 			{
-				short v = volume[x + y*width + z*width*height] - volume[x + (y-1)*width + z*width*height];
-				normals[x + y*width + z*width*height].y = float(v) / numeric_limits<short>::max();
+				//short v = volume[x + y*width + z*width*height] - volume[x + (y-1)*width + z*width*height];
+				float dy = (float)(getRelativeValue(getIndex(x, y, z)) - getRelativeValue(getIndex(x, y - 1, z)));
+				normals[x + y*width + z*width*height].y = dy;
 			}
 		}
 	}
@@ -915,8 +779,10 @@ std::vector<glm::vec3> SpimStack::calculateVolumeNormals() const
 			normals[y*width + z*width*height].x = 0.f;
 			for (unsigned int x = 1; x < width; ++x)
 			{
-				short v = volume[x + y*width + z*width*height] - volume[x -1 + y*width + z*width*height];
-				normals[x + y*width + z*width*height].x = float(v) / numeric_limits<short>::max();
+				
+				//short v = volume[x + y*width + z*width*height] - volume[x -1 + y*width + z*width*height];
+				float dx = (float)(getRelativeValue(getIndex(x, y, z)) - getRelativeValue(getIndex(x - 1, y, z)));
+				normals[x + y*width + z*width*height].x = dx;
 			}
 		}
 	}
@@ -930,8 +796,9 @@ std::vector<glm::vec3> SpimStack::calculateVolumeNormals() const
 			normals[x + y*width].z = 0.f;
 			for (unsigned int z = 1; z < depth; ++z)
 			{
-				short v = volume[x + y*width + z*width*height] - volume[x + y*width + (z-1)*width*height];
-				normals[x + y*width + z*width*height].z = float(v) / numeric_limits<short>::max();
+				//short v = volume[x + y*width + z*width*height] - volume[x + y*width + (z-1)*width*height];
+				float dz = (float)(getRelativeValue(getIndex(x, y, z)) - getRelativeValue(getIndex(x, y, z - 1)));
+				normals[x + y*width + z*width*height].z = dz; // float(v) / numeric_limits<short>::max();
 			}
 		}
 	}
@@ -950,8 +817,10 @@ std::vector<glm::vec3> SpimStack::calculateVolumeNormals() const
 
 vector<size_t> SpimStack::calculateHistogram(const Threshold& t) const
 {
-	vector<size_t> histogram(t.getSpread(), 0);
-
+	vector<size_t> histogram(std::ceil(t.getSpread()));
+	throw(std::runtime_error("Not implemented!"));
+	
+	/*
 	for (unsigned int i = 0; i < width*height*depth; ++i)
 	{
 		int j = (int)volume[i] - (int)t.min;
@@ -959,8 +828,10 @@ vector<size_t> SpimStack::calculateHistogram(const Threshold& t) const
 		if (j >= 0 && j < histogram.size())
 			++histogram[j];
 	}
-	
+	*/
+
 	return std::move(histogram);
+
 }
 
 /*
@@ -1110,4 +981,290 @@ AABB SpimStack::getTransformedBBox() const
 
 
 	return std::move(result);
+}
+
+
+void SpimStack::updateStats()
+{
+	cout << "[Stack] Updating stats ... ";
+	maxVal = 0.f;
+	minVal = std::numeric_limits<float>::max();
+	for (size_t i = 0; i < width*height*depth; ++i)
+	{
+		double val = getValue(i);
+		maxVal = std::max(maxVal, val);
+		minVal = std::min(minVal, val);
+	}
+	cout << "done; range: " << minVal << "-" << maxVal << endl;
+
+	cout << "[Stack] Calculating bbox ... ";
+	vec3 vol = dimensions * vec3(width, height, depth);
+	bbox.min = vec3(0.f); // -vol * 0.5f;
+	bbox.max = vol;// *0.5f;
+	cout << "done.\n";
+}
+
+
+
+
+SpimStackU16::~SpimStackU16()
+{
+	delete[] volume;
+}
+
+
+
+
+void SpimStackU16::loadBinary(const std::string& filename, const glm::ivec3& res)
+{
+	width = res.x;
+	height = res.y;
+	depth = res.z;
+
+	volume = new unsigned short[width*height*depth];
+
+	std::ifstream file(filename, ios::binary);
+	assert(file.is_open());
+
+	file.read(reinterpret_cast<char*>(volume), width*height*depth*sizeof(unsigned short));
+
+
+	cout << "[Stack] Loaded binary volume: " << width << "x" << height << "x" << depth << endl;
+
+}
+
+
+
+
+void SpimStackU16::loadImage(const std::string& filename)
+{
+	FIMULTIBITMAP* fmb = FreeImage_OpenMultiBitmap(FIF_TIFF, filename.c_str(), FALSE, TRUE);
+
+	if (!fmb)
+		throw std::runtime_error("Unable to open image \"" + filename + "\"!");
+
+	assert(fmb);
+
+	// get the dimensions
+	depth = FreeImage_GetPageCount(fmb);
+	bool initialized = false;
+
+
+	for (unsigned int z = 0; z < depth; ++z)
+	{
+		FIBITMAP* bm = FreeImage_LockPage(fmb, z);
+
+		int w = FreeImage_GetWidth(bm);
+		int h = FreeImage_GetHeight(bm);
+		
+		unsigned int bpp = FreeImage_GetBPP(bm);
+		assert(bpp == 16);
+		
+
+		if (!initialized)
+		{
+			initialized = true;
+			width = w;
+			height = h;
+			volume = new unsigned short[width*height*depth];
+		}
+		else
+		{
+			assert(width == w);
+			assert(height = h);
+		}
+
+
+		unsigned short* bits = reinterpret_cast<unsigned short*>(FreeImage_GetBits(bm));
+
+		size_t offset = width*height*z;
+		memcpy(&volume[offset], bits, sizeof(unsigned short)*width*height);
+
+		FreeImage_UnlockPage(fmb, bm, FALSE);
+	}
+
+	cout << "[Stack] Loaded image stack: " << width << "x" << height << "x" << depth << endl;
+
+
+	FreeImage_CloseMultiBitmap(fmb);
+
+}
+
+void SpimStackU16::subsample(bool updateTextureData)
+{
+	assert(volume);
+
+
+	dimensions *= vec3(2.f, 2.f, 1.f);
+
+	std::cout << "[Spimstack] Subsampling to " << width / 2 << "x" << height / 2 << "x" << depth << std::endl;
+
+	unsigned short* newData = new unsigned short[(width / 2)*(height / 2)*depth];
+
+	for (unsigned int z = 0; z < depth; ++z)
+	{
+		for (unsigned int x = 0, nx = 0; x < width; x += 2, ++nx)
+		{
+			for (unsigned int y = 0, ny = 0; y < height; y += 2, ++ny)
+			{
+				//std::cout << "x y z " << x << "," << y << "," << z << " -> " << (x * 2) << "," << (y * 2) << "," << z << std::endl;
+
+				const unsigned short val = volume[x + y*width + z*width*height];
+				newData[nx + ny*width / 2 + z*width / 2 * height / 2] = val;
+
+			}
+		}
+	}
+
+	delete[] volume;
+	volume = newData;
+	width /= 2;
+	height /= 2;
+
+	if (updateTextureData)
+		updateTexture();
+}
+
+void SpimStackU16::updateTexture()
+{
+	if (!glIsTexture(volumeTextureId))
+		glGenTextures(1, &volumeTextureId);
+
+	cout << "[Stack] Updating texture ... ";
+	glBindTexture(GL_TEXTURE_3D, volumeTextureId);
+	glTexImage3D(GL_TEXTURE_3D, 0, GL_R16UI, width, height, depth, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, volume);
+	glBindTexture(GL_TEXTURE_3D, 0);
+	cout << "done.\n";
+}
+
+
+
+SpimStackU8::~SpimStackU8()
+{
+	delete[] volume;
+}
+
+
+
+
+void SpimStackU8::loadBinary(const std::string& filename, const glm::ivec3& res)
+{
+	width = res.x;
+	height = res.y;
+	depth = res.z;
+
+	volume = new unsigned char[width*height*depth];
+
+	std::ifstream file(filename, ios::binary);
+	assert(file.is_open());
+
+	file.read(reinterpret_cast<char*>(volume), width*height*depth*sizeof(unsigned char));
+
+
+	cout << "[Stack] Loaded binary volume: " << width << "x" << height << "x" << depth << endl;
+
+}
+
+
+
+
+void SpimStackU8::loadImage(const std::string& filename)
+{
+	FIMULTIBITMAP* fmb = FreeImage_OpenMultiBitmap(FIF_TIFF, filename.c_str(), FALSE, TRUE);
+
+	if (!fmb)
+		throw std::runtime_error("Unable to open image \"" + filename + "\"!");
+
+	assert(fmb);
+
+	// get the dimensions
+	depth = FreeImage_GetPageCount(fmb);
+	bool initialized = false;
+
+
+	for (unsigned int z = 0; z < depth; ++z)
+	{
+		FIBITMAP* bm = FreeImage_LockPage(fmb, z);
+
+		int w = FreeImage_GetWidth(bm);
+		int h = FreeImage_GetHeight(bm);
+
+		unsigned int bpp = FreeImage_GetBPP(bm);
+		assert(bpp == 8);
+
+
+		if (!initialized)
+		{
+			initialized = true;
+			width = w;
+			height = h;
+			volume = new unsigned char[width*height*depth];
+		}
+		else
+		{
+			assert(width == w);
+			assert(height = h);
+		}
+
+
+		unsigned char* bits = reinterpret_cast<unsigned char*>(FreeImage_GetBits(bm));
+
+		size_t offset = width*height*z;
+		memcpy(&volume[offset], bits, sizeof(unsigned char)*width*height);
+
+		FreeImage_UnlockPage(fmb, bm, FALSE);
+	}
+
+	cout << "[Stack] Loaded image stack: " << width << "x" << height << "x" << depth << endl;
+
+
+	FreeImage_CloseMultiBitmap(fmb);
+
+}
+
+void SpimStackU8::subsample(bool updateTextureData)
+{
+	assert(volume);
+
+
+	dimensions *= vec3(2.f, 2.f, 1.f);
+
+	std::cout << "[Spimstack] Subsampling to " << width / 2 << "x" << height / 2 << "x" << depth << std::endl;
+
+	unsigned char* newData = new unsigned char[(width / 2)*(height / 2)*depth];
+
+	for (unsigned int z = 0; z < depth; ++z)
+	{
+		for (unsigned int x = 0, nx = 0; x < width; x += 2, ++nx)
+		{
+			for (unsigned int y = 0, ny = 0; y < height; y += 2, ++ny)
+			{
+				//std::cout << "x y z " << x << "," << y << "," << z << " -> " << (x * 2) << "," << (y * 2) << "," << z << std::endl;
+
+				const unsigned char val = volume[x + y*width + z*width*height];
+				newData[nx + ny*width / 2 + z*width / 2 * height / 2] = val;
+
+			}
+		}
+	}
+
+	delete[] volume;
+	volume = newData;
+	width /= 2;
+	height /= 2;
+
+	if (updateTextureData)
+		updateTexture();
+}
+
+void SpimStackU8::updateTexture()
+{
+	if (!glIsTexture(volumeTextureId))
+		glGenTextures(1, &volumeTextureId);
+
+	cout << "[Stack] Updating texture ... ";
+	glBindTexture(GL_TEXTURE_3D, volumeTextureId);
+	glTexImage3D(GL_TEXTURE_3D, 0, GL_R8I, width, height, depth, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, volume);
+	glBindTexture(GL_TEXTURE_3D, 0);
+	cout << "done.\n";
 }

@@ -17,16 +17,17 @@ struct Hourglass;
 class SpimStack : public InteractionVolume
 {
 public:
-	SpimStack(const std::string& filename, unsigned int subsample=0);
+	SpimStack();
 	virtual ~SpimStack();
 	
-	void draw() const;
-	void drawSlices(Shader* s, const glm::vec3& viewDir) const;
+	void load(const std::string& filename);
+
+	virtual void drawSlices(Shader* s, const glm::vec3& viewDir) const;
 
 	void loadRegistration(const std::string& filename);
 
 	// halfs the internal resolution of the dataset
-	void subsample(bool updateTexture=true);
+	virtual void subsample(bool updateTexture=true) = 0;
 		
 	// extracts the points in world coords. The w coordinate contains the point's value
 	std::vector<glm::vec4> extractTransformedPoints() const;
@@ -48,7 +49,7 @@ public:
 	inline const std::string& getFilename() const { return filename;  }
 
 
-private:
+protected:
 	glm::vec3			dimensions;
 
 	unsigned int		width, height, depth;
@@ -62,15 +63,22 @@ private:
 
 	// 2 display lists: 0->width and width->0 for quick front-to-back rendering
 	mutable unsigned int	volumeList[2];
+	
+	double					minVal, maxVal;
+	
 
-	unsigned short*			volume;
-	unsigned short			minVal, maxVal;
+	virtual void updateStats();
+	virtual void updateTexture() = 0;
 
 
-	void loadImage(const std::string& filename);
-	void loadBinary(const std::string& filename, const glm::ivec3& resolution);
+	virtual double getValue(size_t index) const = 0;
+	virtual double getRelativeValue(size_t index) const = 0;
 
+	virtual void loadImage(const std::string& filename) = 0;
+	virtual void loadBinary(const std::string& filename, const glm::ivec3& resolution) = 0;
 
+	inline size_t getIndex(unsigned int x, unsigned int y, unsigned int z) const { return x + y*width + z*width*height; }
+	
 	void createPlaneLists();
 
 
@@ -80,9 +88,61 @@ private:
 
 	std::vector<glm::vec3> calculateVolumeNormals() const;
 
-	//cv::Mat getImagePlane(unsigned int z) const;
-
 };
 
+class SpimStackU16 : public SpimStack
+{
+public:
+	~SpimStackU16();
 
+	virtual void subsample(bool updateTexture = true);
+
+private:
+	unsigned short*			volume;
+
+	virtual void updateTexture();
+
+	virtual void loadImage(const std::string& filename);
+	virtual void loadBinary(const std::string& filename, const glm::ivec3& resolution);
+
+	
+	inline double getValue(size_t index) const
+	{
+		//assert(index < width*heigth*depth);
+		return (float)volume[index];
+	}
+
+	inline double getRelativeValue(size_t index) const
+	{
+		return getValue(index) / std::numeric_limits<unsigned short>::max();
+	}
+};
+
+class SpimStackU8 : public SpimStack
+{
+public:
+	~SpimStackU8();
+
+	virtual void subsample(bool updateTexture = true);
+
+private:
+	unsigned char*			volume;
+
+	virtual void updateTexture();
+
+	virtual void loadImage(const std::string& filename);
+	virtual void loadBinary(const std::string& filename, const glm::ivec3& resolution);
+
+
+	inline double getValue(size_t index) const
+	{
+		//assert(index < width*heigth*depth);
+		return (float)volume[index];
+	}
+
+	inline double getRelativeValue(size_t index) const
+	{
+		return getValue(index) / 255;
+	}
+};
 

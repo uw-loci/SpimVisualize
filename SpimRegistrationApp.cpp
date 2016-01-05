@@ -407,7 +407,9 @@ void SpimRegistrationApp::loadContrastSettings()
 
 void SpimRegistrationApp::addSpimStack(const std::string& filename)
 {
-	SpimStack* stack = new SpimStack(filename);
+	SpimStack* stack = new SpimStackU16;
+	
+	stack->load(filename);
 
 	stack->subsample(false);
 	stack->subsample();
@@ -1658,8 +1660,11 @@ void SpimRegistrationApp::selectAndApplyBestTransform()
 
 	static unsigned int counter = 0;
 	char filename[256];
+#ifdef _WIN32
+	sprintf_s(filename, "e:/temp/result_%d.csv", counter++);
+#else
 	sprintf(filename, "e:/temp/result_%d.csv", counter++);
-
+#endif
 	// write out to csv file 
 	std::ofstream file(filename);
 	file << "#Tx, Ty, Tz, Ry, score\n";

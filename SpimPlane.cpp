@@ -66,7 +66,11 @@ SpimPlane::SpimPlane(const std::string& imageFile, const std::string& registrati
 		std::string buffer;
 		std::getline(file, buffer);
 
+#ifdef _WIN32
+		int result = sscanf_s(buffer.c_str(), "m%*2s: %f", &glm::value_ptr(transform)[i]);
+#else
 		int result = sscanf(buffer.c_str(), "m%*2s: %f", &glm::value_ptr(transform)[i]);
+#endif
 	}
 	
 	transform = glm::transpose(transform);
