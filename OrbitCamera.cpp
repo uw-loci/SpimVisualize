@@ -42,7 +42,7 @@ void OrbitCamera::setup() const
 void OrbitCamera::getMVP(glm::mat4& mvp) const
 {
 	mat4 mdlv = glm::lookAt(getPosition(), target, up);
-	mat4 proj = glm::perspective(fovy, aspect, near, far);
+	mat4 proj = glm::perspective((float)deg2rad(fovy), aspect, near, far);
 
 	mvp = proj * mdlv;
 }
@@ -50,7 +50,7 @@ void OrbitCamera::getMVP(glm::mat4& mvp) const
 void OrbitCamera::getMVPdouble(glm::dmat4& mvp) const
 {
 	dmat4 mdlv = glm::lookAt(dvec3(getPosition()), dvec3(target), dvec3(up));
-	dmat4 proj = glm::perspective((double)fovy, (double)aspect, (double)near, (double)far);
+	dmat4 proj = glm::perspective(deg2rad((double)fovy), (double)aspect, (double)near, (double)far);
 
 	mvp = proj * mdlv;
 }
@@ -58,13 +58,13 @@ void OrbitCamera::getMVPdouble(glm::dmat4& mvp) const
 void OrbitCamera::getDoubleMatrices(glm::dmat4& proj, glm::dmat4& view) const
 {
 	view = glm::lookAt(dvec3(getPosition()), dvec3(target), dvec3(up));
-	proj = glm::perspective((double)fovy, (double)aspect, (double)near, (double)far);
+	proj = glm::perspective(deg2rad((double)fovy), (double)aspect, (double)near, (double)far);
 }
 
 void OrbitCamera::getMatrices(glm::mat4& proj, glm::mat4& view) const
 {
 	view = glm::lookAt(vec3(getPosition()), vec3(target), vec3(up));
-	proj = glm::perspective(fovy, aspect, near, far);
+	proj = glm::perspective((float)deg2rad(fovy), aspect, near, far);
 }
 
 
