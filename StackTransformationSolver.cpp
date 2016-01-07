@@ -5,7 +5,12 @@
 #include <random>
 #include <iostream>
 
+#include <GL/glew.h>
+
+#include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/transform2.hpp>
+
+#include "Framebuffer.h"
 
 IStackTransformationSolver::IStackTransformationSolver() : currentSolution(-1)
 {
@@ -41,8 +46,35 @@ bool IStackTransformationSolver::hasValidCurrentSolution() const
 void IStackTransformationSolver::recordCurrentScore(double s)
 {
 	if (hasValidCurrentSolution())
+	{
+		std::cout << "[Solver] Recording score of " << s << " for current solution.\n";
 		solutions[currentSolution].score += s;
+	}
 }
+
+void IStackTransformationSolver::recordCurrentScore(Framebuffer* fbo)
+{
+	fbo->bind();
+	glReadBuffer(GL_COLOR_ATTACHMENT0);
+
+	std::vector<glm::vec4> pixels(fbo->getWidth()*fbo->getHeight());
+	glReadPixels(0, 0, fbo->getWidth(), fbo->getHeight(), GL_RGBA, GL_FLOAT, glm::value_ptr(pixels[0]));
+	fbo->disable();
+
+	double value = 0;
+
+	for (size_t i = 0; i < pixels.size(); ++i)
+	{
+		glm::vec3 color(pixels[i]);
+		value += glm::dot(color, color);
+	}
+
+	std::cout << "[Solver] Read back score: " << value << std::endl;
+	glReadBuffer(GL_BACK);
+
+	recordCurrentScore(value);
+}
+
 
 const IStackTransformationSolver::Solution& IStackTransformationSolver::getCurrentSolution() const
 {

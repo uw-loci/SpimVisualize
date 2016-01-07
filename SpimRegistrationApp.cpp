@@ -288,8 +288,7 @@ void SpimRegistrationApp::draw()
 				else
 				{
 					// image-based metric
-					double score = calculateScore(volumeRenderTarget);
-					solver->recordCurrentScore(score);
+					solver->recordCurrentScore(volumeRenderTarget);
 
 				}
 			}
@@ -1538,29 +1537,6 @@ void SpimRegistrationApp::toggleSlices()
 {
 	drawSlices = !drawSlices;
 	std::cout << "[Render] Drawing " << (drawSlices ? "slices" : "volumes") << std::endl;
-}
-
-double SpimRegistrationApp::calculateScore(Framebuffer* fbo) const
-{
-	fbo->bind();
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-
-	std::vector<glm::vec4> pixels(fbo->getWidth()*fbo->getHeight());
-	glReadPixels(0, 0, fbo->getWidth(), fbo->getHeight(), GL_RGBA, GL_FLOAT, glm::value_ptr(pixels[0]));
-	fbo->disable();
-
-	double value = 0;
-
-	for (size_t i = 0; i < pixels.size(); ++i)
-	{
-		glm::vec3 color(pixels[i]);
-		value += glm::dot(color, color);
-	}
-
-	std::cout << "[Debug] Read back score: " << value << std::endl;
-	glReadBuffer(GL_BACK);
-
-	return value;
 }
 
 void SpimRegistrationApp::inspectOutputImage(const glm::ivec2& cursor)

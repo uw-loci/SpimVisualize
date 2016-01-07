@@ -5,6 +5,8 @@
 
 #include <vector>
 
+class Framebuffer;
+
 class IStackTransformationSolver : boost::noncopyable
 {
 public:
@@ -26,6 +28,7 @@ public:
 
 	virtual void createCandidateSolutions() = 0;
 	virtual void recordCurrentScore(double score);
+	virtual void recordCurrentScore(Framebuffer* fbo);
 
 	bool nextSolution();
 	void resetSolutions();

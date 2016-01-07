@@ -221,8 +221,6 @@ private:
 	bool				useOcclusionQuery;
 	unsigned int		singleOcclusionQuery;
 	
-	double calculateScore( Framebuffer* fbo) const;
-
 
 	IStackTransformationSolver*		solver;
 
