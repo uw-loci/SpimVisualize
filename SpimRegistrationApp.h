@@ -19,6 +19,7 @@ class ReferencePoints;
 struct Hourglass;
 class InteractionVolume;
 class SimplePointcloud;
+class IStackTransformationSolver;
 
 class SpimRegistrationApp : boost::noncopyable
 {
@@ -215,40 +216,15 @@ private:
 
 
 	// auto-stack alignment
-	unsigned long long		lastSamplesPass;
-	glm::mat4				lastPassMatrix;
-		
 	bool					runAlignment;
-
-	struct OcclusionQueryResult
-	{
-		glm::mat4			matrix;
-		unsigned long long	result[4];
-		bool				ready;
-
-		inline unsigned long long getScore() const
-		{
-			return result[0] + result[1] + result[2] + result[3];
-		}
-
-		inline bool operator < (const OcclusionQueryResult& rhs) const
-		{
-			return getScore() < rhs.getScore();
-		}
-	};
-
-	std::vector<glm::mat4>				candidateTransforms;
-	std::vector<OcclusionQueryResult>	occlusionQueryResults;
-	OcclusionQueryResult				currentResult;
 
 	bool				useOcclusionQuery;
 	unsigned int		singleOcclusionQuery;
-
-	void createCandidateTransforms();
-	void selectAndApplyBestTransform();
-
+	
 	double calculateScore( Framebuffer* fbo) const;
 
+
+	IStackTransformationSolver*		solver;
 
 	static glm::vec3 getRandomColor(unsigned int n);
 

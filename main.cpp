@@ -385,7 +385,7 @@ int main(int argc, const char** argv)
 		//regoApp->addSpimStack("e:/spim/drosophila_example_tiff/spim_TL18_Angle0.tif");
 		regoApp->addSpimStack("e:/spim/OpenSPIM_tutorial/spim_TL00_Angle1.ome.tiff");
 		regoApp->addSpimStack("e:/spim/OpenSPIM_tutorial/spim_TL00_Angle2.ome.tiff");
-		regoApp->addSpimStack("e:/spim/OpenSPIM_tutorial/spim_TL00_Angle3.ome.tiff");
+		//regoApp->addSpimStack("e:/spim/OpenSPIM_tutorial/spim_TL00_Angle3.ome.tiff");
 
 		regoApp->centerCamera();
 		regoApp->loadStackTransformations();

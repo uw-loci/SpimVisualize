@@ -7,6 +7,7 @@
 #include "OrbitCamera.h"
 #include "BeadDetection.h"
 #include "SimplePointcloud.h"
+#include "StackTransformationSolver.h"
 
 #include <algorithm>
 #include <iostream>
@@ -34,7 +35,7 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(nu
 	drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), sliceCount(100), 
 	configPath("./"), cameraMoving(false), runAlignment(false), histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f),
 	subsampleOnCameraMove(false), renderMode(RENDER_VIEWPLANE_SLICES), useOcclusionQuery(false), blendMode(BLEND_ADD), 
-	useImageAutoContrast(false), currentVolume(-1)
+	useImageAutoContrast(false), currentVolume(-1), solver(nullptr)
 {
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
@@ -51,10 +52,13 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(nu
 
 	glGenQueries(1, &singleOcclusionQuery);
 
+
+	solver = new UniformSamplingSolver;
 }
 
 SpimRegistrationApp::~SpimRegistrationApp()
 {
+	delete solver;
 	
 	delete volumeRenderTarget;
 	
@@ -178,12 +182,7 @@ void SpimRegistrationApp::draw()
 				int query = vp->name;
 				assert(query < 4);
 				
-				const glm::mat4& mat = candidateTransforms.back();
-
-				/*
-				saveStackTransform(currentStack);
-				stacks[currentStack]->applyTransform(mat);
-				*/
+				const glm::mat4& mat = solver->getCurrentSolution().matrix;
 
 				saveVolumeTransform(currentVolume);
 				interactionVolumes[currentVolume]->applyTransform(mat);
@@ -283,16 +282,14 @@ void SpimRegistrationApp::draw()
 
 					GLuint64 result = 0;
 					glGetQueryObjectui64v(singleOcclusionQuery, GL_QUERY_RESULT, &result);
-					
-					currentResult.result[vp->name] = result;
-					currentResult.ready = true;
+				
+					solver->recordCurrentScore(result);
 				}
 				else
 				{
 					// image-based metric
 					double score = calculateScore(volumeRenderTarget);
-					currentResult.result[vp->name] = (unsigned long long)score;
-					currentResult.ready = true;
+					solver->recordCurrentScore(score);
 
 				}
 			}
@@ -1411,13 +1408,8 @@ void SpimRegistrationApp::beginAutoAlign()
 	
 
 	runAlignment = true;      
-	if (candidateTransforms.empty())
-		createCandidateTransforms();
-	
-
-	lastSamplesPass = 0;
-	//lastPassMatrix = stacks[currentStack]->transform;
-	lastPassMatrix = interactionVolumes[currentVolume]->transform;
+	solver->resetSolutions();
+	solver->createCandidateSolutions();
 
 
 	//saveStackTransform(currentStack);
@@ -1428,16 +1420,6 @@ void SpimRegistrationApp::beginAutoAlign()
 void SpimRegistrationApp::endAutoAlign()
 {
 	runAlignment = false;
-	lastSamplesPass = 0;
-
-	currentResult.ready = false;
-
-
-	// clear all pending stuff
-	//candidateTransforms.clear();
-	occlusionQueryResults.clear();
-	
-	
 }
 
 void SpimRegistrationApp::undoLastTransform()
@@ -1497,38 +1479,21 @@ void SpimRegistrationApp::update(float dt)
 
 	if (runAlignment)
 	{
-		std::cout << "[Align] Testing transform " << candidateTransforms.size() << " ... \n";
+		if (solver->nextSolution())
+		{
+			std::cout << "[Align] Testing transform " << solver->getCurrentSolution().id << " ... \n";
+		}
+		else
+		{
+			std::cout << "[Aling] No more transformations to test!\n";
+			
+			const IStackTransformationSolver::Solution& solution = solver->getBestSolution();
 
-		// remove the last frame's transform
-		candidateTransforms.pop_back();
+			interactionVolumes[currentVolume]->applyTransform(solution.matrix);
+			std::cout << "[Debug] Selected transform with a score of " << solution.score << std::endl;
 
-		if (candidateTransforms.empty())
-		{		
-			std::cout << "[Debug] Selecting best transform ... \n";
-			selectAndApplyBestTransform();
 			endAutoAlign();
 		}
-
-
-		if (currentResult.ready)
-		{
-			occlusionQueryResults.push_back(currentResult);
-
-			// reset the current result
-			currentResult.result[0] = 0;
-			currentResult.result[1] = 0;
-			currentResult.result[2] = 0;
-			currentResult.result[3] = 0;
-			currentResult.ready = false;
-			currentResult.matrix = candidateTransforms.back();
-		}
-		
-		/*
-		// first process all existing transforms
-		if (occlusionQueryResults.size() >= 10)
-			selectAndApplyBestTransform();
-		*/
-		
 	}
 
 
@@ -1568,148 +1533,6 @@ void SpimRegistrationApp::maximizeViews()
 	
 	
 }
-
-
-void SpimRegistrationApp::createCandidateTransforms()
-{
-	assert(currentVolumeValid());
-
-	using namespace glm;
-
-	candidateTransforms.clear();
-
-	
-	// single axis alignment: dx,dy,dz, ry
-	int transform = rand() % 4;
-	
-
-	
-	// right now just check dx+dz
-	if (transform == 1)
-		transform = 0;
-	if (transform == 3)
-		transform = 2;
-	
-	std::cout << "[Debug] Creating transformations for: " << std::endl;
-
-	if (transform == 3)
-	{
-
-		//vec3 d = stacks[currentStack]->getBBox().getCentroid();
-		vec3 d = interactionVolumes[currentVolume]->getBBox().getCentroid();
-		mat4 T = glm::translate(vec3(d.x, 0.f, d.z));
-
-		// rotation
-		for (int a = -100; a <= 100; ++a)
-		{
-
-			mat4 R = glm::rotate((float)a/10.f, vec3(0, 1, 0));
-			candidateTransforms.push_back(R);
-		}
-	}
-	else
-	{
-		for (int x = -100; x <= 100; ++x)
-		{
-			float dx = (float)x / 5.f;
-			vec3 v(0.f);
-			v[transform] = dx;
-
-			mat4 T = translate(v);
-
-			candidateTransforms.push_back(T);
-		}
-	}
-	std::cout << "[Debug] Created " << candidateTransforms.size() << " new candidate transforms.\n";
-
-	// reset the current result
-	currentResult.result[0] = 0;
-	currentResult.result[1] = 0;
-	currentResult.result[2] = 0;
-	currentResult.result[3] = 0;
-	currentResult.ready = false;
-	currentResult.matrix = candidateTransforms.back();
-
-
-	/*
-	// create new vector of queries ... 
-	if (occlusionQueryIdsLazyEvaluation[0].size() != candidateTransforms.size())
-	{
-		if (!occlusionQueryIdsLazyEvaluation[0].empty())
-			for (int i = 0; i < 4; ++i)
-				glDeleteQueries(occlusionQueryIdsLazyEvaluation[i].size(), &occlusionQueryIdsLazyEvaluation[i][0]);
-
-		for (int i = 0; i < 4; ++i)
-		{
-			occlusionQueryIdsLazyEvaluation[i].resize(candidateTransforms.size());
-			glGenQueries(occlusionQueryIdsLazyEvaluation[i].size(), &occlusionQueryIdsLazyEvaluation[i][0]);
-		}
-	}
-
-	occlusionQueryCurrentLazyEvaluation = 0;
-	*/
-}
-
-
-void SpimRegistrationApp::selectAndApplyBestTransform()
-{
-	if (occlusionQueryResults.empty())
-		return;
-
-
-
-	static unsigned int counter = 0;
-	char filename[256];
-#ifdef _WIN32
-	sprintf_s(filename, "e:/temp/result_%d.csv", counter++);
-#else
-	sprintf(filename, "e:/temp/result_%d.csv", counter++);
-#endif
-	// write out to csv file 
-	std::ofstream file(filename);
-	file << "#Tx, Ty, Tz, Ry, score\n";
-
-	for (size_t i = 0; i < occlusionQueryResults.size(); ++i)
-	{
-		const OcclusionQueryResult& result = occlusionQueryResults[i];
-		glm::vec3 t(result.matrix[3]);
-
-		// quaternion to axis-angle
-		glm::quat quat(glm::mat3(result.matrix));
-		float a = 2.f * acos(quat.w);
-		
-		file << t.x << ", " << t.y << ", " << t.z << ", " << a << ", " << result.getScore() << std::endl;;
- 
-	}
-
-
-
-
-
-
-
-	sort(occlusionQueryResults.begin(), occlusionQueryResults.end());
-	const OcclusionQueryResult& bestResult = occlusionQueryResults.back();
-	
-
-	if (bestResult.getScore() > lastSamplesPass)
-	{
-		// apply transform
-		//stacks[currentStack]->applyTransform(bestResult.matrix);
-
-		interactionVolumes[currentVolume]->applyTransform(bestResult.matrix);
-
-
-		std::cout << "[Debug] Selected transform with a score of " << bestResult.getScore() << std::endl;
-		
-		lastSamplesPass = bestResult.getScore();
-	}
-	else
-		std::cout << "[Debug] No transform with better samples passed than before!\n";
-	
-	occlusionQueryResults.clear();
-}
-
 
 void SpimRegistrationApp::toggleSlices()
 {
