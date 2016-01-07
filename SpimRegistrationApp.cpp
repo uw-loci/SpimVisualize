@@ -702,7 +702,7 @@ void SpimRegistrationApp::rotateCurrentStack(float rotY)
 	if (!currentVolumeValid())
 		return;
 
-	interactionVolumes[currentVolume]->rotate(rotY);
+	interactionVolumes[currentVolume]->rotate(glm::radians(rotY));
 	updateGlobalBbox();
 }
 
