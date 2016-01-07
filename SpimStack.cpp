@@ -59,9 +59,9 @@ SpimStack::SpimStack() : filename(""), dimensions(DEFAULT_DIMENSIONS), width(0),
 {
 	volumeList[0] = 0;
 	volumeList[1] = 0;
-		
-	cout << "[Stack] Creating 3D texture ... ";
+
 	glGenTextures(1, &volumeTextureId);
+	cout << "[Stack] Created new texture id: " << volumeTextureId << endl;
 	glBindTexture(GL_TEXTURE_3D, volumeTextureId);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -69,9 +69,10 @@ SpimStack::SpimStack() : filename(""), dimensions(DEFAULT_DIMENSIONS), width(0),
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glBindTexture(GL_TEXTURE_3D, 0);
 
-	glTexImage3D(GL_TEXTURE_3D, 0, GL_R16I, width, height, depth, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, 0);
-	cout << "done.\n";
+
+
 }
 
 SpimStack::~SpimStack()
@@ -716,7 +717,6 @@ void SpimStack::extractTransformedFeaturePoints(const Threshold& t, ReferencePoi
 
 Threshold SpimStack::getLimits() const
 {
-	assert(volume);
 	Threshold t;
 
 	t.max = 0;
@@ -818,17 +818,23 @@ std::vector<glm::vec3> SpimStack::calculateVolumeNormals() const
 vector<size_t> SpimStack::calculateHistogram(const Threshold& t) const
 {
 	vector<size_t> histogram(std::ceil(t.getSpread()));
-	throw(std::runtime_error("Not implemented!"));
+	//throw(std::runtime_error("Not implemented!"));
 	
-	/*
-	for (unsigned int i = 0; i < width*height*depth; ++i)
+	
+	for (size_t i = 0; i < width*height*depth; ++i)
 	{
+		/*
 		int j = (int)volume[i] - (int)t.min;
-
 		if (j >= 0 && j < histogram.size())
 			++histogram[j];
+
+		*/
+		int j = (int)floor(getValue(i) - t.min);
+		if (j >= 0 && j < histogram.size())
+			++histogram[j];
+
 	}
-	*/
+	
 
 	return std::move(histogram);
 
@@ -1127,13 +1133,10 @@ void SpimStackU16::subsample(bool updateTextureData)
 
 void SpimStackU16::updateTexture()
 {
-	if (!glIsTexture(volumeTextureId))
-		glGenTextures(1, &volumeTextureId);
-
-	cout << "[Stack] Updating texture ... ";
+	cout << "[Stack] Updating 3D texture ... ";
 	glBindTexture(GL_TEXTURE_3D, volumeTextureId);
+	assert(volume);
 	glTexImage3D(GL_TEXTURE_3D, 0, GL_R16UI, width, height, depth, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, volume);
-	glBindTexture(GL_TEXTURE_3D, 0);
 	cout << "done.\n";
 }
 
@@ -1259,12 +1262,9 @@ void SpimStackU8::subsample(bool updateTextureData)
 
 void SpimStackU8::updateTexture()
 {
-	if (!glIsTexture(volumeTextureId))
-		glGenTextures(1, &volumeTextureId);
-
-	cout << "[Stack] Updating texture ... ";
+	cout << "[Stack] Updating 3D texture ... ";
 	glBindTexture(GL_TEXTURE_3D, volumeTextureId);
-	glTexImage3D(GL_TEXTURE_3D, 0, GL_R8I, width, height, depth, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, volume);
-	glBindTexture(GL_TEXTURE_3D, 0);
+	assert(volume);
+	glTexImage3D(GL_TEXTURE_3D, 0, GL_R8UI, width, height, depth, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, volume);
 	cout << "done.\n";
 }
