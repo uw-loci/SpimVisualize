@@ -1407,8 +1407,7 @@ void SpimRegistrationApp::beginAutoAlign()
 	
 
 	runAlignment = true;      
-	solver->resetSolutions();
-	solver->createCandidateSolutions();
+	solver->initialize();
 
 
 	//saveStackTransform(currentStack);

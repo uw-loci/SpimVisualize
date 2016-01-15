@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <random>
 #include <iostream>
+#include <chrono>
 
 #include <GL/glew.h>
 
@@ -11,46 +12,6 @@
 #include <glm/gtx/transform2.hpp>
 
 #include "Framebuffer.h"
-
-IStackTransformationSolver::IStackTransformationSolver() : currentSolution(-1)
-{
-}
-
-bool IStackTransformationSolver::nextSolution()
-{
-	if (solutions.empty())
-		return false;
-
-	++currentSolution;
-	if (currentSolution == solutions.size())
-	{
-		// reset to last valid solution
-		--currentSolution;
-		return false;
-	}
-
-	return true;
-}
-
-void IStackTransformationSolver::resetSolutions()
-{
-	solutions.clear();
-	currentSolution = -1;
-}
-
-bool IStackTransformationSolver::hasValidCurrentSolution() const
-{
-	return !solutions.empty() && (currentSolution >= 0) && (currentSolution < solutions.size());
-}
-
-void IStackTransformationSolver::recordCurrentScore(double s)
-{
-	if (hasValidCurrentSolution())
-	{
-		std::cout << "[Solver] Recording score of " << s << " for current solution.\n";
-		solutions[currentSolution].score += s;
-	}
-}
 
 void IStackTransformationSolver::recordCurrentScore(Framebuffer* fbo)
 {
@@ -76,7 +37,49 @@ void IStackTransformationSolver::recordCurrentScore(Framebuffer* fbo)
 }
 
 
-const IStackTransformationSolver::Solution& IStackTransformationSolver::getCurrentSolution() const
+void UniformSamplingSolver::initialize()
+{
+	resetSolution();
+	createCandidateSolutions();
+}
+
+void UniformSamplingSolver::resetSolution()
+{
+	solutions.clear();
+	currentSolution = -1;
+}
+
+bool UniformSamplingSolver::nextSolution()
+{
+	if (solutions.empty())
+		return false;
+
+	++currentSolution;
+	if (currentSolution == solutions.size())
+	{
+		// reset to last valid solution
+		--currentSolution;
+		return false;
+	}
+
+	return true;
+}
+
+bool UniformSamplingSolver::hasValidCurrentSolution() const
+{
+	return !solutions.empty() && (currentSolution >= 0) && (currentSolution < solutions.size());
+}
+
+void UniformSamplingSolver::recordCurrentScore(double s)
+{
+	if (hasValidCurrentSolution())
+	{
+		std::cout << "[Solver] Recording score of " << s << " for current solution.\n";
+		solutions[currentSolution].score += s;
+	}
+}
+
+const UniformSamplingSolver::Solution& UniformSamplingSolver::getCurrentSolution() const
 {
 	if (!hasValidCurrentSolution())
 		throw std::runtime_error("Solver has no valid current solution");
@@ -84,7 +87,7 @@ const IStackTransformationSolver::Solution& IStackTransformationSolver::getCurre
 	return solutions[currentSolution];
 }
 
-const IStackTransformationSolver::Solution& IStackTransformationSolver::getBestSolution()
+const IStackTransformationSolver::Solution& UniformSamplingSolver::getBestSolution()
 {
 	assert(!solutions.empty());
 
@@ -96,9 +99,7 @@ void UniformSamplingSolver::createCandidateSolutions()
 {
 	using namespace glm;
 
-	resetSolutions();
-
-	std::mt19937 rng;
+	std::mt19937 rng(std::chrono::system_clock::now().time_since_epoch().count());;
 	
 	// single axis alignment: dx,dy,dz, ry
 	int transform = rng() % 4;
@@ -150,4 +151,52 @@ void UniformSamplingSolver::createCandidateSolutions()
 	
 	std::cout << "[Uniform solver] Created " << solutions.size() << " new candidate transforms.\n";
 	currentSolution = 0;
+}
+
+
+void SimulatedAnnealingSolver::initialize()
+{
+	temp = 1.f;
+	// create a random initial solution
+
+
+	currentSolution.score = 0;
+	bestSolution = currentSolution;
+
+
+	// initialize rng
+	rng = std::mt19937(std::chrono::system_clock::now().time_since_epoch().count());;
+}
+
+
+bool SimulatedAnnealingSolver::nextSolution()
+{
+	const float EPS = 0.0001f;
+	if (temp > EPS)
+	{
+		modifyCurrentSolution();
+		temp *= cooling;
+		return true;
+	}
+
+	return false;
+}
+
+void SimulatedAnnealingSolver::recordCurrentScore(double s)
+{
+	currentSolution.score = s;
+
+	if (s > bestSolution.score)
+		bestSolution = currentSolution;
+	else
+	{
+		double d = exp((currentSolution.score - bestSolution.score) / temp);
+		if ((double)rng() / rng.max() < d)
+			bestSolution = currentSolution;
+	}
+}
+
+void SimulatedAnnealingSolver::modifyCurrentSolution()
+{
+
 }
