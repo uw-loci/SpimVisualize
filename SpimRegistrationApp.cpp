@@ -8,6 +8,7 @@
 #include "BeadDetection.h"
 #include "SimplePointcloud.h"
 #include "StackTransformationSolver.h"
+#include "TinyStats.h"
 
 #include <algorithm>
 #include <iostream>
@@ -334,6 +335,10 @@ void SpimRegistrationApp::draw()
 
 	}
 	*/
+
+
+	// draw the solver score here
+	drawSolverScore(layout->getActiveViewport());
 }
 
 void SpimRegistrationApp::saveStackTransformations() const
@@ -1413,7 +1418,6 @@ void SpimRegistrationApp::beginAutoAlign()
 	runAlignment = true;      
 	solver->initialize(interactionVolumes[currentVolume]);
 
-
 	//saveStackTransform(currentStack);
 	saveVolumeTransform(currentVolume);
 
@@ -1738,4 +1742,33 @@ void SpimRegistrationApp::inspectPointclouds(const Ray& r)
 
 
 	}
+}
+
+void SpimRegistrationApp::drawSolverScore(const Viewport* vp) const
+{
+
+	const TinyHistory<double>& hist = solver->getHistory();
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0, 500, hist.min, hist.max, 0, 1);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	size_t offset = 0;
+	if (hist.history.size() > 500)
+		offset = hist.history.size() - 500;
+
+
+	glColor3f(1, 1, 0);
+	glBegin(GL_LINE_STRIP);
+	for (size_t i = offset; i < hist.history.size(); ++i)
+	{
+		double d = hist.history[i];
+
+		glVertex2d(i-offset, d);
+	}
+	glEnd();
+
+
 }

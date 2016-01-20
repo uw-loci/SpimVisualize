@@ -6,8 +6,11 @@
 #include <random>
 #include <vector>
 
+#include "TinyStats.h"
+
 class Framebuffer;
 class InteractionVolume;
+
 
 class IStackTransformationSolver : boost::noncopyable
 {
@@ -24,7 +27,7 @@ public:
 
 		inline bool operator < (const Solution& rhs) const { return score < rhs.score; }
 	};
-
+		
 	virtual ~IStackTransformationSolver() {};
 
 	/// initializes a new run of the solver
@@ -43,6 +46,13 @@ public:
 	virtual const Solution& getCurrentSolution() const = 0;
 	/// returns the best solution found so far
 	virtual const Solution& getBestSolution() = 0;
+	
+	inline const TinyHistory<double>& getHistory() const { return history; }
+
+
+protected:
+	TinyHistory<double>			history;
+
 };
 
 /// tests a uniform range of different transformations in TX,TY,TZ, RY

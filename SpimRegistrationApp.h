@@ -192,7 +192,7 @@ private:
 	void updateGlobalBbox();
 
 	void drawContrastEditor(const Viewport* vp);
-	
+	void drawSolverScore(const Viewport* vp) const;
 	void drawGroundGrid(const Viewport* vp) const;
 	void drawBoundingBoxes() const;
 

@@ -49,6 +49,8 @@ void UniformSamplingSolver::initialize(const InteractionVolume* v)
 {
 	resetSolution();
 	createCandidateSolutions(v);
+
+	history.reset();
 }
 
 void UniformSamplingSolver::resetSolution()
@@ -84,6 +86,8 @@ void UniformSamplingSolver::recordCurrentScore(double s)
 	{
 		std::cout << "[Solver] Recording score of " << s << " for current solution.\n";
 		solutions[currentSolution].score += s;
+	
+		history.add(s);
 	}
 }
 
@@ -183,6 +187,8 @@ void SimulatedAnnealingSolver::initialize(const InteractionVolume* v)
 
 	// initialize rng
 	rng = std::mt19937(std::chrono::system_clock::now().time_since_epoch().count());;
+
+	history.reset();
 }
 
 void SimulatedAnnealingSolver::resetSolution()
@@ -217,6 +223,7 @@ bool SimulatedAnnealingSolver::nextSolution()
 void SimulatedAnnealingSolver::recordCurrentScore(double s)
 {
 	currentSolution.score = s;
+	history.add(s);
 
 	if (s > bestSolution.score)
 		bestSolution = currentSolution;
