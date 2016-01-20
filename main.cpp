@@ -167,10 +167,8 @@ static void keyboard(unsigned char key, int x, int y)
 
 static void keyboardUp(unsigned char key, int x, int y)
 {
-	/*
 	if (key == ' ')
 		regoApp->endAutoAlign();
-	*/
 }
 
 
@@ -351,25 +349,7 @@ int main(int argc, const char** argv)
 			regoApp->addSpimStack(argv[i]);
 
 		}
-
-
-
-		for (int i = 0; i < 3; ++i)
-		{
-			char filename[256];
-			//sprintf(filename, "e:/spim/test/spim_TL00_Angle%d.tif", i);
-			//sprintf(filename, "E:/spim/091015 SPIM various size beads/091015 20micron beads/spim_TL01_Angle%d.ome.tiff", i);
-			//sprintf(filename, "e:/spim/zebra/spim_TL01_Angle%d.ome.tiff", i);
-			//sprintf(filename, "e:/spim/zebra_beads/spim_TL01_Angle%d.ome.tiff", i);
-			sprintf(filename, "e:/spim/121514 Fish2 no beads-selected/spim_TL01_Angle%d.ome.tiff", i);
-			
-			
-			regoApp->addSpimStack(filename);
-		}
-
-		//regoApp->addSpimStack("e:/regoApp/result_31x31x360.bin");
 		*/
-
 
 		/*
 		SimplePointcloud::resaveAsBin("e:/urs/ES_20151111.txt");
@@ -380,12 +360,9 @@ int main(int argc, const char** argv)
 		*/
 
 	
-		//regoApp->addSpimStack("e:/spim/zebra_beads/spim_TL01_Angle0.ome.tiff");
-		//regoApp->addSpimStack("e:/spim/zebra/spim_TL01_Angle0.ome.8bit.tif");
-		//regoApp->addSpimStack("e:/spim/drosophila_example_tiff/spim_TL18_Angle0.tif");
-		regoApp->addSpimStack("e:/spim/OpenSPIM_tutorial/spim_TL00_Angle1.ome.tiff");
-		regoApp->addSpimStack("e:/spim/OpenSPIM_tutorial/spim_TL00_Angle2.ome.tiff");
-		//regoApp->addSpimStack("e:/spim/OpenSPIM_tutorial/spim_TL00_Angle3.ome.tiff");
+		//regoApp->addSpimStack("e:/spim/OpenSPIM_tutorial/spim_TL00_Angle1.ome.tiff");
+		regoApp->addSpimStack("e:/spim/zebra/spim_TL01_Angle0.ome.tiff");
+		regoApp->addSpimStack("e:/spim/zebra/spim_TL01_Angle1.ome.tiff");
 
 		regoApp->centerCamera();
 		regoApp->loadStackTransformations();

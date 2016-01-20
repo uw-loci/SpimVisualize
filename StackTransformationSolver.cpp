@@ -12,6 +12,14 @@
 #include <glm/gtx/transform2.hpp>
 
 #include "Framebuffer.h"
+#include "InteractionVolume.h"
+
+/// returns a uniform random variable in [-1..1]
+static inline double rng_u(std::mt19937& rng)
+{
+	return ((double)rng() / rng.max() * 2) - 1;
+}
+
 
 void IStackTransformationSolver::recordCurrentScore(Framebuffer* fbo)
 {
@@ -37,10 +45,10 @@ void IStackTransformationSolver::recordCurrentScore(Framebuffer* fbo)
 }
 
 
-void UniformSamplingSolver::initialize()
+void UniformSamplingSolver::initialize(const InteractionVolume* v)
 {
 	resetSolution();
-	createCandidateSolutions();
+	createCandidateSolutions(v);
 }
 
 void UniformSamplingSolver::resetSolution()
@@ -95,32 +103,22 @@ const IStackTransformationSolver::Solution& UniformSamplingSolver::getBestSoluti
 	return solutions.back();
 }
 
-void UniformSamplingSolver::createCandidateSolutions()
+void UniformSamplingSolver::createCandidateSolutions(const InteractionVolume* v)
 {
 	using namespace glm;
 
 	std::mt19937 rng(std::chrono::system_clock::now().time_since_epoch().count());;
 	
+	/*
+
 	// single axis alignment: dx,dy,dz, ry
 	int transform = rng() % 4;
-
-	
-	// right now just check dx+dz
-	if (transform == 1)
-		transform = 0;
-	if (transform == 3)
-		transform = 2;
 
 	std::cout << "[Uniform solver] Creating transformations for: " << std::endl;
 
 	if (transform == 3)
 	{
-		/*
-		//vec3 d = stacks[currentStack]->getBBox().getCentroid();
-		vec3 d = interactionVolumes[currentVolume]->getBBox().getCentroid();
-		mat4 T = glm::translate(vec3(d.x, 0.f, d.z));
-		*/
-
+	
 		// rotation
 		for (int a = -100; a <= 100; ++a)
 		{
@@ -148,34 +146,68 @@ void UniformSamplingSolver::createCandidateSolutions()
 			solutions.push_back(s);
 		}
 	}
-	
+	*/
+
+	// try different rotations
+	for (int r = -100; r <= 100; ++r)
+	{
+		float a = radians((float)r / 10.f);
+
+		Solution s;
+		s.id = r;
+		s.score = 0;
+
+		s.matrix = translate(mat4(1.f), v->getBBox().getCentroid());
+		s.matrix = rotate(s.matrix, a, glm::vec3(0, 1, 0));
+		s.matrix = translate(s.matrix, v->getBBox().getCentroid() * -1.f);
+
+		//s.matrix = rotate(a, vec3(0, 1, 0));
+		solutions.push_back(s);
+
+	}
+
+
 	std::cout << "[Uniform solver] Created " << solutions.size() << " new candidate transforms.\n";
 	currentSolution = 0;
 }
 
-
-void SimulatedAnnealingSolver::initialize()
+void SimulatedAnnealingSolver::initialize(const InteractionVolume* v)
 {
 	temp = 1.f;
-	// create a random initial solution
-
-
+	
 	currentSolution.score = 0;
+	currentSolution.matrix = v->transform;
 	bestSolution = currentSolution;
 
+	iteration = 0;
 
 	// initialize rng
 	rng = std::mt19937(std::chrono::system_clock::now().time_since_epoch().count());;
 }
 
+void SimulatedAnnealingSolver::resetSolution()
+{
+
+	currentSolution.score = 0;
+	currentSolution.matrix = glm::mat4(1.f);
+	
+	bestSolution = currentSolution;
+}
 
 bool SimulatedAnnealingSolver::nextSolution()
 {
 	const float EPS = 0.0001f;
 	if (temp > EPS)
 	{
+		++iteration;
+
 		modifyCurrentSolution();
+		currentSolution.score = 0;
 		temp *= cooling;
+
+
+		std::cout << "[Solver] Temp: " << temp << std::endl;
+		
 		return true;
 	}
 
@@ -198,5 +230,13 @@ void SimulatedAnnealingSolver::recordCurrentScore(double s)
 
 void SimulatedAnnealingSolver::modifyCurrentSolution()
 {
+	using namespace glm;
+	
+	// randomly choose an operation to modify the current matrix with
 
+	mat4 T(1.f);
+
+	currentSolution.matrix = T * currentSolution.matrix;
+
+	currentSolution.id = iteration;
 }

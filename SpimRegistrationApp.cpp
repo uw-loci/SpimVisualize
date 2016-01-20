@@ -54,6 +54,7 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(nu
 
 
 	solver = new UniformSamplingSolver;
+	//solver = new SimulatedAnnealingSolver;
 }
 
 SpimRegistrationApp::~SpimRegistrationApp()
@@ -406,9 +407,12 @@ void SpimRegistrationApp::addSpimStack(const std::string& filename)
 	SpimStack* stack = new SpimStackU16;
 	
 	stack->load(filename);
+	stack->subsample();
 
+	/*
 	stack->subsample(false);
 	stack->subsample();
+	*/
 
 	stacks.push_back(stack);
 	addInteractionVolume(stack);
@@ -1407,7 +1411,7 @@ void SpimRegistrationApp::beginAutoAlign()
 	
 
 	runAlignment = true;      
-	solver->initialize();
+	solver->initialize(interactionVolumes[currentVolume]);
 
 
 	//saveStackTransform(currentStack);
@@ -1445,6 +1449,10 @@ void SpimRegistrationApp::startStackMove()
 void SpimRegistrationApp::endStackMove()
 {
 	updateGlobalBbox();
+
+
+
+
 }
 
 void SpimRegistrationApp::saveVolumeTransform(unsigned int n)
@@ -1579,7 +1587,7 @@ void SpimRegistrationApp::inspectOutputImage(const glm::ivec2& cursor)
 
 
 		
-
+		/*
 		// shoot rays!
 		relCoords *= 2.f;
 		relCoords -= vec2(1.f);
@@ -1593,18 +1601,11 @@ void SpimRegistrationApp::inspectOutputImage(const glm::ivec2& cursor)
 		ray.createFromFrustum(mvp, relCoords);
 		rays.push_back(ray);
 		
-		/*
-		ray.createFromFrustum(mvp, vec2(-1, -1)); rays.push_back(ray);
-		ray.createFromFrustum(mvp, vec2( 1, -1)); rays.push_back(ray);
-		ray.createFromFrustum(mvp, vec2( 1,  1)); rays.push_back(ray);
-		ray.createFromFrustum(mvp, vec2(-1,  1)); rays.push_back(ray);
-		*/
-
+		
 		if (pointclouds.size() > 0)
 			inspectPointclouds(ray);
 
-
-
+		*/
 	}
 
 	/*

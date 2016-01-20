@@ -7,6 +7,7 @@
 #include <vector>
 
 class Framebuffer;
+class InteractionVolume;
 
 class IStackTransformationSolver : boost::noncopyable
 {
@@ -27,7 +28,7 @@ public:
 	virtual ~IStackTransformationSolver() {};
 
 	/// initializes a new run of the solver
-	virtual void initialize() = 0;
+	virtual void initialize(const InteractionVolume* v) = 0;
 	/// resets all previous solutions
 	virtual void resetSolution() = 0;
 	/// returns true if another solution should be tested
@@ -49,7 +50,7 @@ class UniformSamplingSolver : public IStackTransformationSolver
 {
 public:
 
-	virtual void initialize();
+	virtual void initialize(const InteractionVolume* v);
 	virtual void resetSolution();
 	virtual bool nextSolution();
 
@@ -62,7 +63,7 @@ protected:
 	std::vector<Solution>		solutions;
 	int							currentSolution;
 
-	void createCandidateSolutions();
+	void createCandidateSolutions(const InteractionVolume* v);
 	void assertValidCurrentSolution();
 
 	bool hasValidCurrentSolution() const;
@@ -72,7 +73,7 @@ class SimulatedAnnealingSolver : public IStackTransformationSolver
 {
 public:
 
-	virtual void initialize();
+	virtual void initialize(const InteractionVolume* v);
 	virtual void resetSolution();
 	virtual bool nextSolution();
 
@@ -88,6 +89,7 @@ private:
 	double				temp, cooling;
 
 	std::mt19937		rng;
+	unsigned int		iteration;
 
 	void modifyCurrentSolution();
 
