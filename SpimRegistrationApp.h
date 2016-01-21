@@ -85,17 +85,7 @@ public:
 	void endAutoAlign();	
 	/// Selects the currently active solver
 	void selectSolver(const std::string& solver);
-
-
-	/** Selects which alignment mode is used. In "Single", the alignment is run once
-		and the user cannot stop it. In "Continuos", the alignment is run until endAutoAlign
-		is called. This also includes selecting the best solution and creating a new 
-		set of solutions once the solver finishes a single run.
-		The default is "Continuous"
-	*/
-	void selectAlignmentMode(const std::string& mode);
-	void switchAlignmentMode();
-
+	
 
 	/// \}
 
@@ -246,11 +236,6 @@ private:
 
 	// auto-stack alignment
 	bool				runAlignment;
-	enum AlignMode
-	{
-		ALIGN_SINGLE_RUN,
-		ALIGN_CONTINUOUS_RUN
-	}					alignMode;
 
 	bool				useOcclusionQuery;
 	unsigned int		singleOcclusionQuery;

@@ -107,7 +107,17 @@ const IStackTransformationSolver::Solution& UniformSamplingSolver::getBestSoluti
 {
 	assert(!solutions.empty());
 
+	// remove all solutions that do not have a valid id. we can do that through the current solution?
+	size_t oldSize = solutions.size();
+	if (currentSolution < solutions.size() - 1)
+		solutions.resize(currentSolution);
+	std::cout << "[Debug] Removed " << oldSize - solutions.size() << " unused solutions.\n";
+	
+	std::cout << "[Debug] Sorting " << solutions.size() << " solutions ... \n";
 	std::sort(solutions.begin(), solutions.end());
+	
+	std::cout << "[Debug] Worst: " << solutions.front().score << ", best: " << solutions.back().score << std::endl;
+	
 	return solutions.back();
 }
 
@@ -187,7 +197,7 @@ void DXSolver::createCandidateSolutions(const InteractionVolume* v)
 
 	solutions.clear();
 
-	for (int x = -100; x <= 100; ++x)
+	for (int x = -20; x <= 20; ++x)
 	{
 		float dx = (float)x / 5.f;
 		Solution s;
@@ -208,7 +218,7 @@ void DYSolver::createCandidateSolutions(const InteractionVolume* v)
 
 	solutions.clear();
 
-	for (int x = -100; x <= 100; ++x)
+	for (int x = -20; x <= 20; ++x)
 	{
 		float dy = (float)x / 5.f;
 		Solution s;
@@ -230,7 +240,7 @@ void DZSolver::createCandidateSolutions(const InteractionVolume* v)
 
 	solutions.clear();
 
-	for (int x = -100; x <= 100; ++x)
+	for (int x = -20; x <= 20; ++x)
 	{
 		float dz = (float)x / 5.f;
 		Solution s;
@@ -250,9 +260,9 @@ void RYSolver::createCandidateSolutions(const InteractionVolume* v)
 	using namespace glm;
 
 	// try different rotations
-	for (int r = -100; r <= 100; ++r)
+	for (int r = -20; r <= 20; ++r)
 	{
-		float a = radians((float)r / 10.f);
+		float a = radians((float)r / 5.f);
 
 		Solution s;
 		s.id = r;

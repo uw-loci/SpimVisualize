@@ -36,7 +36,7 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(nu
 	drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), sliceCount(100),
 	configPath("./"), cameraMoving(false), runAlignment(false), histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f),
 	subsampleOnCameraMove(false), renderMode(RENDER_VIEWPLANE_SLICES), useOcclusionQuery(false), blendMode(BLEND_ADD),
-	useImageAutoContrast(false), currentVolume(-1), solver(nullptr), alignMode(ALIGN_CONTINUOUS_RUN)
+	useImageAutoContrast(false), currentVolume(-1), solver(nullptr)
 {
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
@@ -1439,9 +1439,9 @@ void SpimRegistrationApp::endAutoAlign()
 	// apply best transformation
 	const IStackTransformationSolver::Solution bestResult = solver->getBestSolution();
 
-	std::cout << "[Debug] Applying best result (" << bestResult.id << ", score: " << bestResult.score << ")... \n";
+	std::cout << "[Debug] Applying best result (id:" << bestResult.id << ", score: " << bestResult.score << ")... \n";
 	saveVolumeTransform(currentVolume);
-	interactionVolumes[currentVolume]->transform = bestResult.matrix;
+	interactionVolumes[currentVolume]->applyTransform(bestResult.matrix);
 	updateGlobalBbox();
 
 }
@@ -1514,13 +1514,6 @@ void SpimRegistrationApp::update(float dt)
 		else
 		{
 			std::cout << "[Aling] No more transformations to test!\n";
-			
-			const IStackTransformationSolver::Solution& solution = solver->getBestSolution();
-
-			interactionVolumes[currentVolume]->applyTransform(solution.matrix);
-			std::cout << "[Debug] Selected transform with a score of " << solution.score << std::endl;
-
-			endAutoAlign();
 		}
 	}
 
@@ -1846,39 +1839,5 @@ void SpimRegistrationApp::selectSolver(const std::string& name)
 
 		cout << "[Debug] Switched solvers.\n";
 	
-	}
-}
-
-void SpimRegistrationApp::selectAlignmentMode(const std::string& mode)
-{
-
-	if (mode == "Single")
-	{
-		alignMode = ALIGN_SINGLE_RUN;
-		std::cout << "[Align] Switched to single align mode.\n";
-	}
-	else if (mode == "Continuous")
-	{
-		alignMode = ALIGN_CONTINUOUS_RUN;
-		std::cout << "[Align] Switched to continuous align mode.\n";
-	}
-	else
-	{
-		std::cerr << "[Error] Align mode \"" << mode << "\" not recognized.\n";
-	}
-
-}
-
-void SpimRegistrationApp::switchAlignmentMode()
-{
-	if (alignMode = ALIGN_SINGLE_RUN)
-	{
-		alignMode = ALIGN_CONTINUOUS_RUN;
-		std::cout << "[Align] Switched to continuous align mode.\n";
-	}
-	else
-	{
-		alignMode = ALIGN_SINGLE_RUN;
-		std::cout << "[Align] Switched to single align mode.\n";
 	}
 }
