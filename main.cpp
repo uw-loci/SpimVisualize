@@ -72,7 +72,7 @@ static void keyboard(unsigned char key, int x, int y)
 		regoApp->beginAutoAlign();
 
 	if (key == 'A')
-		regoApp->startAlign();
+		regoApp->switchAlignmentMode();
 
 	if (key == ',')
 		regoApp->decreaseMinThreshold();
