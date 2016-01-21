@@ -31,12 +31,12 @@ const unsigned int MIN_SLICE_COUNT = 20;
 const unsigned int MAX_SLICE_COUNT = 1500;
 const unsigned int STD_SLICE_COUNT = 100;
 
-SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(nullptr), sliceShader(nullptr), volumeShader(nullptr), 
+SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(nullptr), sliceShader(nullptr), volumeShader(nullptr),
 	volumeRaycaster(nullptr), drawQuad(nullptr), volumeDifferenceShader(nullptr), tonemapper(nullptr), layout(nullptr),
-	drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), sliceCount(100), 
+	drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), sliceCount(100),
 	configPath("./"), cameraMoving(false), runAlignment(false), histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f),
-	subsampleOnCameraMove(false), renderMode(RENDER_VIEWPLANE_SLICES), useOcclusionQuery(false), blendMode(BLEND_ADD), 
-	useImageAutoContrast(false), currentVolume(-1), solver(nullptr)
+	subsampleOnCameraMove(false), renderMode(RENDER_VIEWPLANE_SLICES), useOcclusionQuery(false), blendMode(BLEND_ADD),
+	useImageAutoContrast(false), currentVolume(-1), solver(nullptr), alignMode(ALIGN_CONTINUOUS_RUN)
 {
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
@@ -181,14 +181,22 @@ void SpimRegistrationApp::draw()
 			if (runAlignment)
 			{
 
-				int query = vp->name;
-				assert(query < 4);
-				
-				const glm::mat4& mat = solver->getCurrentSolution().matrix;
+				try
+				{
 
-				saveVolumeTransform(currentVolume);
-				interactionVolumes[currentVolume]->applyTransform(mat);
+					int query = vp->name;
+					assert(query < 4);
 
+					const glm::mat4& mat = solver->getCurrentSolution().matrix;
+
+					saveVolumeTransform(currentVolume);
+					interactionVolumes[currentVolume]->applyTransform(mat);
+
+				}
+				catch (std::runtime_error& e)
+				{
+					std::cerr << "[Error] " << e.what() << std::endl;
+				}
 			}
 
 
@@ -1418,7 +1426,6 @@ void SpimRegistrationApp::beginAutoAlign()
 	runAlignment = true;      
 	solver->initialize(interactionVolumes[currentVolume]);
 
-	//saveStackTransform(currentStack);
 	saveVolumeTransform(currentVolume);
 
 }
@@ -1426,6 +1433,17 @@ void SpimRegistrationApp::beginAutoAlign()
 void SpimRegistrationApp::endAutoAlign()
 {
 	runAlignment = false;
+
+	std::cout << "[Debug] Ending auto align.\n";
+
+	// apply best transformation
+	const IStackTransformationSolver::Solution bestResult = solver->getBestSolution();
+
+	std::cout << "[Debug] Applying best result (" << bestResult.id << ", score: " << bestResult.score << ")... \n";
+	saveVolumeTransform(currentVolume);
+	interactionVolumes[currentVolume]->transform = bestResult.matrix;
+	updateGlobalBbox();
+
 }
 
 void SpimRegistrationApp::undoLastTransform()
@@ -1771,4 +1789,96 @@ void SpimRegistrationApp::drawSolverScore(const Viewport* vp) const
 	glEnd();
 
 
+}
+
+void SpimRegistrationApp::selectSolver(const std::string& name)
+{
+	// do not change solvers mid-run
+	if (runAlignment)
+		return;
+
+
+	using namespace std;
+	IStackTransformationSolver* newSolver = nullptr;
+
+	if (name == "Uniform")
+	{
+		cout << "[Solver] Creating new UniformSamplingSolver\n";
+		newSolver = new UniformSamplingSolver;
+	}
+
+	if (name == "Uniform DX")
+	{
+		cout << "[Solver] Creating new Uniform DX Solver\n";
+		newSolver = new DXSolver;
+	}
+
+	if (name == "Uniform DY")
+	{
+		cout << "[Solver] Creating new Uniform DY Solver\n";
+		newSolver = new DYSolver;
+	}
+
+	if (name == "Uniform DZ")
+	{
+		cout << "[Solver] Creating new Uniform DZ Solver\n";
+		newSolver = new DZSolver;
+	}
+
+	if (name == "Uniform RY")
+	{
+		cout << "[Solver] Creating new Uniform RY Solver\n";
+		newSolver = new RYSolver;
+	}
+
+	if (name == "Simulated Annealing")
+	{
+		cout << "[Solver] Creating new Simulated Annealing Solver\n";
+		newSolver = new SimulatedAnnealingSolver;
+	}
+
+
+	// only switch solvers if we have created a valid one
+	if (newSolver)
+	{
+		delete solver;
+		solver = newSolver;
+
+		cout << "[Debug] Switched solvers.\n";
+	
+	}
+}
+
+void SpimRegistrationApp::selectAlignmentMode(const std::string& mode)
+{
+
+	if (mode == "Single")
+	{
+		alignMode = ALIGN_SINGLE_RUN;
+		std::cout << "[Align] Switched to single align mode.\n";
+	}
+	else if (mode == "Continuous")
+	{
+		alignMode = ALIGN_CONTINUOUS_RUN;
+		std::cout << "[Align] Switched to continuous align mode.\n";
+	}
+	else
+	{
+		std::cerr << "[Error] Align mode \"" << mode << "\" not recognized.\n";
+	}
+
+}
+
+void SpimRegistrationApp::switchAlignmentMode()
+{
+	if (alignMode = ALIGN_SINGLE_RUN)
+	{
+		alignMode = ALIGN_CONTINUOUS_RUN;
+		std::cout << "[Align] Switched to continuous align mode.\n";
+	}
+	else
+	{
+		alignMode = ALIGN_SINGLE_RUN;
+		std::cout << "[Align] Switched to single align mode.\n";
+	}
 }

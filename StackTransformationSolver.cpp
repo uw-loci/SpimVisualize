@@ -48,7 +48,11 @@ void IStackTransformationSolver::recordCurrentScore(Framebuffer* fbo)
 void UniformSamplingSolver::initialize(const InteractionVolume* v)
 {
 	resetSolution();
+	
 	createCandidateSolutions(v);
+	
+	if (!solutions.empty())
+		currentSolution = 0;
 
 	history.reset();
 }
@@ -91,7 +95,7 @@ void UniformSamplingSolver::recordCurrentScore(double s)
 	}
 }
 
-const UniformSamplingSolver::Solution& UniformSamplingSolver::getCurrentSolution() const
+const IStackTransformationSolver::Solution& UniformSamplingSolver::getCurrentSolution() const
 {
 	if (!hasValidCurrentSolution())
 		throw std::runtime_error("Solver has no valid current solution");
@@ -173,6 +177,98 @@ void UniformSamplingSolver::createCandidateSolutions(const InteractionVolume* v)
 
 	std::cout << "[Uniform solver] Created " << solutions.size() << " new candidate transforms.\n";
 	currentSolution = 0;
+}
+
+
+void DXSolver::createCandidateSolutions(const InteractionVolume* v)
+{
+	using namespace glm;
+	std::mt19937 rng(std::chrono::system_clock::now().time_since_epoch().count());;
+
+	solutions.clear();
+
+	for (int x = -100; x <= 100; ++x)
+	{
+		float dx = (float)x / 5.f;
+		Solution s;
+		s.score = 0;
+		s.id = x;
+		s.matrix = translate(vec3(dx, 0.f, 0.f));
+
+		solutions.push_back(s);
+	}
+
+	std::cout << "[DX Solver] Created " << solutions.size() << " candidate solutions.\n";
+}
+
+void DYSolver::createCandidateSolutions(const InteractionVolume* v)
+{
+	using namespace glm;
+	std::mt19937 rng(std::chrono::system_clock::now().time_since_epoch().count());;
+
+	solutions.clear();
+
+	for (int x = -100; x <= 100; ++x)
+	{
+		float dy = (float)x / 5.f;
+		Solution s;
+		s.score = 0;
+		s.id = x;
+		s.matrix = translate(vec3(0.f, dy, 0.f));
+
+		solutions.push_back(s);
+	}
+
+
+	std::cout << "[DY Solver] Created " << solutions.size() << " candidate solutions.\n";
+}
+
+void DZSolver::createCandidateSolutions(const InteractionVolume* v)
+{
+	using namespace glm;
+	std::mt19937 rng(std::chrono::system_clock::now().time_since_epoch().count());;
+
+	solutions.clear();
+
+	for (int x = -100; x <= 100; ++x)
+	{
+		float dz = (float)x / 5.f;
+		Solution s;
+		s.score = 0;
+		s.id = x;
+		s.matrix = translate(vec3(0.f, 0.f, dz));
+
+		solutions.push_back(s);
+	}
+
+
+	std::cout << "[DZ Solver] Created " << solutions.size() << " candidate solutions.\n";
+}
+
+void RYSolver::createCandidateSolutions(const InteractionVolume* v)
+{
+	using namespace glm;
+
+	// try different rotations
+	for (int r = -100; r <= 100; ++r)
+	{
+		float a = radians((float)r / 10.f);
+
+		Solution s;
+		s.id = r;
+		s.score = 0;
+
+		s.matrix = translate(mat4(1.f), v->getBBox().getCentroid());
+		s.matrix = rotate(s.matrix, a, glm::vec3(0, 1, 0));
+		s.matrix = translate(s.matrix, v->getBBox().getCentroid() * -1.f);
+
+		//s.matrix = rotate(a, vec3(0, 1, 0));
+		solutions.push_back(s);
+
+	}
+
+
+	std::cout << "[RY Solver] Created " << solutions.size() << " candidate solutions.\n";
 }
 
 void SimulatedAnnealingSolver::initialize(const InteractionVolume* v)

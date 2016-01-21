@@ -73,11 +73,36 @@ protected:
 	std::vector<Solution>		solutions;
 	int							currentSolution;
 
-	void createCandidateSolutions(const InteractionVolume* v);
-	void assertValidCurrentSolution();
+	virtual void createCandidateSolutions(const InteractionVolume* v);
 
 	bool hasValidCurrentSolution() const;
  };
+
+class DXSolver : public UniformSamplingSolver
+{
+protected:
+	virtual void createCandidateSolutions(const InteractionVolume* v);
+};
+
+class DYSolver : public UniformSamplingSolver
+{
+protected:
+	virtual void createCandidateSolutions(const InteractionVolume* v);
+};
+
+class DZSolver : public UniformSamplingSolver
+{
+protected:
+	virtual void createCandidateSolutions(const InteractionVolume* v);
+};
+
+// only checks rotation solutions 
+class RYSolver : public UniformSamplingSolver
+{
+protected:
+	virtual void createCandidateSolutions(const InteractionVolume* v);
+
+};
 
 class SimulatedAnnealingSolver : public IStackTransformationSolver
 {

@@ -48,13 +48,16 @@ public:
 	void toggleSelectStack(int n);
 	void toggleStack(int n);
 	inline void toggleCurrentStack() { toggleStack(currentVolume); }
-	
+	void toggleAllStacks();
+
 	void startStackMove();
 	void endStackMove();
 
-
+	/// Undos the last transform applied. This also includes movements of a stack
+	void undoLastTransform();
 	void moveStack(const glm::vec2& delta);
 	void rotateCurrentStack(float rotY);
+
 	void inspectOutputImage(const glm::ivec2& cursor);
 
 	void changeContrast(const glm::ivec2& cursor);
@@ -67,24 +70,50 @@ public:
 	void contrastEditorApplyThresholds();
 
 
-	void toggleAllStacks();
-
+	
 
 	inline void clearRays() { rays.clear(); }
 	
+	/// \name Alignment
+	/// \{
+	/// Begins the auto alignment process with the currently selected solver
+	/**	Each frame the solver will try a different solution and record the score.
+		The alignment process can be stopped by calling @endAutoAlign. At that point 
+		the best solution is selected and applied. 
+	*/
 	void beginAutoAlign();
-	void endAutoAlign();
-	void undoLastTransform();
+	void endAutoAlign();	
+	/// Selects the currently active solver
+	void selectSolver(const std::string& solver);
+
+
+	/** Selects which alignment mode is used. In "Single", the alignment is run once
+		and the user cannot stop it. In "Continuos", the alignment is run until endAutoAlign
+		is called. This also includes selecting the best solution and creating a new 
+		set of solutions once the solver finishes a single run.
+		The default is "Continuous"
+	*/
+	void selectAlignmentMode(const std::string& mode);
+	void switchAlignmentMode();
+
+
+	/// \}
 
 	void updateMouseMotion(const glm::ivec2& cursor);
 	
 
+	/// \name Views/Layout
+	/// \{
 	void setPerspectiveLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
 	void setTopviewLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
 	void setThreeViewLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
 	void setContrastEditorLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
 	
+	/// \}
 
+
+	/// \name Rendering options
+	/// \{
 	void increaseSliceCount();
 	void decreaseSliceCount();
 	void resetSliceCount();
@@ -94,7 +123,8 @@ public:
 	void panCamera(const glm::vec2& delta);
 	void centerCamera();
 	void maximizeViews();
-
+	
+	/// \}
 
 	inline void setCameraMoving(bool m) { cameraMoving = m; }
 
@@ -170,7 +200,6 @@ private:
 		RENDER_ALIGN
 
 	}						renderMode;
-
 	enum BlendMode
 	{
 		BLEND_ADD,
@@ -216,14 +245,19 @@ private:
 
 
 	// auto-stack alignment
-	bool					runAlignment;
+	bool				runAlignment;
+	enum AlignMode
+	{
+		ALIGN_SINGLE_RUN,
+		ALIGN_CONTINUOUS_RUN
+	}					alignMode;
 
 	bool				useOcclusionQuery;
 	unsigned int		singleOcclusionQuery;
 	
 
 	IStackTransformationSolver*		solver;
-
+	
 	static glm::vec3 getRandomColor(unsigned int n);
 
 	inline bool currentVolumeValid() const { return currentVolume > -1 && currentVolume < interactionVolumes.size(); }

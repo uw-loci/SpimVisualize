@@ -71,6 +71,9 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == ' ')
 		regoApp->beginAutoAlign();
 
+	if (key == 'A')
+		regoApp->startAlign();
+
 	if (key == ',')
 		regoApp->decreaseMinThreshold();
 	if (key == '.')
@@ -240,6 +243,19 @@ static void special(int key, int x, int y)
 	if (key == GLUT_KEY_F4)
 		regoApp->setContrastEditorLayout(winRes, mouse.coordinates);
 	
+
+	if (key == GLUT_KEY_F5)
+		regoApp->selectSolver("Uniform DX");
+	if (key == GLUT_KEY_F6)
+		regoApp->selectSolver("Uniform DY");
+	if (key == GLUT_KEY_F7)
+		regoApp->selectSolver("Uniform DZ");	
+	if (key == GLUT_KEY_F8)
+		regoApp->selectSolver("Uniform RY");
+	if (key == GLUT_KEY_F9)
+		regoApp->selectSolver("Uniform"); 
+	if (key == GLUT_KEY_F10)
+		regoApp->selectSolver("Simulated Annealing");
 
 	if (key == GLUT_KEY_DOWN)
 	{
