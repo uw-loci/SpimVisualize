@@ -53,6 +53,10 @@ public:
 protected:
 	TinyHistory<double>			history;
 
+
+	// creates a rotation matrix around the volumes' centroid around the y-axis with the specified angle
+	static glm::mat4 createRotationMatrix(float radians, const InteractionVolume* v);
+
 };
 
 /// tests a uniform range of different transformations in TX,TY,TZ, RY
@@ -73,7 +77,7 @@ protected:
 	std::vector<Solution>		solutions;
 	int							currentSolution;
 
-	virtual void createCandidateSolutions(const InteractionVolume* v);
+	virtual void createCandidateSolutions(const InteractionVolume* v) = 0;
 
 	bool hasValidCurrentSolution() const;
  };
@@ -144,12 +148,13 @@ public:
 	inline double getTemp() const { return temp; }
 
 private:
-	Solution			currentSolution, bestSolution;
-	double				temp, cooling;
+	Solution					currentSolution, bestSolution;
+	double						temp, cooling;
 
-	std::mt19937		rng;
-	unsigned int		iteration;
+	std::mt19937				rng;
+	unsigned int				iteration;
 
+	const InteractionVolume*	currentVolume;
 	void modifyCurrentSolution();
 
 };

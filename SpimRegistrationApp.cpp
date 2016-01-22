@@ -54,7 +54,9 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(nu
 	glGenQueries(1, &singleOcclusionQuery);
 
 
-	solver = new UniformSamplingSolver;
+	useOcclusionQuery = false;
+
+	solver = new RYSolver;
 	//solver = new SimulatedAnnealingSolver;
 }
 
@@ -293,7 +295,9 @@ void SpimRegistrationApp::draw()
 					GLuint64 result = 0;
 					glGetQueryObjectui64v(singleOcclusionQuery, GL_QUERY_RESULT, &result);
 				
-					solver->recordCurrentScore(result);
+					double relativeResult = (double)result / (double)(volumeRenderTarget->getWidth()*volumeRenderTarget->getHeight());
+
+					solver->recordCurrentScore(relativeResult);
 				}
 				else
 				{
@@ -1793,12 +1797,6 @@ void SpimRegistrationApp::selectSolver(const std::string& name)
 
 	using namespace std;
 	IStackTransformationSolver* newSolver = nullptr;
-
-	if (name == "Uniform")
-	{
-		cout << "[Solver] Creating new UniformSamplingSolver\n";
-		newSolver = new UniformSamplingSolver;
-	}
 
 	if (name == "Uniform DX")
 	{

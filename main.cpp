@@ -97,9 +97,13 @@ static void keyboard(unsigned char key, int x, int y)
 	
 	if (key == '[')
 		regoApp->rotateCurrentStack(-0.5);
+	if (key == '{')
+		regoApp->rotateCurrentStack(-5.f);
 
 	if (key == ']')
 		regoApp->rotateCurrentStack(0.5);
+	if (key == '}')
+		regoApp->rotateCurrentStack(5.f);
 	
 	if (key == 'r')
 		regoApp->switchRenderMode();
@@ -253,10 +257,8 @@ static void special(int key, int x, int y)
 	if (key == GLUT_KEY_F8)
 		regoApp->selectSolver("Uniform RY");
 	if (key == GLUT_KEY_F9)
-		regoApp->selectSolver("Uniform"); 
-	if (key == GLUT_KEY_F10)
 		regoApp->selectSolver("Simulated Annealing");
-	if (key == GLUT_KEY_F11)
+	if (key == GLUT_KEY_F10)
 		regoApp->selectSolver("Hillclimb");
 
 	if (key == GLUT_KEY_DOWN)

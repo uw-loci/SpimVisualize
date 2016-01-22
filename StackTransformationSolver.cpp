@@ -38,10 +38,24 @@ void IStackTransformationSolver::recordCurrentScore(Framebuffer* fbo)
 		value += glm::dot(color, color);
 	}
 
+	value /= (fbo->getWidth()*fbo->getHeight());
+
 	std::cout << "[Solver] Read back score: " << value << std::endl;
 	glReadBuffer(GL_BACK);
 
 	recordCurrentScore(value);
+}
+
+glm::mat4 IStackTransformationSolver::createRotationMatrix(float angle, const InteractionVolume* v)
+{
+	using namespace glm;
+	mat4 matrix(1.f);
+	// this rotates the volume around its center
+	matrix = translate(mat4(1.f), v->getBBox().getCentroid());
+	matrix = rotate(matrix, angle, glm::vec3(0, 1, 0));
+	matrix = translate(matrix, v->getBBox().getCentroid() * -1.f);
+
+	return matrix;
 }
 
 
@@ -119,74 +133,6 @@ const IStackTransformationSolver::Solution& UniformSamplingSolver::getBestSoluti
 	std::cout << "[Debug] Worst: " << solutions.front().score << ", best: " << solutions.back().score << std::endl;
 	
 	return solutions.back();
-}
-
-void UniformSamplingSolver::createCandidateSolutions(const InteractionVolume* v)
-{
-	using namespace glm;
-
-	std::mt19937 rng(std::chrono::system_clock::now().time_since_epoch().count());;
-	
-	/*
-
-	// single axis alignment: dx,dy,dz, ry
-	int transform = rng() % 4;
-
-	std::cout << "[Uniform solver] Creating transformations for: " << std::endl;
-
-	if (transform == 3)
-	{
-	
-		// rotation
-		for (int a = -100; a <= 100; ++a)
-		{
-			Solution s;
-			s.score = 0;
-			s.id = a;
-			s.matrix = glm::rotate(radians((float)a / 10.f), vec3(0, 1, 0));
-
-			solutions.push_back(s);
-		}
-	}
-	else
-	{
-		for (int x = -100; x <= 100; ++x)
-		{
-			float dx = (float)x / 5.f;
-			vec3 v(0.f);
-			v[transform] = dx;
-
-			Solution s;
-			s.score = 0;
-			s.id = x;
-			s.matrix = translate(v);
-			
-			solutions.push_back(s);
-		}
-	}
-	*/
-
-	// try different rotations
-	for (int r = -100; r <= 100; ++r)
-	{
-		float a = radians((float)r / 10.f);
-
-		Solution s;
-		s.id = r;
-		s.score = 0;
-
-		s.matrix = translate(mat4(1.f), v->getBBox().getCentroid());
-		s.matrix = rotate(s.matrix, a, glm::vec3(0, 1, 0));
-		s.matrix = translate(s.matrix, v->getBBox().getCentroid() * -1.f);
-
-		//s.matrix = rotate(a, vec3(0, 1, 0));
-		solutions.push_back(s);
-
-	}
-
-
-	std::cout << "[Uniform solver] Created " << solutions.size() << " new candidate transforms.\n";
-	currentSolution = 0;
 }
 
 
@@ -388,11 +334,7 @@ void MultiDimensionalHillClimb::createPotentialSolutions()
 
 			Solution s;
 			s.id = solutionCounter++;
-
-			// this rotates the volume around its center
-			s.matrix = translate(mat4(1.f), currentVolume->getBBox().getCentroid());
-			s.matrix = rotate(s.matrix, f, glm::vec3(0, 1, 0));
-			s.matrix = translate(s.matrix, currentVolume->getBBox().getCentroid() * -1.f);
+			s.matrix = createRotationMatrix(f, currentVolume);
 
 			s.score = 0;
 			potentialSolutions.push_back(s);
@@ -404,13 +346,15 @@ void MultiDimensionalHillClimb::createPotentialSolutions()
 
 void SimulatedAnnealingSolver::initialize(const InteractionVolume* v)
 {
-	temp = 1.f;
-	
+	temp = 1;
+	cooling = 0.998;
+
 	currentSolution.score = 0;
 	currentSolution.matrix = v->transform;
 	bestSolution = currentSolution;
 
 	iteration = 0;
+	currentVolume = v;
 
 	// initialize rng
 	rng = std::mt19937(std::chrono::system_clock::now().time_since_epoch().count());;
@@ -420,6 +364,7 @@ void SimulatedAnnealingSolver::initialize(const InteractionVolume* v)
 
 void SimulatedAnnealingSolver::resetSolution()
 {
+	currentVolume = nullptr;
 
 	currentSolution.score = 0;
 	currentSolution.matrix = glm::mat4(1.f);
@@ -429,18 +374,18 @@ void SimulatedAnnealingSolver::resetSolution()
 
 bool SimulatedAnnealingSolver::nextSolution()
 {
-	const float EPS = 0.0001f;
+	const double EPS = 0.0001;
 	if (temp > EPS)
 	{
-		++iteration;
 
 		modifyCurrentSolution();
 		currentSolution.score = 0;
 		temp *= cooling;
 
+	
+		std::cout << "[Solver] Temp: " << temp << ", iteration: " << iteration << std::endl;
+		++iteration;
 
-		std::cout << "[Solver] Temp: " << temp << std::endl;
-		
 		return true;
 	}
 
@@ -453,24 +398,56 @@ void SimulatedAnnealingSolver::recordCurrentScore(double s)
 	history.add(s);
 
 	if (s > bestSolution.score)
+	{
 		bestSolution = currentSolution;
+		std::cout << "[Debug] Accepted better solution with score " << s << std::endl;
+	}
 	else
 	{
 		double d = exp((currentSolution.score - bestSolution.score) / temp);
 		if ((double)rng() / rng.max() < d)
+		{
 			bestSolution = currentSolution;
+			std::cout << "[Debug] Accepted worse solution with score " << s << std::endl;
+		}
 	}
 }
 
 void SimulatedAnnealingSolver::modifyCurrentSolution()
 {
 	using namespace glm;
-	
+
+	if (!currentVolume)
+		throw std::runtime_error("Simulated annealing solver has no current volume!");
+
+	float f = 0.5f;
+	if (rng() % 2 == 1)
+		f *= -1.f;
+
 	// randomly choose an operation to modify the current matrix with
+	int mode = rng() % 4;
+	if (mode == 0)
+	{
+		mat4 T = translate(vec3(f, 0, 0));
+		currentSolution.matrix = T * currentSolution.matrix;
+	}
+	else if (mode == 1)
+	{
+		mat4 T = translate(vec3(0, f, 0));
+		currentSolution.matrix = T * currentSolution.matrix;
+	}
+	else if (mode == 2)
+	{
+		mat4 T = translate(vec3(0, f, 0));
+		currentSolution.matrix = T * currentSolution.matrix;
+	}
+	else if (mode == 3)
+	{
+		mat4 T = createRotationMatrix(radians(f), currentVolume);
+		currentSolution.matrix = T * currentSolution.matrix;
+	}
 
-	mat4 T(1.f);
-
-	currentSolution.matrix = T * currentSolution.matrix;
 
 	currentSolution.id = iteration;
+	currentSolution.score = 0;
 }
