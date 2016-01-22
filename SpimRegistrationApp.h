@@ -9,6 +9,7 @@
 #include "AABB.h"
 #include "Ray.h"
 #include "StackRegistration.h"
+#include "TinyStats.h"
 
 class Framebuffer;
 class Shader;
@@ -213,7 +214,7 @@ private:
 	void updateGlobalBbox();
 
 	void drawContrastEditor(const Viewport* vp);
-	void drawSolverScore(const Viewport* vp) const;
+	void drawScoreHistory(const TinyHistory<double>& hist) const;
 	void drawGroundGrid(const Viewport* vp) const;
 	void drawBoundingBoxes() const;
 
@@ -234,7 +235,7 @@ private:
 	float maxImageContrast;
 
 	void calculateImageContrast(const std::vector<glm::vec4>& rgbaImage);
-
+	static double calculateImageScore(Framebuffer* fbo);
 
 	// auto-stack alignment
 	bool				runAlignment;
@@ -242,6 +243,10 @@ private:
 	bool				useOcclusionQuery;
 	unsigned int		singleOcclusionQuery;
 	
+	// this one will override runAlignment and always calculate the score 
+	bool				calculateScore;
+	TinyHistory<double>	scoreHistory;
+
 
 	IStackTransformationSolver*		solver;
 	

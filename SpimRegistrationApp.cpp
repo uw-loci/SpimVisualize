@@ -54,7 +54,8 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(nu
 	glGenQueries(1, &singleOcclusionQuery);
 
 
-	useOcclusionQuery = false;
+	useOcclusionQuery = true;
+	calculateScore = true;
 
 	solver = new RYSolver;
 	//solver = new SimulatedAnnealingSolver;
@@ -202,7 +203,7 @@ void SpimRegistrationApp::draw()
 			}
 
 
-			if (runAlignment && useOcclusionQuery)
+			if ((runAlignment || calculateScore) && useOcclusionQuery)
 			{
 				glBeginQuery(GL_SAMPLES_PASSED, singleOcclusionQuery);
 				//glBeginQuery(GL_SAMPLES_PASSED, occlusionQueries[query]);
@@ -258,7 +259,7 @@ void SpimRegistrationApp::draw()
 
 
 
-			if (runAlignment && useOcclusionQuery)
+			if ((runAlignment || calculateScore) && useOcclusionQuery)
 			{
 				glEndQuery(GL_SAMPLES_PASSED);
 			
@@ -306,6 +307,35 @@ void SpimRegistrationApp::draw()
 
 				}
 			}
+			else
+			{
+				// only calculate score if the solver has not alreay
+				if (calculateScore)
+				{
+					if (useOcclusionQuery)
+					{
+						GLint queryStatus = GL_FALSE;
+						while (queryStatus == GL_FALSE)
+							glGetQueryObjectiv(singleOcclusionQuery, GL_QUERY_RESULT_AVAILABLE, &queryStatus);
+
+						GLuint64 result = 0;
+						glGetQueryObjectui64v(singleOcclusionQuery, GL_QUERY_RESULT, &result);
+
+						double relativeResult = (double)result / (double)(volumeRenderTarget->getWidth()*volumeRenderTarget->getHeight());
+						scoreHistory.add(relativeResult);
+					}
+					else
+					{
+						double score = calculateImageScore(volumeRenderTarget);
+						scoreHistory.add(score);
+					}
+
+				}
+			}
+
+			
+
+
 		}
 
 		vp->drawBorder();
@@ -350,7 +380,14 @@ void SpimRegistrationApp::draw()
 
 
 	// draw the solver score here
-	drawSolverScore(layout->getActiveViewport());
+
+	if (runAlignment || !solver->getHistory().history.empty())
+		drawScoreHistory(solver->getHistory());
+	
+	if (calculateImageScore)
+		drawScoreHistory(scoreHistory);
+	
+	
 }
 
 void SpimRegistrationApp::saveStackTransformations() const
@@ -1759,11 +1796,9 @@ void SpimRegistrationApp::inspectPointclouds(const Ray& r)
 	}
 }
 
-void SpimRegistrationApp::drawSolverScore(const Viewport* vp) const
+void SpimRegistrationApp::drawScoreHistory(const TinyHistory<double>& hist) const
 {
-
-	const TinyHistory<double>& hist = solver->getHistory();
-
+	
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glOrtho(0, 500, hist.min, hist.max, 0, 1);
@@ -1849,4 +1884,32 @@ void SpimRegistrationApp::clearHistory()
 {
 	if (solver)
 		solver->clearHistory();
+
+	scoreHistory.history.clear();
+	scoreHistory.reset();
+}
+
+double SpimRegistrationApp::calculateImageScore(Framebuffer* fbo)
+{
+	fbo->bind();
+	glReadBuffer(GL_COLOR_ATTACHMENT0);
+
+	std::vector<glm::vec4> pixels(fbo->getWidth()*fbo->getHeight());
+	glReadPixels(0, 0, fbo->getWidth(), fbo->getHeight(), GL_RGBA, GL_FLOAT, glm::value_ptr(pixels[0]));
+	fbo->disable();
+
+	double value = 0;
+
+	for (size_t i = 0; i < pixels.size(); ++i)
+	{
+		glm::vec3 color(pixels[i]);
+		value += glm::dot(color, color);
+	}
+
+	value /= (fbo->getWidth()*fbo->getHeight());
+
+	std::cout << "[Image] Read back render target score: " << value << std::endl;
+	glReadBuffer(GL_BACK);
+
+	return value;
 }
