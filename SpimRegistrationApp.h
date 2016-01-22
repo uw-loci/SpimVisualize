@@ -87,6 +87,8 @@ public:
 	void selectSolver(const std::string& solver);
 	
 
+	void clearHistory();
+
 	/// \}
 
 	void updateMouseMotion(const glm::ivec2& cursor);

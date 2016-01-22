@@ -1830,6 +1830,11 @@ void SpimRegistrationApp::selectSolver(const std::string& name)
 		newSolver = new SimulatedAnnealingSolver;
 	}
 
+	if (name == "Hillclimb")
+	{
+		cout << "[Solver] Creating new Multidimensional hillclimb solver\n";
+		newSolver = new MultiDimensionalHillClimb;
+	}
 
 	// only switch solvers if we have created a valid one
 	if (newSolver)
@@ -1840,4 +1845,10 @@ void SpimRegistrationApp::selectSolver(const std::string& name)
 		cout << "[Debug] Switched solvers.\n";
 	
 	}
+}
+
+void SpimRegistrationApp::clearHistory()
+{
+	if (solver)
+		solver->clearHistory();
 }

@@ -70,6 +70,9 @@ static void keyboard(unsigned char key, int x, int y)
 
 	if (key == ' ')
 		regoApp->beginAutoAlign();
+
+	if (key == 'H')
+		regoApp->clearHistory();
 	
 	if (key == ',')
 		regoApp->decreaseMinThreshold();
@@ -253,6 +256,8 @@ static void special(int key, int x, int y)
 		regoApp->selectSolver("Uniform"); 
 	if (key == GLUT_KEY_F10)
 		regoApp->selectSolver("Simulated Annealing");
+	if (key == GLUT_KEY_F11)
+		regoApp->selectSolver("Hillclimb");
 
 	if (key == GLUT_KEY_DOWN)
 	{

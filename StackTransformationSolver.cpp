@@ -281,6 +281,127 @@ void RYSolver::createCandidateSolutions(const InteractionVolume* v)
 	std::cout << "[RY Solver] Created " << solutions.size() << " candidate solutions.\n";
 }
 
+
+void MultiDimensionalHillClimb::initialize(const InteractionVolume* v)
+{
+	// initialize rng
+	rng = std::mt19937(std::chrono::system_clock::now().time_since_epoch().count());;
+
+	resetSolution();
+	history.reset();
+
+	currentVolume = v;
+	createPotentialSolutions();
+}
+
+void MultiDimensionalHillClimb::resetSolution()
+{
+	potentialSolutions.clear();
+	bestSolution.score = 0;
+	bestSolution.matrix = glm::mat4(1.f);
+	currentVolume = nullptr;
+}
+
+bool MultiDimensionalHillClimb::nextSolution()
+{
+	potentialSolutions.pop_back();
+	if (potentialSolutions.empty())
+	{
+		std::cout << "[Hillclimb] Best score in last run was " << bestSolution.score << std::endl;
+		createPotentialSolutions();
+	}
+	return true;
+}
+
+const IStackTransformationSolver::Solution& MultiDimensionalHillClimb::getCurrentSolution() const
+{
+	if (potentialSolutions.empty())
+		return bestSolution;
+	else
+		return potentialSolutions.back();
+}
+
+void MultiDimensionalHillClimb::recordCurrentScore(double score)
+{
+	if (score > bestSolution.score)
+	{
+		bestSolution = potentialSolutions.back();
+		history.add(score);
+	}
+}
+
+void MultiDimensionalHillClimb::createPotentialSolutions()
+{
+	using namespace glm;
+
+	int mode = rng() % 4;
+
+	std::cout << "[Hillclimb] Mode: " << mode << std::endl;
+	
+	if (mode == 0)
+	{
+		for (int i = -10; i <= 10; ++i)
+		{
+			float f = (float)i / 5.f;
+
+			Solution s;
+			s.id = solutionCounter++;
+			s.matrix = translate(vec3(f, 0, 0));
+			s.score = 0;
+			potentialSolutions.push_back(s);
+		}
+	}
+	else if (mode == 1)
+	{
+		for (int i = -10; i <= 10; ++i)
+		{
+			float f = (float)i / 5.f;
+
+			Solution s;
+			s.id = solutionCounter++;
+			s.matrix = translate(vec3(0, f, 0));
+			s.score = 0;
+			potentialSolutions.push_back(s);
+		}
+	}
+	else if (mode == 2)
+	{
+		for (int i = -10; i <= 10; ++i)
+		{
+			float f = (float)i / 5.f;
+
+			Solution s;
+			s.id = solutionCounter++;
+			s.matrix = translate(vec3(0, 0, f));
+			s.score = 0;
+			potentialSolutions.push_back(s);
+		}
+	}
+	else if (mode == 3)
+	{
+		if (!currentVolume)
+			throw std::runtime_error("No current interaction volume set for the multidim hillclimb!");
+
+		for (int i = -10; i <= 10; ++i)
+		{
+			float f = radians((float)i / 5.f);
+
+			Solution s;
+			s.id = solutionCounter++;
+
+			// this rotates the volume around its center
+			s.matrix = translate(mat4(1.f), currentVolume->getBBox().getCentroid());
+			s.matrix = rotate(s.matrix, f, glm::vec3(0, 1, 0));
+			s.matrix = translate(s.matrix, currentVolume->getBBox().getCentroid() * -1.f);
+
+			s.score = 0;
+			potentialSolutions.push_back(s);
+		}
+	}
+
+	std::cout << "[Hillclimb] " << potentialSolutions.size() << " new solutions in queue.\n";
+}
+
 void SimulatedAnnealingSolver::initialize(const InteractionVolume* v)
 {
 	temp = 1.f;

@@ -48,7 +48,7 @@ public:
 	virtual const Solution& getBestSolution() = 0;
 	
 	inline const TinyHistory<double>& getHistory() const { return history; }
-
+	inline void clearHistory() { history.history.clear(); }
 
 protected:
 	TinyHistory<double>			history;
@@ -102,6 +102,30 @@ class RYSolver : public UniformSamplingSolver
 protected:
 	virtual void createCandidateSolutions(const InteractionVolume* v);
 
+};
+
+class MultiDimensionalHillClimb : public IStackTransformationSolver
+{
+public:
+
+	virtual void initialize(const InteractionVolume* v);
+	virtual void resetSolution();
+	virtual bool nextSolution();
+
+	virtual void recordCurrentScore(double score);
+
+	const Solution& getCurrentSolution() const;
+	inline const Solution& getBestSolution() { return bestSolution; }
+
+private:
+	std::vector<Solution>		potentialSolutions;
+	Solution					bestSolution;
+	
+	unsigned int				solutionCounter;
+	std::mt19937				rng;
+
+	const InteractionVolume*	currentVolume;
+	void createPotentialSolutions();
 };
 
 class SimulatedAnnealingSolver : public IStackTransformationSolver
