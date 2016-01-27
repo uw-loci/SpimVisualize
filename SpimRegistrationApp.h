@@ -87,6 +87,8 @@ public:
 	/// Selects the currently active solver
 	void selectSolver(const std::string& solver);
 	
+	void toggleScoreMode();
+
 
 	void clearHistory();
 

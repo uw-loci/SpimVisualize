@@ -89,6 +89,10 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == 't')
 		regoApp->contrastEditorApplyThresholds();
 
+
+	if (key == 'q')
+		regoApp->toggleScoreMode();
+
 	if (key == ';')
 		regoApp->decreaseSliceCount();
 	if (key == '\'')

@@ -1913,3 +1913,18 @@ double SpimRegistrationApp::calculateImageScore(Framebuffer* fbo)
 
 	return value;
 }
+
+void SpimRegistrationApp::toggleScoreMode()
+{
+	if (useOcclusionQuery)
+	{
+		useOcclusionQuery = false;
+		std::cout << "[Score] Using image metric\n";
+	}
+	else
+	{
+		useOcclusionQuery = true;
+		std::cout << "[Score] Using occlusion query.\n";
+	}
+
+}
