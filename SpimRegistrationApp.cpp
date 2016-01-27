@@ -53,7 +53,7 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(nu
 
 	glGenQueries(1, &singleOcclusionQuery);
 		
-	useOcclusionQuery = true;
+	useOcclusionQuery = false;
 	calculateScore = true;
 	
 	solver = new RYSolver;
@@ -133,6 +133,7 @@ void SpimRegistrationApp::reloadShaders()
 
 void SpimRegistrationApp::draw()
 {
+	renderTargetReadbackCurrent = false;
 
 	for (size_t i = 0; i < layout->getViewCount(); ++i)
 	{
@@ -227,7 +228,7 @@ void SpimRegistrationApp::draw()
 			
 			
 			
-			drawTonemappedQuad(volumeRenderTarget);
+			drawTonemappedQuad();
 			//drawTexturedQuad(volumeRenderTarget->getColorbuffer());
 
 
@@ -281,7 +282,7 @@ void SpimRegistrationApp::draw()
 					}
 					else
 					{
-						double score = calculateImageScore(volumeRenderTarget);
+						double score = calculateImageScore();
 						scoreHistory.add(score);
 					}
 
@@ -303,7 +304,7 @@ void SpimRegistrationApp::draw()
 	if (runAlignment || !solver->getHistory().history.empty())
 		drawScoreHistory(solver->getHistory());
 	
-	if (calculateImageScore)
+	if (calculateScore)
 		drawScoreHistory(scoreHistory);
 	
 	
@@ -439,40 +440,34 @@ void SpimRegistrationApp::drawTexturedQuad(unsigned int texture) const
 }
 
 
-void SpimRegistrationApp::drawTonemappedQuad(Framebuffer* fbo) const
+void SpimRegistrationApp::drawTonemappedQuad()
 {
 
+	if (!renderTargetReadbackCurrent)
+		readbackRenderTarget();
+
+
 	// read back render target to determine largest and smallest value
-	bool readback = false;
-	if (readback)
+	bool readback = true;
+	glm::vec4 minVal(std::numeric_limits<float>::max());
+	glm::vec4 maxVal(std::numeric_limits<float>::lowest());
+
+	for (size_t i = 0; i < renderTargetReadback.size(); ++i)
 	{
-		fbo->bind();
-		glReadBuffer(GL_COLOR_ATTACHMENT0);
-
-		std::vector<glm::vec4> pixels(fbo->getWidth()*fbo->getHeight());
-		glReadPixels(0, 0, fbo->getWidth(), fbo->getHeight(), GL_RGBA, GL_FLOAT, glm::value_ptr(pixels[0]));
-		fbo->disable();
-
-		glm::vec4 minVal(std::numeric_limits<float>::max());
-		glm::vec4 maxVal(std::numeric_limits<float>::lowest());
-
-		for (size_t i = 0; i < pixels.size(); ++i)
-		{
-			minVal = glm::min(minVal, pixels[i]);
-			maxVal = glm::max(maxVal, pixels[i]);
-		}
-
-		std::cout << "[Debug] Read back min: " << minVal << ", max: " << maxVal << std::endl;
-
-		glReadBuffer(GL_BACK);
+		minVal = glm::min(minVal, renderTargetReadback[i]);
+		maxVal = glm::max(maxVal, renderTargetReadback[i]);
 	}
+
+
 
 	glDisable(GL_DEPTH_TEST);
 	glDepthMask(GL_FALSE);
 
 	tonemapper->bind();
 	tonemapper->setUniform("sliceCount", (float)sliceCount);
-	tonemapper->setTexture2D("colormap", fbo->getColorbuffer());
+	tonemapper->setTexture2D("colormap", volumeRenderTarget->getColorbuffer());
+	tonemapper->setUniform("minVal", minVal);
+	tonemapper->setUniform("maxVal", maxVal);
 
 	glBegin(GL_QUADS);
 	glVertex2i(0, 1);
@@ -1523,14 +1518,8 @@ void SpimRegistrationApp::inspectOutputImage(const glm::ivec2& cursor)
 		return;
 
 
-	// read back last render target
-	// TODO: change me to the _correct_ render target
-	volumeRenderTarget->bind();
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-
-	std::vector<vec4> pixels(volumeRenderTarget->getWidth()*volumeRenderTarget->getHeight());
-	glReadPixels(0, 0, volumeRenderTarget->getWidth(), volumeRenderTarget->getHeight(), GL_RGBA, GL_FLOAT, glm::value_ptr(pixels[0]));
-	volumeRenderTarget->disable();
+	if (!renderTargetReadbackCurrent)
+		readbackRenderTarget();
 
 	// calculate relative coordinates
 	Viewport* vp = layout->getActiveViewport();
@@ -1548,7 +1537,7 @@ void SpimRegistrationApp::inspectOutputImage(const glm::ivec2& cursor)
 		size_t index = imgCoords.x + imgCoords.y * volumeRenderTarget->getWidth();
 
 		//std::cout << "[Debug] " << cursor << " -> " << relCoords << " -> " << imgCoords << std::endl;
-		std::cout << "[Image] " << pixels[index] << std::endl;
+		std::cout << "[Image] " << renderTargetReadback[index] << std::endl;
 
 
 		
@@ -1798,28 +1787,21 @@ void SpimRegistrationApp::clearHistory()
 	scoreHistory.reset();
 }
 
-double SpimRegistrationApp::calculateImageScore(Framebuffer* fbo)
+double SpimRegistrationApp::calculateImageScore()
 {
-	fbo->bind();
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-
-	std::vector<glm::vec4> pixels(fbo->getWidth()*fbo->getHeight());
-	glReadPixels(0, 0, fbo->getWidth(), fbo->getHeight(), GL_RGBA, GL_FLOAT, glm::value_ptr(pixels[0]));
-	fbo->disable();
+	if (!renderTargetReadbackCurrent)
+		readbackRenderTarget();
 
 	double value = 0;
-
-	for (size_t i = 0; i < pixels.size(); ++i)
+	for (size_t i = 0; i < renderTargetReadback.size(); ++i)
 	{
-		glm::vec3 color(pixels[i]);
+		glm::vec3 color(renderTargetReadback[i]);
 		value += glm::dot(color, color);
 	}
 
-	value /= (fbo->getWidth()*fbo->getHeight());
+	value /= renderTargetReadback.size();
 
-	//std::cout << "[Image] Read back render target score: " << value << std::endl;
-	glReadBuffer(GL_BACK);
-
+	std::cout << "[Image] Read back render target score: " << value << std::endl;
 	return value;
 }
 
@@ -1836,4 +1818,21 @@ void SpimRegistrationApp::toggleScoreMode()
 		std::cout << "[Score] Using occlusion query.\n";
 	}
 
+}
+
+
+void SpimRegistrationApp::readbackRenderTarget()
+{
+	volumeRenderTarget->bind();
+	glReadBuffer(GL_COLOR_ATTACHMENT0);
+
+	const unsigned int res = volumeRenderTarget->getWidth()*volumeRenderTarget->getHeight();
+	if (renderTargetReadback.size() != res)
+		renderTargetReadback.resize(res);
+
+	glReadPixels(0, 0, volumeRenderTarget->getWidth(), volumeRenderTarget->getHeight(), GL_RGBA, GL_FLOAT, glm::value_ptr(renderTargetReadback[0]));
+	volumeRenderTarget->disable();
+
+	renderTargetReadbackCurrent = true;
+	glReadBuffer(GL_BACK);
 }

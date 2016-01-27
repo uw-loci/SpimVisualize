@@ -208,7 +208,7 @@ private:
 	void drawBoundingBoxes() const;
 
 	void drawTexturedQuad(unsigned int texture) const;
-	void drawTonemappedQuad(Framebuffer* fbo) const;
+	void drawTonemappedQuad();
 
 	void drawAxisAlignedSlices(const glm::mat4& mvp, const glm::vec3& axis, const Shader* shader) const;
 	void drawAxisAlignedSlices(const Viewport* vp, const Shader* shader) const;
@@ -224,7 +224,7 @@ private:
 	float maxImageContrast;
 
 	void calculateImageContrast(const std::vector<glm::vec4>& rgbaImage);
-	static double calculateImageScore(Framebuffer* fbo);
+	double calculateImageScore();
 
 	// auto-stack alignment
 	bool				runAlignment;
@@ -232,6 +232,13 @@ private:
 	bool				useOcclusionQuery;
 	unsigned int		singleOcclusionQuery;
 	
+	// this is the read-back image. used for inspection etc
+	std::vector<glm::vec4>	renderTargetReadback;
+	bool					renderTargetReadbackCurrent = false;
+
+	void readbackRenderTarget();
+
+
 	// this one will override runAlignment and always calculate the score 
 	bool				calculateScore;
 	TinyHistory<double>	scoreHistory;

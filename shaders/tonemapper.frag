@@ -3,8 +3,8 @@
 
 varying vec2 texcoord;
 
-uniform float maxThreshold;
-uniform float minThreshold;
+uniform vec4 maxVal;
+uniform vec4 minVal;
 uniform float sliceCount;
 
 uniform sampler2D colormap;
@@ -48,7 +48,10 @@ void main()
 
 	*/
 
-	gl_FragColor = vec4(color / float(weight), 1.0 / float(weight));
+	color -= minVal.rgb;
+	color /= (maxVal - minVal).rgb;
+
+	gl_FragColor = vec4(color, 1.0 / float(weight));
 
 
 
