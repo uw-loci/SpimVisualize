@@ -1908,7 +1908,7 @@ double SpimRegistrationApp::calculateImageScore(Framebuffer* fbo)
 
 	value /= (fbo->getWidth()*fbo->getHeight());
 
-	std::cout << "[Image] Read back render target score: " << value << std::endl;
+	//std::cout << "[Image] Read back render target score: " << value << std::endl;
 	glReadBuffer(GL_BACK);
 
 	return value;
