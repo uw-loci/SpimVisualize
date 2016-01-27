@@ -10,7 +10,7 @@ struct Volume
 	bool			enabled;
 };
 
-#define VOLUMES 3
+#define VOLUMES 2
 uniform Volume volume[VOLUMES];
 
 uniform bool enableDiscard = true;
@@ -31,7 +31,7 @@ void main()
 	// init colors here
 	colors[0] = vec3(1.0, 0.0, 0.0);
 	colors[1] = vec3(0.0, 1.0, 0.0);
-	colors[2] = vec3(0.0, 0.0, 1.0);
+	//colors[2] = vec3(0.0, 0.0, 1.0);
 
 	/*
 	if (VOLUMES > 1)
@@ -124,7 +124,7 @@ void main()
 	sum /= (maxThreshold - minThreshold);
 
 	color *= sum;
-	float alpha = 1.0 / (sliceCount);
+	float alpha = float(count);
 
 	fragColor = vec4(color, alpha);
 

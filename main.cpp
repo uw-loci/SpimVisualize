@@ -108,12 +108,7 @@ static void keyboard(unsigned char key, int x, int y)
 		regoApp->rotateCurrentStack(0.5);
 	if (key == '}')
 		regoApp->rotateCurrentStack(5.f);
-	
-	if (key == 'r')
-		regoApp->switchRenderMode();
-	if (key == 'R')
-		regoApp->switchBlendMode();
-
+		
 	if (key == 's')
 		regoApp->reloadShaders();
 

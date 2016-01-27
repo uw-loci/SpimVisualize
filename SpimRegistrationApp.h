@@ -189,19 +189,6 @@ private:
 	// for contrast mapping
 	Shader*					tonemapper;
 
-	enum RenderMode
-	{
-		RENDER_VIEWPLANE_SLICES,
-		RENDER_ALIGN
-
-	}						renderMode;
-	enum BlendMode
-	{
-		BLEND_ADD,
-		BLEND_MAX
-
-	}						blendMode;
-
 	// stores undo transformations for all stacks
 	struct VolumeTransform
 	{

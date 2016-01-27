@@ -35,7 +35,7 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(nu
 	volumeRaycaster(nullptr), drawQuad(nullptr), volumeDifferenceShader(nullptr), tonemapper(nullptr), layout(nullptr),
 	drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), sliceCount(100),
 	configPath("./"), cameraMoving(false), runAlignment(false), histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f),
-	subsampleOnCameraMove(false), renderMode(RENDER_VIEWPLANE_SLICES), useOcclusionQuery(false), blendMode(BLEND_ADD),
+	subsampleOnCameraMove(false), useOcclusionQuery(false),
 	useImageAutoContrast(false), currentVolume(-1), solver(nullptr)
 {
 	globalBBox.reset();
@@ -52,11 +52,10 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(nu
 	volumeRenderTarget = new Framebuffer(512, 512, GL_RGBA32F, GL_FLOAT);
 
 	glGenQueries(1, &singleOcclusionQuery);
-
-
+		
 	useOcclusionQuery = true;
 	calculateScore = true;
-
+	
 	solver = new RYSolver;
 	//solver = new SimulatedAnnealingSolver;
 }
@@ -132,41 +131,6 @@ void SpimRegistrationApp::reloadShaders()
 
 }
 
-void SpimRegistrationApp::switchRenderMode()
-{
-	switch (renderMode)
-	{
-	case RENDER_ALIGN:
-		std::cout << "[Render] Now rendering viewplane slices\n";
-		renderMode = RENDER_VIEWPLANE_SLICES;
-		break;
-	case RENDER_VIEWPLANE_SLICES:
-		std::cout << "[Render] Now rendering alignment volumes.\n";
-		renderMode = RENDER_ALIGN;
-		break;
-
-	default:
-		std::cout << "[Render] Invalid rendermode.\n";
-		renderMode = RENDER_ALIGN;
-	}
-
-}
-
-void SpimRegistrationApp::switchBlendMode()
-{
-	if (blendMode == BLEND_ADD)
-	{
-		blendMode = BLEND_MAX;
-		std::cout << "[Render] Blend mode max\n";
-	}
-	else
-	{
-		blendMode = BLEND_ADD;
-		std::cout << "[Render] Blend mode add\n";
-	}
-}
-
-
 void SpimRegistrationApp::draw()
 {
 
@@ -217,40 +181,30 @@ void SpimRegistrationApp::draw()
 
 				
 			glEnable(GL_BLEND);
-			if (blendMode == BLEND_ADD)
-				glBlendEquation(GL_FUNC_ADD);
-			else
-				glBlendEquation(GL_MAX);
+			glBlendEquation(GL_FUNC_ADD);
+
+			//glBlendEquation(GL_MAX);
 
 
-			if (renderMode == RENDER_ALIGN)
-			{
-				glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-				glBlendFunc(GL_ONE, GL_ONE);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+			glBlendFunc(GL_ONE, GL_ONE);
 
-				drawViewplaneSlices(vp, volumeDifferenceShader);
-			}
+			// align three-color view
+			drawViewplaneSlices(vp, volumeDifferenceShader);
+		
+			// normal view
+			//drawViewplaneSlices(vp, volumeShader);
+
 			
-
-			if (renderMode == RENDER_VIEWPLANE_SLICES)
-			{				
-				drawViewplaneSlices(vp, volumeShader);
-
-			}
-			
-			//drawViewplaneSlices(vp, volumeDifferenceShader);
-
 			glDisable(GL_BLEND);
 			
 
-
-
+			/*
 			if (!pointclouds.empty())
-			{
 				drawPointclouds(vp);
-			}
+			*/
 
-			drawRays(vp);
+			//drawRays(vp);
 
 
 			
@@ -270,10 +224,11 @@ void SpimRegistrationApp::draw()
 			
 			volumeRenderTarget->disable();
 			
-			if (renderMode == RENDER_ALIGN)
-				drawTexturedQuad(volumeRenderTarget->getColorbuffer());
-			else if (renderMode == RENDER_VIEWPLANE_SLICES)
-				drawTonemappedQuad(volumeRenderTarget);
+			
+			
+			
+			drawTonemappedQuad(volumeRenderTarget);
+			//drawTexturedQuad(volumeRenderTarget->getColorbuffer());
 
 
 			if (drawGrid)
@@ -341,42 +296,6 @@ void SpimRegistrationApp::draw()
 		vp->drawBorder();
 
 	}
-
-
-
-	/*
-	// gather all occlusion queries here
-	if (runAlignment)
-	{
-		
-		auto start = std::chrono::high_resolution_clock::now();
-
-		for (int i = 0; i < 4; ++i)
-		{
-
-			// read back occlusion result
-			if (occlusionQueryMask[i])
-			{
-				GLint queryStatus = GL_FALSE;
-				while (queryStatus == GL_FALSE)
-					glGetQueryObjectiv(singleOcclusionQuery, GL_QUERY_RESULT_AVAILABLE, &queryStatus);
-
-				GLuint64 result = 0;
-				glGetQueryObjectui64v(singleOcclusionQuery, GL_QUERY_RESULT, &result);
-
-				currentResult.result[i] = result;
-			}
-		}
-		
-		
-		auto end = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<double, std::milli> elapsed = end - start;
-		std::cout << "[Debug] Read back occlusion query in " << elapsed.count() << " ms.\n";
-
-
-
-	}
-	*/
 
 
 	// draw the solver score here
@@ -552,16 +471,6 @@ void SpimRegistrationApp::drawTonemappedQuad(Framebuffer* fbo) const
 	glDepthMask(GL_FALSE);
 
 	tonemapper->bind();
-	tonemapper->setUniform("maxThreshold", (float)globalThreshold.max);
-	tonemapper->setUniform("minThreshold", (float)globalThreshold.min);
-
-	if (useImageAutoContrast)
-	{
-		tonemapper->setUniform("minThreshold", minImageContrast);
-		tonemapper->setUniform("maxThreshold", maxImageContrast);
-	}
-
-
 	tonemapper->setUniform("sliceCount", (float)sliceCount);
 	tonemapper->setTexture2D("colormap", fbo->getColorbuffer());
 

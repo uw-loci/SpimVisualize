@@ -24,6 +24,7 @@ void main()
 	if (weight == 0.0)
 		discard;
 
+	/*
 
 	// normalize along ray length
 	float intensity = color.r / weight;
@@ -42,14 +43,12 @@ void main()
 
 
 
-	color = mix(blu, red, intensity);
-
-
 	if (intensity < 0.01)
 		color = vec3(0.0, 1.0, 0.0);
 
+	*/
 
-	gl_FragColor = vec4(color, 1.0);
+	gl_FragColor = vec4(color / float(weight), 1.0 / float(weight));
 
 
 
