@@ -229,9 +229,6 @@ private:
 	// auto-stack alignment
 	bool				runAlignment;
 
-	bool				useOcclusionQuery;
-	unsigned int		singleOcclusionQuery;
-	
 	// this is the read-back image. used for inspection etc
 	std::vector<glm::vec4>	renderTargetReadback;
 	bool					renderTargetReadbackCurrent = false;

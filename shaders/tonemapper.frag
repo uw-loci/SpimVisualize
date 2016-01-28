@@ -24,40 +24,10 @@ void main()
 	if (weight == 0.0)
 		discard;
 
-	/*
-
-	// normalize along ray length
-	float intensity = color.r / weight;
-
-	intensity -= minThreshold;
-
-	if (intensity < 0.0 && enableDiscard)
-		discard;
-
-	intensity /= (maxThreshold - minThreshold);
-
-
-
-
-
-
-	if (intensity < 0.01)
-		color = vec3(0.0, 1.0, 0.0);
-
-	*/
-
-	/*
-	color -= minVal.rgb;
-	color /= (maxVal - minVal).rgb;
-	*/
-
-	//color /= 200.0;
-
-	//color = vec3(weight);
-
-
 	vec3 blu = vec3(0.0, 0.0, 0.8);
 	vec3 red = vec3(0.8, 0.0, 0.0);
+
+
 
 	float val = color.r;
 

@@ -39,8 +39,6 @@ public:
 
 	/// records the image/occlusion score for the current solution
 	virtual void recordCurrentScore(double score) = 0;
-	/// recordsthe image/occlusion score for the current solution
-	virtual void recordCurrentScore(Framebuffer* fbo);
 
 	/// returns the current solution to be tested
 	virtual const Solution& getCurrentSolution() const = 0;

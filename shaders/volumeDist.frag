@@ -10,12 +10,13 @@ struct Volume
 	bool			enabled;
 };
 
-#define VOLUMES 2
+#define VOLUMES 3
 uniform Volume volume[VOLUMES];
+
+uniform int currentVolume = 0;
 
 uniform bool enableDiscard = true;
 int value[VOLUMES];
-vec3 colors[VOLUMES];
 
 uniform float minThreshold;
 uniform float maxThreshold;
@@ -27,21 +28,6 @@ out vec4 fragColor;
 
 void main()
 {	
-
-	// init colors here
-	colors[0] = vec3(1.0, 0.0, 0.0);
-	colors[1] = vec3(0.0, 1.0, 0.0);
-	//colors[2] = vec3(0.0, 0.0, 1.0);
-
-	/*
-	if (VOLUMES > 1)
-		colors[2] = vec3(0.0, 0.0, 1.0);
-	if (VOLUMES > 2)
-		colors[3] = vec3(1.0, 1.0, 0.0);
-	if (VOLUMES > 3)
-		colors[4] = vec3(0.0, 1.0, 1.0);
-	*/
-
 
 	// count of the number volumes this pixel is contained int
 	int count = 0;
@@ -88,27 +74,14 @@ void main()
 		discard;
 
 	
-	vec3 color = vec3(0.0);
-	/*
-	for (int i = 0; i < VOLUMES; ++i)
-	{
-		if (value[i] > minThreshold)
-			color += abs(colors[0] - color[i]);
-	}
-	*/
-
-
-	int diffValue = value[0];
-
-
+	int diffValue = 0;
 	bool anyGreater = false;
 	for (int i = 0; i < VOLUMES; ++i)
 	{
 
 		if (value[i] > minThreshold)
 		{			
-			//color += colors[i]11;
-			color += vec3(value[i] - value[0]);
+			diffValue += (value[i] - value[0]);
 			anyGreater = true;
 		}
 
@@ -121,28 +94,18 @@ void main()
 
 
 
-	//color = vec3(diffValue);
+	// normalize diffvalue
+	float normalDiff = diffValue / sliceCount;
 
+
+
+	vec3 color = vec3(normalDiff, sum, sum/sliceCount);
 
 	/*
-	// average value
-	sum /= float(count);
-
-
-	// scale value by contrast settings
-	sum -= minThreshold;
-	sum /= (maxThreshold - minThreshold);
-
-	color *= sum;
+	color.r /= 200.0;
+	color.r /= 11.0;
 	*/
 
-
-	float alpha = float(count);
-	
-
-	color /= 200.0;
-	color /= 11.0;
-
-	fragColor = vec4(color, alpha);
+	fragColor = vec4(color, float(count));
 
 }
