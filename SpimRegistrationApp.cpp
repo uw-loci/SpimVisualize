@@ -35,8 +35,7 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(nu
 	volumeRaycaster(nullptr), drawQuad(nullptr), volumeDifferenceShader(nullptr), tonemapper(nullptr), layout(nullptr),
 	drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), sliceCount(100),
 	configPath("./"), cameraMoving(false), runAlignment(false), histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f),
-	subsampleOnCameraMove(false), useOcclusionQuery(false),
-	useImageAutoContrast(false), currentVolume(-1), solver(nullptr)
+	subsampleOnCameraMove(false), useImageAutoContrast(false), currentVolume(-1), solver(nullptr)
 {
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
@@ -51,9 +50,6 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(nu
 
 	volumeRenderTarget = new Framebuffer(512, 512, GL_RGBA32F, GL_FLOAT);
 
-	glGenQueries(1, &singleOcclusionQuery);
-		
-	useOcclusionQuery = false;
 	calculateScore = true;
 	
 	solver = new RYSolver;
@@ -72,9 +68,6 @@ SpimRegistrationApp::~SpimRegistrationApp()
 	delete volumeShader;
 	delete volumeDifferenceShader;
 	delete volumeRaycaster;
-
-
-	glDeleteQueries(1, &singleOcclusionQuery);
 
 
 	for (size_t i = 0; i < stacks.size(); ++i)
@@ -168,12 +161,6 @@ void SpimRegistrationApp::draw()
 			}
 
 
-			if ((runAlignment || calculateScore) && useOcclusionQuery)
-			{
-				glBeginQuery(GL_SAMPLES_PASSED, singleOcclusionQuery);
-				//glBeginQuery(GL_SAMPLES_PASSED, occlusionQueries[query]);
-			}
-
 			/// actual drawing block begins
 			/// --------------------------------------------------------
 
@@ -214,12 +201,6 @@ void SpimRegistrationApp::draw()
 
 
 
-			if ((runAlignment || calculateScore) && useOcclusionQuery)
-			{
-				glEndQuery(GL_SAMPLES_PASSED);
-			
-			}
-
 			glDisable(GL_BLEND);
 			glBlendEquation(GL_FUNC_ADD);
 			
@@ -243,51 +224,19 @@ void SpimRegistrationApp::draw()
 			{
 				undoLastTransform();
 
-				if (useOcclusionQuery)
-				{
-					GLint queryStatus = GL_FALSE;
-					while (queryStatus == GL_FALSE)
-						glGetQueryObjectiv(singleOcclusionQuery, GL_QUERY_RESULT_AVAILABLE, &queryStatus);
+				// image-based metric
+				double score = calculateImageScore();
+				solver->recordCurrentScore(score);
 
-					GLuint64 result = 0;
-					glGetQueryObjectui64v(singleOcclusionQuery, GL_QUERY_RESULT, &result);
-				
-					double relativeResult = (double)result / (double)(volumeRenderTarget->getWidth()*volumeRenderTarget->getHeight());
-
-					solver->recordCurrentScore(relativeResult);
-				}
-				else
-				{
-					// image-based metric
-					double score = calculateImageScore();
-					solver->recordCurrentScore(score);
-
-
-				}
 			}
 			else
 			{
 				// only calculate score if the solver has not alreay
 				if (calculateScore)
 				{
-					if (useOcclusionQuery)
-					{
-						GLint queryStatus = GL_FALSE;
-						while (queryStatus == GL_FALSE)
-							glGetQueryObjectiv(singleOcclusionQuery, GL_QUERY_RESULT_AVAILABLE, &queryStatus);
-
-						GLuint64 result = 0;
-						glGetQueryObjectui64v(singleOcclusionQuery, GL_QUERY_RESULT, &result);
-
-						double relativeResult = (double)result / (double)(volumeRenderTarget->getWidth()*volumeRenderTarget->getHeight());
-						scoreHistory.add(relativeResult);
-					}
-					else
-					{
-						double score = calculateImageScore();
-						scoreHistory.add(score);
-					}
-
+					double score = calculateImageScore();
+					scoreHistory.add(score);
+			
 				}
 			}
 
@@ -1811,21 +1760,6 @@ double SpimRegistrationApp::calculateImageScore()
 
 	//std::cout << "[Image] Read back render target score: " << value << std::endl;
 	return value;
-}
-
-void SpimRegistrationApp::toggleScoreMode()
-{
-	if (useOcclusionQuery)
-	{
-		useOcclusionQuery = false;
-		std::cout << "[Score] Using image metric\n";
-	}
-	else
-	{
-		useOcclusionQuery = true;
-		std::cout << "[Score] Using occlusion query.\n";
-	}
-
 }
 
 
