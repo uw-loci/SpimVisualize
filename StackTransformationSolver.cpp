@@ -20,7 +20,7 @@ static inline double rng_u(std::mt19937& rng)
 	return ((double)rng() / rng.max() * 2) - 1;
 }
 
-
+/*
 void IStackTransformationSolver::recordCurrentScore(Framebuffer* fbo)
 {
 	fbo->bind();
@@ -45,6 +45,7 @@ void IStackTransformationSolver::recordCurrentScore(Framebuffer* fbo)
 
 	recordCurrentScore(value);
 }
+*/
 
 glm::mat4 IStackTransformationSolver::createRotationMatrix(float angle, const InteractionVolume* v)
 {

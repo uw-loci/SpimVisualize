@@ -259,7 +259,9 @@ void SpimRegistrationApp::draw()
 				else
 				{
 					// image-based metric
-					solver->recordCurrentScore(volumeRenderTarget);
+					double score = calculateImageScore();
+					solver->recordCurrentScore(score);
+
 
 				}
 			}
