@@ -1750,7 +1750,7 @@ double SpimRegistrationApp::calculateImageScore()
 	for (size_t i = 0; i < renderTargetReadback.size(); ++i)
 	{
 		glm::vec3 color(renderTargetReadback[i]);
-		value += glm::dot(color, color);
+		value += abs(color.r);
 
 		if (renderTargetReadback[i].a > 0)
 			++validCount;

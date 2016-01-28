@@ -13,9 +13,7 @@ struct Volume
 #define VOLUMES 2
 uniform Volume volume[VOLUMES];
 
-uniform bool enableDiscard = true;
 int value[VOLUMES];
-vec3 colors[VOLUMES];
 
 uniform float minThreshold;
 uniform float maxThreshold;
@@ -27,21 +25,6 @@ out vec4 fragColor;
 
 void main()
 {	
-
-	// init colors here
-	colors[0] = vec3(1.0, 0.0, 0.0);
-	colors[1] = vec3(0.0, 1.0, 0.0);
-	//colors[2] = vec3(0.0, 0.0, 1.0);
-
-	/*
-	if (VOLUMES > 1)
-		colors[2] = vec3(0.0, 0.0, 1.0);
-	if (VOLUMES > 2)
-		colors[3] = vec3(1.0, 1.0, 0.0);
-	if (VOLUMES > 3)
-		colors[4] = vec3(0.0, 1.0, 1.0);
-	*/
-
 
 	// count of the number volumes this pixel is contained int
 	int count = 0;
@@ -88,18 +71,8 @@ void main()
 		discard;
 
 	
-	vec3 color = vec3(0.0);
-	/*
-	for (int i = 0; i < VOLUMES; ++i)
-	{
-		if (value[i] > minThreshold)
-			color += abs(colors[0] - color[i]);
-	}
-	*/
 
-
-	int diffValue = value[0];
-
+	int diffValue = 0;
 
 	bool anyGreater = false;
 	for (int i = 0; i < VOLUMES; ++i)
@@ -107,12 +80,11 @@ void main()
 
 		if (value[i] > minThreshold)
 		{			
-			//color += colors[i]11;
-			color += vec3(value[i] - value[0]);
+			diffValue += (value[i] - value[0]);
 			anyGreater = true;
 		}
 
-		if (enableDiscard && value[i] < minThreshold)
+		if (value[i] < minThreshold)
 			discard;
 	}
 
@@ -120,8 +92,7 @@ void main()
 		discard;
 
 
-
-	//color = vec3(diffValue);
+	vec3 color = vec3(diffValue);
 
 
 	/*
