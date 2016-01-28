@@ -89,9 +89,7 @@ void SpimRegistrationApp::reloadShaders()
 	int numberOfVolumes = std::max(1, (int)stacks.size());
 	std::vector<std::string> defines;
 	defines.push_back("#define VOLUMES " + boost::lexical_cast<std::string>(numberOfVolumes) + "\n");
-
-	bool enableShaderPreProcessing = false;
-
+		
 	delete pointShader;
 	pointShader = new Shader("shaders/points2.vert", "shaders/points2.frag");
 
