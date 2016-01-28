@@ -1793,15 +1793,21 @@ double SpimRegistrationApp::calculateImageScore()
 		readbackRenderTarget();
 
 	double value = 0;
+
+	double validCount = 0;
+
 	for (size_t i = 0; i < renderTargetReadback.size(); ++i)
 	{
 		glm::vec3 color(renderTargetReadback[i]);
 		value += glm::dot(color, color);
+
+		if (renderTargetReadback[i].a > 0)
+			++validCount;
 	}
 
-	value /= renderTargetReadback.size();
+	value /= validCount;
 
-	std::cout << "[Image] Read back render target score: " << value << std::endl;
+	//std::cout << "[Image] Read back render target score: " << value << std::endl;
 	return value;
 }
 

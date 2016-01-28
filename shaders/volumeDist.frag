@@ -89,21 +89,26 @@ void main()
 
 	
 	vec3 color = vec3(0.0);
+	/*
 	for (int i = 0; i < VOLUMES; ++i)
 	{
 		if (value[i] > minThreshold)
-			color += colors[i];
+			color += abs(colors[0] - color[i]);
 	}
+	*/
 
 
-	/*
+	int diffValue = value[0];
+
+
 	bool anyGreater = false;
 	for (int i = 0; i < VOLUMES; ++i)
 	{
 
 		if (value[i] > minThreshold)
 		{			
-			color += colors[i];
+			//color += colors[i]11;
+			color += vec3(value[i] - value[0]);
 			anyGreater = true;
 		}
 
@@ -113,8 +118,13 @@ void main()
 
 	if (!anyGreater)
 		discard;
-	*/
 
+
+
+	//color = vec3(diffValue);
+
+
+	/*
 	// average value
 	sum /= float(count);
 
@@ -124,7 +134,14 @@ void main()
 	sum /= (maxThreshold - minThreshold);
 
 	color *= sum;
+	*/
+
+
 	float alpha = float(count);
+	
+
+	color /= 200.0;
+	color /= 11.0;
 
 	fragColor = vec4(color, alpha);
 

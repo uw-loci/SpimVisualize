@@ -38,8 +38,6 @@ void main()
 
 
 
-	vec3 blu = vec3(0.0, 0.0, 0.8);
-	vec3 red = vec3(0.8, 0.0, 0.0);
 
 
 
@@ -48,8 +46,23 @@ void main()
 
 	*/
 
+	/*
 	color -= minVal.rgb;
 	color /= (maxVal - minVal).rgb;
+	*/
+
+	//color /= 200.0;
+
+	//color = vec3(weight);
+
+
+	vec3 blu = vec3(0.0, 0.0, 0.8);
+	vec3 red = vec3(0.8, 0.0, 0.0);
+
+	float val = color.r;
+
+	color = mix(blu, red, val / 2.0 + 0.5);
+
 
 	gl_FragColor = vec4(color, 1.0 / float(weight));
 
