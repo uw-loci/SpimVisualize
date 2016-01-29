@@ -157,7 +157,7 @@ void DXSolver::createCandidateSolutions(const InteractionVolume* v)
 
 	for (int x = -20; x <= 20; ++x)
 	{
-		float dx = (float)x / 5.f;
+		float dx = (float)x / 2.f;
 		Solution s;
 		s.score = 0;
 		s.id = x;
@@ -178,7 +178,7 @@ void DYSolver::createCandidateSolutions(const InteractionVolume* v)
 
 	for (int x = -20; x <= 20; ++x)
 	{
-		float dy = (float)x / 5.f;
+		float dy = (float)x / 2.f;
 		Solution s;
 		s.score = 0;
 		s.id = x;
@@ -200,7 +200,7 @@ void DZSolver::createCandidateSolutions(const InteractionVolume* v)
 
 	for (int x = -20; x <= 20; ++x)
 	{
-		float dz = (float)x / 5.f;
+		float dz = (float)x / 2.f;
 		Solution s;
 		s.score = 0;
 		s.id = x;

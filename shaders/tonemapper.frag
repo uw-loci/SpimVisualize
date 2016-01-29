@@ -33,8 +33,12 @@ void main()
 	float delta = (val - minThreshold) / (maxThreshold - minThreshold);
 	color = mix(blu, red, delta);
 
-	//color = mix(blu, red, val / 2.0 + 0.5);
 
+	/*
+	// max difference
+	float diff = color.r / 20.0; // / 4000.0;
+	color = vec3(diff);
+	*/
 
 	gl_FragColor = vec4(color, 1.0);
 

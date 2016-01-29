@@ -22,6 +22,8 @@ int value[VOLUMES];
 uniform float minThreshold;
 uniform float maxThreshold;
 
+uniform float stdDev;
+
 uniform float sliceCount;
 
 in vec4 vertex;
@@ -104,12 +106,15 @@ void main()
 
 
 float mean = 0.0;
+float maxCount = 0;
 #if (VOLUMES == 2)
 	mean = value[1];
+	maxCount = 2;
 #endif
 
 #if (VOLUMES == 3)
 	mean = float(value[1] + value[2]) / 2.0;
+	maxCount = 3;
 #endif
 
 #if (VOLUMES == 4)
@@ -122,23 +127,16 @@ float mean = 0.0;
 	
 	float diffValue = mean - value[0];
 
+	if (abs(diffValue) > 5.0*stdDev)
+	{
+		diffValue = 1.0;
+	}
+	else
+		diffValue = 0.0;
+
+	if (count < maxCount)
+		diffValue = 0.0;
+
 	vec3 color = vec3(diffValue, sum, count);
-
-
-	/*
-	// average value
-	sum /= float(count);
-
-
-	// scale value by contrast settings
-	sum -= minThreshold;
-	sum /= (maxThreshold - minThreshold);
-
-	color *= sum;
-	*/
-
-	color /= 200.0;
-	color /= 11.0;
-
 	fragColor = vec4(color, maxVal);
 }

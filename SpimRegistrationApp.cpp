@@ -210,8 +210,8 @@ void SpimRegistrationApp::draw()
 			{
 				double score = calculateImageScore();
 
-				if (calculateScore)
-					scoreHistory.add(score);
+				//if (calculateScore)
+				scoreHistory.add(score);
 
 				if (runAlignment)
 				{
@@ -1029,7 +1029,7 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 	shader->setUniform("minThreshold", (float)globalThreshold.min);
 	shader->setUniform("maxThreshold", (float)globalThreshold.max);
 	shader->setUniform("sliceCount", (float)sliceCount);
-	
+	shader->setUniform("stdDev", (float)globalThreshold.stdDeviation);
 
 	// reorder stacks so that the current volume is always at index 0
 	std::vector<SpimStack*> reorderedStacks(stacks);
