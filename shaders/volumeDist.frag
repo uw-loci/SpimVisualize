@@ -108,6 +108,10 @@ float mean = 0.0;
 #if (VOLUMES == 4)
 	mean = float(value[1] + value[2] + value[3]) / 3.0;
 #endif
+
+#if (VOLUMES == 5)
+	float(value[1] + value[2] + value[3] + value[4]) / 4.0;
+#endif
 	
 	float diffValue = mean - value[0];
 
