@@ -153,10 +153,11 @@ void SpimRegistrationApp::draw()
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 				
-			glEnable(GL_BLEND);
-			glBlendEquation(GL_FUNC_ADD);
 
+			glEnable(GL_BLEND);
+			//glBlendEquation(GL_FUNC_ADD);
 			//glBlendEquation(GL_MAX);
+			glBlendEquationSeparate(GL_FUNC_ADD, GL_MAX);
 
 
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE);
@@ -399,6 +400,9 @@ void SpimRegistrationApp::drawTonemappedQuad()
 	tonemapper->setTexture2D("colormap", volumeRenderTarget->getColorbuffer());
 	tonemapper->setUniform("minVal", minVal);
 	tonemapper->setUniform("maxVal", maxVal);
+
+	tonemapper->setUniform("minThreshold", (float)globalThreshold.min);
+	tonemapper->setUniform("maxThreshold", (float)globalThreshold.max);
 
 	glBegin(GL_QUADS);
 	glVertex2i(0, 1);

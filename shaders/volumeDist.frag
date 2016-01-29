@@ -36,6 +36,9 @@ void main()
 	// total intensity of all volumes
 	float sum = 0.0;
 
+
+	float maxVal = 0.0;
+
 	for (int i = 0; i < VOLUMES; ++i)
 	{
 		if (!volume[i].enabled)
@@ -53,11 +56,15 @@ void main()
 
 		value[i] = 0;
 
+
 		// check if the value is inside
 		if (worldPosition.x > volume[i].bboxMin.x && worldPosition.x < volume[i].bboxMax.x &&
 			worldPosition.y > volume[i].bboxMin.y && worldPosition.y < volume[i].bboxMax.y &&
 			worldPosition.z > volume[i].bboxMin.z && worldPosition.z < volume[i].bboxMax.z) 
 		{			
+
+			maxVal = max(maxVal, t);
+
 
 			if (float(t) >= minThreshold)
 			{
@@ -115,7 +122,7 @@ float mean = 0.0;
 	
 	float diffValue = mean - value[0];
 
-	vec3 color = vec3(diffValue, sum, 0.0);
+	vec3 color = vec3(diffValue, sum, count);
 
 
 	/*
@@ -133,5 +140,5 @@ float mean = 0.0;
 	color /= 200.0;
 	color /= 11.0;
 
-	fragColor = vec4(color, count);
+	fragColor = vec4(color, maxVal);
 }
