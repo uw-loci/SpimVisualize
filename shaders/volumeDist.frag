@@ -10,7 +10,11 @@ struct Volume
 	bool			enabled;
 };
 
+// the #define VOLUMES should be set externally
+#ifndef VOLUMES
 #define VOLUMES 2
+#endif
+
 uniform Volume volume[VOLUMES];
 
 int value[VOLUMES];
@@ -72,8 +76,7 @@ void main()
 
 	
 
-	int diffValue = 0;
-
+	/*
 	bool anyGreater = false;
 	for (int i = 0; i < VOLUMES; ++i)
 	{
@@ -90,9 +93,25 @@ void main()
 
 	if (!anyGreater)
 		discard;
+	*/
 
 
-	vec3 color = vec3(diffValue);
+float mean = 0.0;
+#if (VOLUMES == 2)
+	mean = value[1];
+#endif
+
+#if (VOLUMES == 3)
+	mean = float(value[1] + value[2]) / 2.0;
+#endif
+
+#if (VOLUMES == 4)
+	mean = float(value[1] + value[2] + value[3]) / 3.0;
+#endif
+	
+	float diffValue = mean - value[0];
+
+	vec3 color = vec3(diffValue, sum, 0.0);
 
 
 	/*
@@ -107,13 +126,8 @@ void main()
 	color *= sum;
 	*/
 
-
-	float alpha = float(count);
-	
-
 	color /= 200.0;
 	color /= 11.0;
 
-	fragColor = vec4(color, alpha);
-
+	fragColor = vec4(color, count);
 }

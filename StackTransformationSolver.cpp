@@ -122,18 +122,29 @@ const IStackTransformationSolver::Solution& UniformSamplingSolver::getBestSoluti
 {
 	assert(!solutions.empty());
 
+	
 	// remove all solutions that do not have a valid id. we can do that through the current solution?
 	size_t oldSize = solutions.size();
 	if (currentSolution < solutions.size() - 1)
 		solutions.resize(currentSolution);
 	std::cout << "[Debug] Removed " << oldSize - solutions.size() << " unused solutions.\n";
 	
+
+	std::cout << "[Debug] Solutions: ";
+	for (size_t i = 0; i < solutions.size(); ++i)
+		std::cout << solutions[i].score << ", ";
+	std::cout << std::endl;
+
+
 	std::cout << "[Debug] Sorting " << solutions.size() << " solutions ... \n";
 	std::sort(solutions.begin(), solutions.end());
 	
-	std::cout << "[Debug] Worst: " << solutions.front().score << ", best: " << solutions.back().score << std::endl;
+
+
+
+	std::cout << "[Debug] Worst: " << solutions.back().score << ", best: " << solutions.front().score << std::endl;
 	
-	return solutions.back();
+	return solutions.front();
 }
 
 
@@ -226,6 +237,10 @@ void RYSolver::createCandidateSolutions(const InteractionVolume* v)
 
 
 	std::cout << "[RY Solver] Created " << solutions.size() << " candidate solutions.\n";
+}
+
+MultiDimensionalHillClimb::MultiDimensionalHillClimb() : solutionCounter(0)
+{
 }
 
 
@@ -398,7 +413,7 @@ void SimulatedAnnealingSolver::recordCurrentScore(double s)
 	currentSolution.score = s;
 	history.add(s);
 
-	if (s > bestSolution.score)
+	if (s < bestSolution.score)
 	{
 		bestSolution = currentSolution;
 		std::cout << "[Debug] Accepted better solution with score " << s << std::endl;

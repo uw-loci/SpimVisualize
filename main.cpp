@@ -376,9 +376,9 @@ int main(int argc, const char** argv)
 		*/
 
 	
-		//regoApp->addSpimStack("e:/spim/OpenSPIM_tutorial/spim_TL00_Angle1.ome.tiff");
 		regoApp->addSpimStack("e:/spim/zebra/spim_TL01_Angle0.ome.tiff");
 		regoApp->addSpimStack("e:/spim/zebra/spim_TL01_Angle1.ome.tiff");
+		regoApp->addSpimStack("e:/spim/zebra/spim_TL01_Angle2.ome.tiff");
 
 		regoApp->centerCamera();
 		regoApp->loadStackTransformations();

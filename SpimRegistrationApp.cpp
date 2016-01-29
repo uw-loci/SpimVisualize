@@ -97,10 +97,7 @@ void SpimRegistrationApp::reloadShaders()
 	sliceShader = new Shader("shaders/slices.vert", "shaders/slices.frag");
 
 	delete volumeShader;
-	if (enableShaderPreProcessing)
-		volumeShader = new Shader("shaders/volume2.vert", "shaders/volume2.frag", defines);
-	else
-		volumeShader = new Shader("shaders/volume2.vert", "shaders/volume2.frag");
+	volumeShader = new Shader("shaders/volume2.vert", "shaders/volume2.frag", defines);
 
 	delete volumeRaycaster;
 	volumeRaycaster = new Shader("shaders/volumeRaycast.vert", "shaders/volumeRaycast.frag");
@@ -109,16 +106,10 @@ void SpimRegistrationApp::reloadShaders()
 	drawQuad = new Shader("shaders/drawQuad.vert", "shaders/drawQuad.frag");
 
 	delete volumeDifferenceShader;
-	if (enableShaderPreProcessing )
-		volumeDifferenceShader = new Shader("shaders/volumeDist.vert", "shaders/volumeDist.frag", defines);
-	else
-		volumeDifferenceShader = new Shader("shaders/volumeDist.vert", "shaders/volumeDist.frag");
+	volumeDifferenceShader = new Shader("shaders/volumeDist.vert", "shaders/volumeDist.frag", defines);
 
 	delete tonemapper;
-	if (enableShaderPreProcessing)
-		tonemapper = new Shader("shaders/drawQuad.vert", "shaders/tonemapper.frag", defines);
-	else
-		tonemapper = new Shader("shaders/drawQuad.vert", "shaders/tonemapper.frag");
+	tonemapper = new Shader("shaders/drawQuad.vert", "shaders/tonemapper.frag", defines);
 
 }
 
@@ -142,10 +133,6 @@ void SpimRegistrationApp::draw()
 
 				try
 				{
-
-					int query = vp->name;
-					assert(query < 4);
-
 					const glm::mat4& mat = solver->getCurrentSolution().matrix;
 
 					saveVolumeTransform(currentVolume);
@@ -218,28 +205,21 @@ void SpimRegistrationApp::draw()
 
 
 			// the query result should be done by now
-			if (runAlignment)
+			if (runAlignment || calculateScore)
 			{
-				undoLastTransform();
-
-				// image-based metric
 				double score = calculateImageScore();
-				solver->recordCurrentScore(score);
 
-			}
-			else
-			{
-				// only calculate score if the solver has not alreay
 				if (calculateScore)
-				{
-					double score = calculateImageScore();
 					scoreHistory.add(score);
-			
+
+				if (runAlignment)
+				{
+					solver->recordCurrentScore(score);
+					undoLastTransform();
+
 				}
+				
 			}
-
-			
-
 
 		}
 
@@ -250,9 +230,11 @@ void SpimRegistrationApp::draw()
 
 	// draw the solver score here
 
+	/*
 	if (runAlignment || !solver->getHistory().history.empty())
 		drawScoreHistory(solver->getHistory());
-	
+	*/
+
 	if (calculateScore)
 		drawScoreHistory(scoreHistory);
 	
@@ -1043,35 +1025,43 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 	shader->setUniform("minThreshold", (float)globalThreshold.min);
 	shader->setUniform("maxThreshold", (float)globalThreshold.max);
 	shader->setUniform("sliceCount", (float)sliceCount);
+	
 
-	for (size_t i = 0; i < stacks.size(); ++i)
-	{
+	// reorder stacks so that the current volume is always at index 0
+	std::vector<SpimStack*> reorderedStacks(stacks);
+	
+	if (currentVolume > 0)
+		std::rotate(reorderedStacks.begin(), reorderedStacks.begin() + currentVolume, reorderedStacks.end());
+	
+	for (size_t i = 0; i < reorderedStacks.size(); ++i)
+	{	
+
 		glActiveTexture((GLenum)(GL_TEXTURE0 + i));
-		glBindTexture(GL_TEXTURE_3D, stacks[i]->getTexture());
+		glBindTexture(GL_TEXTURE_3D, reorderedStacks[i]->getTexture());
 
 #ifdef _WIN32
 		char uname[256];
 		sprintf_s(uname, "volume[%d].texture", i);
 		shader->setUniform(uname, (int)i);
 
-		AABB bbox = stacks[i]->getBBox();
+		AABB bbox = reorderedStacks[i]->getBBox();
 		sprintf_s(uname, "volume[%d].bboxMax", i);
 		shader->setUniform(uname, bbox.max);
 		sprintf_s(uname, "volume[%d].bboxMin", i);
 		shader->setUniform(uname, bbox.min);
 
 		sprintf_s(uname, "volume[%d].enabled", i);
-		shader->setUniform(uname, stacks[i]->enabled);
+		shader->setUniform(uname, reorderedStacks[i]->enabled);
 
 		sprintf_s(uname, "volume[%d].inverseMVP", i);
-		shader->setMatrix4(uname, glm::inverse(mvp * stacks[i]->transform));
+		shader->setMatrix4(uname, glm::inverse(mvp * reorderedStacks[i]->transform));
 
 #else
 		char uname[256];
 		sprintf(uname, "volume[%d].texture", i);
 		shader->setUniform(uname, (int)i);
 
-		AABB bbox = stacks[i]->getBBox();
+		AABB bbox = reorderedStacks[i]->getBBox();
 		sprintf(uname, "volume[%d].bboxMax", i);
 		shader->setUniform(uname, bbox.max);
 		sprintf(uname, "volume[%d].bboxMin", i);
@@ -1081,7 +1071,7 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 		shader->setUniform(uname, stacks[i]->enabled);
 
 		sprintf(uname, "volume[%d].inverseMVP", i);
-		shader->setMatrix4(uname, glm::inverse(mvp * stacks[i]->transform));
+		shader->setMatrix4(uname, glm::inverse(mvp * reorderedStacks[i]->transform));
 #endif
 	}
 

@@ -109,6 +109,8 @@ protected:
 class MultiDimensionalHillClimb : public IStackTransformationSolver
 {
 public:
+	MultiDimensionalHillClimb();
+
 
 	virtual void initialize(const InteractionVolume* v);
 	virtual void resetSolution();
