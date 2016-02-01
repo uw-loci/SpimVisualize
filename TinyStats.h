@@ -97,13 +97,13 @@ struct TinyHistory : public TinyStats < T >
 
 	virtual void reset()
 	{
-		TinyStats::reset();
+		TinyStats<T>::reset();
 		history.clear();
 	}
 
 	virtual void add(const T& val)
 	{
-		TinyStats::add(val);
+		TinyStats<T>::add(val);
 		history.push_back(val);
 	}
 	
