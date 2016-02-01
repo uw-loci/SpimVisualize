@@ -313,12 +313,10 @@ void SpimRegistrationApp::addSpimStack(const std::string& filename)
 	SpimStack* stack = new SpimStackU16;
 	
 	stack->load(filename);
-	stack->subsample();
-
-	/*
+	stack->subsample(false);
 	stack->subsample(false);
 	stack->subsample();
-	*/
+	
 
 	stacks.push_back(stack);
 	addInteractionVolume(stack);
@@ -1062,19 +1060,19 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 
 #else
 		char uname[256];
-		sprintf(uname, "volume[%d].texture", i);
+		sprintf(uname, "volume[%d].texture", (int)i);
 		shader->setUniform(uname, (int)i);
 
 		AABB bbox = reorderedStacks[i]->getBBox();
-		sprintf(uname, "volume[%d].bboxMax", i);
+		sprintf(uname, "volume[%d].bboxMax", (int)i);
 		shader->setUniform(uname, bbox.max);
-		sprintf(uname, "volume[%d].bboxMin", i);
+		sprintf(uname, "volume[%d].bboxMin", (int)i);
 		shader->setUniform(uname, bbox.min);
 
-		sprintf(uname, "volume[%d].enabled", i);
+		sprintf(uname, "volume[%d].enabled", (int)i);
 		shader->setUniform(uname, stacks[i]->enabled);
 
-		sprintf(uname, "volume[%d].inverseMVP", i);
+		sprintf(uname, "volume[%d].inverseMVP", (int)i);
 		shader->setMatrix4(uname, glm::inverse(mvp * reorderedStacks[i]->transform));
 #endif
 	}
@@ -1255,25 +1253,25 @@ void SpimRegistrationApp::raycastVolumes(const Viewport* vp, const Shader* shade
 
 #else
 		char uname[256];
-		sprintf(uname, "volume[%d].texture", i);
+		sprintf(uname, "volume[%d].texture", (int)i);
 		shader->setUniform(uname, (int)i);
 
 		AABB bbox = stacks[i]->getBBox();
-		sprintf(uname, "volume[%d].bboxMax", i);
+		sprintf(uname, "volume[%d].bboxMax", (int)i);
 		shader->setUniform(uname, bbox.max);
-		sprintf(uname, "volume[%d].bboxMin", i);
+		sprintf(uname, "volume[%d].bboxMin", (int)i);
 		shader->setUniform(uname, bbox.min);
 
-		sprintf(uname, "volume[%d].enabled", i);
+		sprintf(uname, "volume[%d].enabled", (int)i);
 		shader->setUniform(uname, stacks[i]->enabled);
 
-		sprintf(uname, "volume[%d].inverseMVP", i);
+		sprintf(uname, "volume[%d].inverseMVP", (int)i);
 		shader->setMatrix4(uname, glm::inverse(mvp * stacks[i]->transform));
 	
-		sprintf(uname, "volume[%d].transform", i);
+		sprintf(uname, "volume[%d].transform", (int)i);
 		shader->setMatrix4(uname, stacks[i]->transform);
 	
-		sprintf(uname, "volume[%d].inverseTransform", i);
+		sprintf(uname, "volume[%d].inverseTransform", (int)i);
 		shader->setMatrix4(uname, glm::inverse(stacks[i]->transform));
 #endif
 	}
