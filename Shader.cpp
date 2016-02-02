@@ -94,7 +94,7 @@ std::vector<std::string>& split(const std::string &s, char delim, std::vector<st
 }
 
 
-static void compileShader(const std::string& fileName, GLint shader, const std::vector<std::string>& defines)
+static void compileShader(const std::string& fileName, GLint shader, const std::map<std::string, std::string>& defines)
 {
 	std::vector<std::string>	contents;
 
@@ -121,78 +121,45 @@ static void compileShader(const std::string& fileName, GLint shader, const std::
 	if (!defines.empty())
 	{
 
-		// find the #version token
-		auto it = contents.begin();
-		while (it->find("#version") == std::string::npos || it == contents.end())
-			++it;
 
-		// not found -- insert at the beginning
-		if (it == contents.end())
+		// for all lines, find the tokens that begin with #define
+		for (size_t i = 0; i < contents.size(); ++i)
 		{
-			contents.insert(contents.end(), defines.begin(), defines.end());
-		}
-		
-		// found -- insert after
-		contents.insert(++it, defines.begin(), defines.end());
-		it += defines.size();
-		
-
-
-		// parse the rest of the lines
-		
-		// first create a map of all defines and tokens
-		std::vector<std::string> definedTokens;
-		for (auto d = defines.begin(); d != defines.end(); ++d)
-		{
-			std::string token = d->substr(d->find("#define ") + 8);
-			token = token.substr(0, token.find_first_of(" "));
-
-			//std::cout << "[Debug] Token: [" << token << "]\n";
-			definedTokens.push_back(token);
-
-		}
-
-
-		while (it != contents.end())
-		{
-			size_t loc = it->find("#define");
-			if (loc != std::string::npos)
+			const std::string& line = contents[i];
+			if (line.find("#define") != std::string::npos)
 			{
-				// extract token
-				std::string token = it->substr(loc + 8);
-				token = token.substr(0, token.find_first_of(" "));
+				// locate the token
+				std::string token = line.substr(line.find("#define ") + 8);
+				token = token.substr(0, token.find_first_of(' '));
 
-				//std::cout << "[Debug] Found token: [" << token << "]\n";
-
-				if (std::find(definedTokens.begin(), definedTokens.end(), token) != definedTokens.end())
+				auto replace = defines.find(token);
+				if (replace != defines.end())
 				{
-					//std::cout << "[Preprocess] Erasing line " << std::distance(contents.begin(), it) << ": \"" << *it << "\"\n";
-					
-					it = contents.erase(it);
+
+					std::string newLine = "#define " + token + " " + replace->second + "\n";
+					std::cout << "[Debug] Replacing line \"" << line << "\" (token: " << token << ") with \"" << newLine << "\"\n";
+
+					contents[i] = newLine;
 				}
+				
+
+
 			}
-			else
-				++it;
 
-			
+
 		}
-
-
-
-
-
-
+		
 		
 	}
 
 
-	/*
+	
 	std::cerr << "[Debug] Shader source:\n";
 	for (size_t i = 0; i < contents.size(); ++i)
 	{
 		std::cerr << "[Sauce] " << std::setw(2) << i << ": " << contents[i]; // << std::endl;
 	}
-	*/
+	
 
 
 	const char *glLines[BUFFER_SIZE];
@@ -243,24 +210,30 @@ Shader::Shader(const std::string& vpFile, const std::string& gpFile, const std::
 	reload();
 }
 
-Shader::Shader(const std::string& vpFile, const std::string& fpFile, const std::vector<std::string>& defines) : mGeometryShader(0), linkedSuccessfully(false), mVertexSource(vpFile), mFragmentSource(fpFile), mDefines(defines)
+Shader::Shader(const std::string& vpFile, const std::string& fpFile, const std::vector<std::pair<std::string, std::string> >& defines) : mGeometryShader(0), linkedSuccessfully(false), mVertexSource(vpFile), mFragmentSource(fpFile)
 {
 	mProgram = glCreateProgram();
 
 	mVertexShader = glCreateShader(GL_VERTEX_SHADER);
 	mFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	
+	for (auto i = defines.begin(); i != defines.end(); ++i)
+		mDefines[i->first] = i->second;
 
 
 	reload();
 }
 
-Shader::Shader(const std::string& vpFile, const std::string& gpFile, const std::string& fpFile, const std::vector<std::string>& defines) : linkedSuccessfully(false), mVertexSource(vpFile), mGeometrySource(gpFile), mFragmentSource(fpFile), mDefines(defines)
+Shader::Shader(const std::string& vpFile, const std::string& gpFile, const std::string& fpFile, const std::vector<std::pair<std::string, std::string> >& defines) : linkedSuccessfully(false), mVertexSource(vpFile), mGeometrySource(gpFile), mFragmentSource(fpFile)
 {
 	mProgram = glCreateProgram();
 
 	mVertexShader = glCreateShader(GL_VERTEX_SHADER);
 	mGeometryShader = glCreateShader(GL_GEOMETRY_SHADER);
 	mFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+
+	for (auto i = defines.begin(); i != defines.end(); ++i)
+		mDefines[i->first] = i->second;
 
 	reload();
 }

@@ -49,8 +49,8 @@ public:
 	Shader(const std::string& vpFile, const std::string& fpFile);
 	Shader(const std::string& vpFile, const std::string& gpFile, const std::string& fpFile);
 	
-	Shader(const std::string& vpFile, const std::string& fpFile, const std::vector<std::string>& defines);
-	Shader(const std::string& vpFile, const std::string& gpFile, const std::string& fpFile, const std::vector<std::string>& defines);
+	Shader(const std::string& vpFile, const std::string& fpFile, const std::vector<std::pair<std::string, std::string> >& defines);
+	Shader(const std::string& vpFile, const std::string& gpFile, const std::string& fpFile, const std::vector<std::pair<std::string, std::string> >& defines);
 
 	/// DTor
 	~Shader();
@@ -138,7 +138,7 @@ private:
 	unsigned int	mProgram;
 
 	std::string		mVertexSource, mGeometrySource, mFragmentSource;
-	std::vector<std::string> mDefines;
+	std::map<std::string, std::string>	mDefines;
 
 
 	typedef std::map<std::string, int> IntMap;
