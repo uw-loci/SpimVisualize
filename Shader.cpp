@@ -137,7 +137,7 @@ static void compileShader(const std::string& fileName, GLint shader, const std::
 				{
 
 					std::string newLine = "#define " + token + " " + replace->second + "\n";
-					std::cout << "[Debug] Replacing line \"" << line << "\" (token: " << token << ") with \"" << newLine << "\"\n";
+					//std::cout << "[Debug] Replacing line \"" << line << "\" (token: " << token << ") with \"" << newLine << "\"\n";
 
 					contents[i] = newLine;
 				}
@@ -153,13 +153,13 @@ static void compileShader(const std::string& fileName, GLint shader, const std::
 	}
 
 
-	
+	/*
 	std::cerr << "[Debug] Shader source:\n";
 	for (size_t i = 0; i < contents.size(); ++i)
 	{
 		std::cerr << "[Sauce] " << std::setw(2) << i << ": " << contents[i]; // << std::endl;
 	}
-	
+	*/
 
 
 	const char *glLines[BUFFER_SIZE];
