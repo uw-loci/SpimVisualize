@@ -117,6 +117,14 @@ public:
 	void centerCamera();
 	void maximizeViews();
 	
+	inline void toggleRayTarget()
+	{
+		if (displayRayTarget == rayStartTarget)
+			displayRayTarget = rayEndTarget;
+		else
+			displayRayTarget = rayStartTarget;
+	};
+
 	/// \}
 
 	inline void setCameraMoving(bool m) { cameraMoving = m; }
@@ -184,6 +192,8 @@ private:
 	Shader*					volumeRaycaster;
 	Shader*					drawQuad;
 		
+	Shader*					drawPosition;
+
 	// for contrast mapping
 	Shader*					tonemapper;
 
@@ -198,6 +208,9 @@ private:
 		
 	Framebuffer*			volumeRenderTarget;	
 
+	Framebuffer*			rayStartTarget, *rayEndTarget, *displayRayTarget;
+
+
 	void updateGlobalBbox();
 
 	void drawContrastEditor(const Viewport* vp);
@@ -211,11 +224,17 @@ private:
 	void drawAxisAlignedSlices(const glm::mat4& mvp, const glm::vec3& axis, const Shader* shader) const;
 	void drawAxisAlignedSlices(const Viewport* vp, const Shader* shader) const;
 	void drawViewplaneSlices(const Viewport* vp, const Shader* shader) const;
+	
+	
+	// ray tracing section
 	void raycastVolumes(const Viewport* vp, const Shader* shader) const;
+	void initializeRayTargets(const Viewport* vp);
 
 	void drawPointclouds(const Viewport* vp);
 	
 	void drawRays(const Viewport* vp);
+
+
 
 	bool useImageAutoContrast;
 	float minImageContrast;

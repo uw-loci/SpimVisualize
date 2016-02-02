@@ -90,6 +90,10 @@ static void keyboard(unsigned char key, int x, int y)
 		regoApp->contrastEditorApplyThresholds();
 
 
+	if (key == 'v')
+		regoApp->toggleRayTarget();
+
+
 	if (key == ';')
 		regoApp->decreaseSliceCount();
 	if (key == '\'')
@@ -377,19 +381,18 @@ int main(int argc, const char** argv)
 
 	
 		regoApp->addSpimStack("e:/spim/zebra/spim_TL01_Angle0.ome.tiff");
+		
+		/*
 		regoApp->addSpimStack("e:/spim/zebra/spim_TL01_Angle1.ome.tiff");
 		regoApp->addSpimStack("e:/spim/zebra/spim_TL01_Angle2.ome.tiff");
+		*/
 
 		regoApp->centerCamera();
 		regoApp->loadStackTransformations();
-		regoApp->loadContrastSettings();
+		//regoApp->loadContrastSettings();
 		
 		regoApp->reloadShaders();
 
-		/*
-		regoApp->addSpimStack("e:/spim/test_beads/spim_TL01_Angle0.ome.tiff");
-		regoApp->centerCamera(); 
-		*/
 	}
 	catch (const std::runtime_error& e)
 	{

@@ -31,11 +31,14 @@ const unsigned int MIN_SLICE_COUNT = 20;
 const unsigned int MAX_SLICE_COUNT = 1500;
 const unsigned int STD_SLICE_COUNT = 100;
 
+
+#define USE_RAYTRACER 
+
 SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(nullptr), sliceShader(nullptr), volumeShader(nullptr),
 	volumeRaycaster(nullptr), drawQuad(nullptr), volumeDifferenceShader(nullptr), tonemapper(nullptr), layout(nullptr),
 	drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), sliceCount(100),
 	configPath("./"), cameraMoving(false), runAlignment(false), histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f),
-	subsampleOnCameraMove(false), useImageAutoContrast(false), currentVolume(-1), solver(nullptr)
+	subsampleOnCameraMove(false), useImageAutoContrast(false), currentVolume(-1), solver(nullptr), drawPosition(nullptr)
 {
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
@@ -50,6 +53,11 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(nu
 
 	volumeRenderTarget = new Framebuffer(512, 512, GL_RGBA32F, GL_FLOAT);
 
+	rayStartTarget = new Framebuffer(512, 512, GL_RGBA32F, GL_FLOAT);
+	rayEndTarget = new Framebuffer(512, 512, GL_RGBA32F, GL_FLOAT);
+	displayRayTarget = rayStartTarget;
+
+
 	calculateScore = true;
 	
 	solver = new RYSolver;
@@ -61,13 +69,16 @@ SpimRegistrationApp::~SpimRegistrationApp()
 	delete solver;
 	
 	delete volumeRenderTarget;
-	
+	delete rayStartTarget;
+	delete rayEndTarget;
+
 	delete drawQuad;
 	delete pointShader;
 	delete sliceShader;
 	delete volumeShader;
 	delete volumeDifferenceShader;
 	delete volumeRaycaster;
+	delete drawPosition;
 
 
 	for (size_t i = 0; i < stacks.size(); ++i)
@@ -111,6 +122,9 @@ void SpimRegistrationApp::reloadShaders()
 	delete tonemapper;
 	tonemapper = new Shader("shaders/drawQuad.vert", "shaders/tonemapper.frag", defines);
 
+	delete drawPosition;
+	drawPosition = new Shader("shaders/drawPosition.vert", "shaders/drawPosition.frag");
+
 }
 
 void SpimRegistrationApp::draw()
@@ -146,6 +160,16 @@ void SpimRegistrationApp::draw()
 			}
 
 
+#ifdef USE_RAYTRACER
+
+			initializeRayTargets(vp);
+
+			drawTexturedQuad(displayRayTarget->getColorbuffer());
+
+
+#else
+
+
 			/// actual drawing block begins
 			/// --------------------------------------------------------
 
@@ -173,11 +197,6 @@ void SpimRegistrationApp::draw()
 			glDisable(GL_BLEND);
 			
 
-			/*
-			if (!pointclouds.empty())
-				drawPointclouds(vp);
-			*/
-
 			//drawRays(vp);
 
 
@@ -197,6 +216,8 @@ void SpimRegistrationApp::draw()
 			
 			drawTonemappedQuad();
 			//drawTexturedQuad(volumeRenderTarget->getColorbuffer());
+#endif
+
 
 
 			if (drawGrid)
@@ -228,7 +249,6 @@ void SpimRegistrationApp::draw()
 
 	}
 
-
 	// draw the solver score here
 
 	/*
@@ -236,9 +256,11 @@ void SpimRegistrationApp::draw()
 		drawScoreHistory(solver->getHistory());
 	*/
 
-	if (calculateScore)
+	if (calculateScore || runAlignment)
 		drawScoreHistory(scoreHistory);
 	
+
+
 	
 }
 
@@ -1769,4 +1791,48 @@ void SpimRegistrationApp::readbackRenderTarget()
 
 	renderTargetReadbackCurrent = true;
 	glReadBuffer(GL_BACK);
+}
+
+void SpimRegistrationApp::initializeRayTargets(const Viewport* vp)
+{
+	
+
+
+	vp->camera->setup();
+	glm::mat4 mvp;
+	vp->camera->getMVP(mvp);
+
+	drawPosition->bind();
+	drawPosition->setMatrix4("mvp", mvp);
+
+	glEnableClientState(GL_VERTEX_ARRAY);
+
+	glEnable(GL_CULL_FACE);
+	glFrontFace(GL_CCW);
+
+	// draw back faces
+	rayEndTarget->bind();
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glCullFace(GL_FRONT);
+	
+	globalBBox.drawSolid();
+
+	rayEndTarget->disable();
+
+	
+	// draw front faces
+
+	rayStartTarget->bind();
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glCullFace(GL_BACK);
+
+	globalBBox.drawSolid();
+
+	rayStartTarget->disable();
+
+	glDisableClientState(GL_VERTEX_ARRAY);
+
+
+	drawPosition->disable();
+
 }
