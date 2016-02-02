@@ -113,6 +113,14 @@ public:
 	*/
 	void setTexture2D(const std::string& textureName, unsigned int textureId, unsigned int textureUnit=0) const;
 
+	/** Sets a 3D texture.
+	@param textureName sampler name in the shader
+	@param textureId OpenGL texture id
+	@param textureUnit on which unit (usually 0-4) should the texture be bound?
+	*/
+	void setTexture3D(const std::string& textureName, unsigned int textureId, unsigned int textureUnit = 0) const;
+
+
 	/** Sets a cubemap texture. Note that you have to disable texturing manually
 		after you're done.
 

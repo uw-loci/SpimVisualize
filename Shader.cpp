@@ -429,6 +429,13 @@ void Shader::setTexture2D(const std::string& name, unsigned int textureId, unsig
 	glUniform1i( getUniform(name), textureUnit );
 }
 
+void Shader::setTexture3D(const std::string& name, unsigned int textureId, unsigned int textureUnit) const
+{
+	glActiveTexture(GL_TEXTURE0 + textureUnit);
+	glBindTexture(GL_TEXTURE_3D, textureId);
+	glUniform1i(getUniform(name), textureUnit);
+}
+
 void Shader::setTextureCube(const std::string& name, unsigned int texId, unsigned int unit) const
 {
 	glActiveTexture(GL_TEXTURE0 + unit);
