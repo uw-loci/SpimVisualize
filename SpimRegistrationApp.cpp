@@ -51,7 +51,7 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(nu
 	resetSliceCount();
 	reloadShaders();
 
-	volumeRenderTarget = new Framebuffer(512, 512, GL_RGBA32F, GL_FLOAT);
+	volumeRenderTarget = new Framebuffer(1024, 1024, GL_RGBA32F, GL_FLOAT);
 
 	rayStartTarget = new Framebuffer(512, 512, GL_RGBA32F, GL_FLOAT);
 	rayEndTarget = new Framebuffer(512, 512, GL_RGBA32F, GL_FLOAT);
@@ -1210,6 +1210,8 @@ void SpimRegistrationApp::raytraceVolumes(const Viewport* vp) const
 	glm::mat4 mvp(1.f);
 	vp->camera->getMVP(mvp);
 
+	glm::mat4 imvp = glm::inverse(mvp);
+
 	volumeRenderTarget->bind();
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
@@ -1275,6 +1277,8 @@ void SpimRegistrationApp::raytraceVolumes(const Viewport* vp) const
 	volumeRaycaster->setTexture2D("rayStart", rayStartTarget->getColorbuffer(), offset + 0);
 	volumeRaycaster->setTexture2D("rayEnd", rayEndTarget->getColorbuffer(), offset + 1);
 	
+	volumeRaycaster->setMatrix4("inverseMVP", imvp);
+
 	glDisable(GL_DEPTH_TEST);
 	glDepthMask(GL_FALSE);
 

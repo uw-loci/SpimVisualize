@@ -13,14 +13,19 @@ struct Volume
 #define VOLUMES 2
 #define STEPS 1000
 #define STEP_LENGTH 2.0
+#define MAX_DISTANCE 2000
 
 uniform Volume volume[VOLUMES];
+
 
 uniform sampler2D	rayStart;
 uniform sampler2D	rayEnd;
 
+
 uniform float		minThreshold;
 uniform float		maxThreshold;
+
+uniform mat4		inverseMVP;
 
 in vec2 texcoord;
 out vec4 fragColor;
@@ -31,16 +36,44 @@ void main()
 	vec4 finalValue = vec4(0.0);
 
 
+
+
+
 	// create ray
-	if (texture(rayStart, texcoord).a > 0)
+	if (texture(rayEnd, texcoord).a > 0)
 	{
-		
-		vec3 rayOrigin = texture(rayStart, texcoord).xyz;
-		vec3 rayDirection = texture(rayEnd, texcoord).xyz;
+
+		vec3 rayOrigin; // = nearPlane.xyz;
+		vec3 rayDirection; // = farPlane.xyz;
+
+
+		if (texture(rayStart, texcoord).a > 0)
+		{
+			rayOrigin = texture(rayStart, texcoord).xyz;
+			rayDirection = texture(rayEnd, texcoord).xyz;
+			
+		}
+		else
+		{
+
+			vec4 nearPlane = vec4(texcoord * 2.0 - vec2(1.0), -1.0, 1.0);
+			vec4 farPlane = vec4(texcoord * 2.0 - vec2(1.0), 1.0, 1.0);
+
+			nearPlane = inverseMVP * nearPlane;
+			nearPlane /= nearPlane.w;
+
+			farPlane = inverseMVP * farPlane;
+			farPlane /= farPlane.w;
+
+			rayOrigin = nearPlane.xyz;
+			rayDirection = farPlane.xyz;
+
+		}
+
+
 		rayDirection -= rayOrigin;
 
-		float distanceToGo = length(rayDirection);
-		rayDirection /= distanceToGo;
+		rayDirection = normalize(rayDirection);
 		rayDirection *= STEP_LENGTH;
 
 
@@ -54,7 +87,7 @@ void main()
 		vec3 worldPosition = rayOrigin;
 		for (int i = 0; i < STEPS; ++i)
 		{
-			if (distanceTravelled > distanceToGo)
+			if (distanceTravelled > MAX_DISTANCE)
 				break;
 
 
@@ -95,9 +128,13 @@ void main()
 		finalValue = vec4(vec3(val), 1.0);
 		//finalValue = vec4(rayDirection, 1.0);
 
+		//finalValue = vec4(rayOrigin, 1.0);
+		//finalValue = vec4(1.0);
+
 	}
 
 	fragColor = finalValue;
+
 
 	//fragColor = vec4(texcoord, 0.0, 1.0);
 }
