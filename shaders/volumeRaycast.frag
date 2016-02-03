@@ -11,7 +11,8 @@ struct Volume
 };
 
 #define VOLUMES 2
-#define STEPS 100
+#define STEPS 1000
+#define STEP_LENGTH 2.0
 
 uniform Volume volume[VOLUMES];
 
@@ -37,14 +38,25 @@ void main()
 		vec3 rayOrigin = texture(rayStart, texcoord).xyz;
 		vec3 rayDirection = texture(rayEnd, texcoord).xyz;
 		rayDirection -= rayOrigin;
-		rayDirection /= float(STEPS);
+
+		float distanceToGo = length(rayDirection);
+		rayDirection /= distanceToGo;
+		rayDirection *= STEP_LENGTH;
+
+
+		//rayDirection /= float(STEPS);
 
 
 		float maxValue = 0.0;
 
+		float distanceTravelled = 0.0;
+
 		vec3 worldPosition = rayOrigin;
 		for (int i = 0; i < STEPS; ++i)
 		{
+			if (distanceTravelled > distanceToGo)
+				break;
+
 
 			float value = 0.0;
 			
@@ -71,6 +83,7 @@ void main()
 
 
 			worldPosition += rayDirection;
+			distanceTravelled += STEP_LENGTH;
 		}
 
 
