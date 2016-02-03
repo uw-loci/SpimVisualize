@@ -10,10 +10,7 @@ struct Volume
 	bool			enabled;
 };
 
-// the #define VOLUMES should be set externally
-#ifndef VOLUMES
 #define VOLUMES 2
-#endif
 
 uniform Volume volume[VOLUMES];
 

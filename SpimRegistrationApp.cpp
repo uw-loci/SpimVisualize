@@ -98,9 +98,11 @@ void SpimRegistrationApp::reloadShaders()
 {
 	
 	int numberOfVolumes = std::max(1, (int)stacks.size());
-	std::vector<std::string> defines;
-	defines.push_back("#define VOLUMES " + boost::lexical_cast<std::string>(numberOfVolumes) + "\n");
-		
+
+	std::vector<std::pair<std::string, std::string> > defines;
+	defines.push_back(std::make_pair("VOLUMES", boost::lexical_cast<std::string>(numberOfVolumes)));
+	
+
 	delete pointShader;
 	pointShader = new Shader("shaders/points2.vert", "shaders/points2.frag");
 
@@ -111,7 +113,7 @@ void SpimRegistrationApp::reloadShaders()
 	volumeShader = new Shader("shaders/volume2.vert", "shaders/volume2.frag", defines);
 
 	delete volumeRaycaster;
-	volumeRaycaster = new Shader("shaders/volumeRaycast.vert", "shaders/volumeRaycast.frag");
+	volumeRaycaster = new Shader("shaders/volumeRaycast.vert", "shaders/volumeRaycast.frag", defines);
 
 	delete drawQuad;
 	drawQuad = new Shader("shaders/drawQuad.vert", "shaders/drawQuad.frag");
@@ -163,10 +165,9 @@ void SpimRegistrationApp::draw()
 #ifdef USE_RAYTRACER
 
 			initializeRayTargets(vp);
+			raytraceVolumes(vp);
 
-			drawTexturedQuad(displayRayTarget->getColorbuffer());
-
-
+			drawTexturedQuad(volumeRenderTarget->getColorbuffer());
 #else
 
 
@@ -1204,120 +1205,92 @@ void SpimRegistrationApp::drawAxisAlignedSlices(const Viewport* vp, const Shader
 
 
 
-void SpimRegistrationApp::raycastVolumes(const Viewport* vp, const Shader* shader) const
+void SpimRegistrationApp::raytraceVolumes(const Viewport* vp) const
 {
-	glm::mat4 mvp;// = vp.proj * vp.view;
+	glm::mat4 mvp(1.f);
 	vp->camera->getMVP(mvp);
+
+	volumeRenderTarget->bind();
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
-	shader->bind();
-	const glm::vec3 camPos = vp->camera->getPosition();
-	const glm::vec3 viewDir = glm::normalize(vp->camera->target - camPos);
-
-
-	// the smallest and largest projected bounding box vertices -- used to calculate the extend of planes
-	// to draw
-	glm::vec3 minPVal(std::numeric_limits<float>::max()), maxPVal(std::numeric_limits<float>::lowest());
-
-	for (size_t i = 0; i < stacks.size(); ++i)
-	{
-		if (!stacks[i]->enabled)
-			continue;
-
-
-		// draw screen filling quads
-		// find max/min distances of bbox cube from camera
-		std::vector<glm::vec3> boxVerts = stacks[i]->getBBox().getVertices();
-
-		// calculate max/min distance
-		float maxDist = 0.f, minDist = std::numeric_limits<float>::max();
-		for (size_t k = 0; k < boxVerts.size(); ++k)
-		{
-			glm::vec4 p = mvp * stacks[i]->transform * glm::vec4(boxVerts[k], 1.f);
-			p /= p.w;
-
-			minPVal = glm::min(minPVal, glm::vec3(p));
-			maxPVal = glm::max(maxPVal, glm::vec3(p));
-
-		}
-
-	}
-
-	maxPVal = glm::min(maxPVal, glm::vec3(1.f));
-	minPVal = glm::max(minPVal, glm::vec3(-1.f));
-
-
+	volumeRaycaster->bind();
+	
+	// bind all the volumes
 	for (size_t i = 0; i < stacks.size(); ++i)
 	{
 		glActiveTexture((GLenum)(GL_TEXTURE0 + i));
 		glBindTexture(GL_TEXTURE_3D, stacks[i]->getTexture());
-
+		
 #ifdef _WIN32
 
 		char uname[256];
 		sprintf_s(uname, "volume[%d].texture", i);
-		shader->setUniform(uname, (int)i);
+		volumeRaycaster->setUniform(uname, (int)i);
+
+		sprintf_s(uname, "volume[%d].transform", i);
+		volumeRaycaster->setMatrix4(uname, stacks[i]->transform);
+
+		sprintf_s(uname, "volume[%d].inverseTransform", i);
+		volumeRaycaster->setMatrix4(uname, glm::inverse(stacks[i]->transform));
 
 		AABB bbox = stacks[i]->getBBox();
 		sprintf_s(uname, "volume[%d].bboxMax", i);
-		shader->setUniform(uname, bbox.max);
+		volumeRaycaster->setUniform(uname, bbox.max);
 		sprintf_s(uname, "volume[%d].bboxMin", i);
-		shader->setUniform(uname, bbox.min);
+		volumeRaycaster->setUniform(uname, bbox.min);
 
-		sprintf_s(uname, "volume[%d].enabled", i);
-		shader->setUniform(uname, stacks[i]->enabled);
-
-		sprintf_s(uname, "volume[%d].inverseMVP", i);
-		shader->setMatrix4(uname, glm::inverse(mvp * stacks[i]->transform));
-
-		sprintf_s(uname, "volume[%d].transform", i);
-		shader->setMatrix4(uname, stacks[i]->transform);
-
-		sprintf_s(uname, "volume[%d].inverseTransform", i);
-		shader->setMatrix4(uname, glm::inverse(stacks[i]->transform));
 
 #else
 		char uname[256];
 		sprintf(uname, "volume[%d].texture", i);
-		shader->setUniform(uname, (int)i);
+		volumeRaycaster->setUniform(uname, (int)i);
 
 		AABB bbox = stacks[i]->getBBox();
 		sprintf(uname, "volume[%d].bboxMax", i);
-		shader->setUniform(uname, bbox.max);
+		volumeRaycaster->setUniform(uname, bbox.max);
 		sprintf(uname, "volume[%d].bboxMin", i);
-		shader->setUniform(uname, bbox.min);
+		volumeRaycaster->setUniform(uname, bbox.min);
 
 		sprintf(uname, "volume[%d].enabled", i);
-		shader->setUniform(uname, stacks[i]->enabled);
+		volumeRaycaster->setUniform(uname, stacks[i]->enabled);
 
 		sprintf(uname, "volume[%d].inverseMVP", i);
-		shader->setMatrix4(uname, glm::inverse(mvp * stacks[i]->transform));
-	
+		volumeRaycaster->setMatrix4(uname, glm::inverse(mvp * stacks[i]->transform));
+
 		sprintf(uname, "volume[%d].transform", i);
-		shader->setMatrix4(uname, stacks[i]->transform);
-	
+		volumeRaycaster->setMatrix4(uname, stacks[i]->transform);
+
 		sprintf(uname, "volume[%d].inverseTransform", i);
-		shader->setMatrix4(uname, glm::inverse(stacks[i]->transform));
+		volumeRaycaster->setMatrix4(uname, glm::inverse(stacks[i]->transform));
 #endif
 	}
 
-	shader->setUniform("minRayDist", minPVal.z);
-	shader->setUniform("maxRayDist", maxPVal.z);
-	shader->setUniform("inverseMVP", glm::inverse(mvp));
-	shader->setUniform("cameraPos", camPos);
+	// set the global contrast
+	volumeRaycaster->setUniform("minThreshold", (float)globalThreshold.min);
+	volumeRaycaster->setUniform("maxThreshold", (float)globalThreshold.max);
 
-	// draw only the frontmost slice
-	glBegin(GL_QUADS);
-	float z = minPVal.z;// glm::mix(minPVal.z, maxPVal.z, 0.5f);
-	glVertex3f(minPVal.x, maxPVal.y, z);
-	glVertex3f(minPVal.x, minPVal.y, z);
-	glVertex3f(maxPVal.x, minPVal.y, z);
-	glVertex3f(maxPVal.x, maxPVal.y, z);
-	glEnd();
-		
-	glActiveTexture(GL_TEXTURE0);
 
-	shader->disable();
+	// bind the ray start/end textures
+	int offset = stacks.size();
+	volumeRaycaster->setTexture2D("rayStart", rayStartTarget->getColorbuffer(), offset + 0);
+	volumeRaycaster->setTexture2D("rayEnd", rayEndTarget->getColorbuffer(), offset + 1);
 	
+	glDisable(GL_DEPTH_TEST);
+	glDepthMask(GL_FALSE);
+
+	// draw a screen-filling quad, tex coords will be calculated in shader
+	glBegin(GL_QUADS);
+	glVertex2i(0, 0);
+	glVertex2i(1, 0);
+	glVertex2i(1, 1);
+	glVertex2i(0, 1);
+	glEnd();
+	
+	glEnable(GL_DEPTH_TEST);
+	glDepthMask(GL_TRUE);
+
+	volumeRaycaster->disable();
+	volumeRenderTarget->disable();
 }
 
 

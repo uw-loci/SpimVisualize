@@ -227,7 +227,7 @@ private:
 	
 	
 	// ray tracing section
-	void raycastVolumes(const Viewport* vp, const Shader* shader) const;
+	void raytraceVolumes(const Viewport* vp) const;
 	void initializeRayTargets(const Viewport* vp);
 
 	void drawPointclouds(const Viewport* vp);
