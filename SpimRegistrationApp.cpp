@@ -1239,19 +1239,19 @@ void SpimRegistrationApp::raytraceVolumes(const Viewport* vp) const
 
 #else
 		char uname[256];
-		sprintf(uname, "volume[%d].texture", i);
+		sprintf(uname, "volume[%d].texture",(int) i);
 		volumeRaycaster->setUniform(uname, (int)i);
 
 		AABB bbox = stacks[i]->getBBox();
-		sprintf(uname, "volume[%d].bboxMax", i);
+		sprintf(uname, "volume[%d].bboxMax", (int)i);
 		volumeRaycaster->setUniform(uname, bbox.max);
-		sprintf(uname, "volume[%d].bboxMin", i);
+		sprintf(uname, "volume[%d].bboxMin", (int)i);
 		volumeRaycaster->setUniform(uname, bbox.min);
 
-		sprintf(uname, "volume[%d].transform", i);
+		sprintf(uname, "volume[%d].transform", (int)i);
 		volumeRaycaster->setMatrix4(uname, stacks[i]->transform);
 
-		sprintf(uname, "volume[%d].inverseTransform", i);
+		sprintf(uname, "volume[%d].inverseTransform", (int)i);
 		volumeRaycaster->setMatrix4(uname, glm::inverse(stacks[i]->transform));
 #endif
 	}
