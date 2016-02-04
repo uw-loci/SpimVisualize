@@ -84,7 +84,7 @@ bool UniformSamplingSolver::nextSolution()
 		return false;
 
 	++currentSolution;
-	if (currentSolution == solutions.size())
+	if (currentSolution == (int)solutions.size())
 	{
 		// reset to last valid solution
 		--currentSolution;
@@ -96,7 +96,7 @@ bool UniformSamplingSolver::nextSolution()
 
 bool UniformSamplingSolver::hasValidCurrentSolution() const
 {
-	return !solutions.empty() && (currentSolution >= 0) && (currentSolution < solutions.size());
+	return !solutions.empty() && (currentSolution >= 0) && (currentSolution < (int)solutions.size());
 }
 
 void UniformSamplingSolver::recordCurrentScore(double s)
@@ -125,7 +125,7 @@ const IStackTransformationSolver::Solution& UniformSamplingSolver::getBestSoluti
 	
 	// remove all solutions that do not have a valid id. we can do that through the current solution?
 	size_t oldSize = solutions.size();
-	if (currentSolution < solutions.size() - 1)
+	if (currentSolution < (int)solutions.size() - 1)
 		solutions.resize(currentSolution);
 	std::cout << "[Debug] Removed " << oldSize - solutions.size() << " unused solutions.\n";
 	
