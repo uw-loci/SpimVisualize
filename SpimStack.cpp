@@ -55,7 +55,7 @@ using namespace glm;
 // voxel dimensions in microns
 static const vec3 DEFAULT_DIMENSIONS(0.625, 0.625, 3);
 
-SpimStack::SpimStack() : filename(""), dimensions(DEFAULT_DIMENSIONS), width(0), height(0), depth(0), volumeTextureId(0)
+SpimStack::SpimStack() : dimensions(DEFAULT_DIMENSIONS), width(0), height(0), depth(0), filename(""), volumeTextureId(0)
 {
 	volumeList[0] = 0;
 	volumeList[1] = 0;
@@ -220,9 +220,9 @@ void SpimStack::loadRegistration(const string& filename)
 		std::getline(file, buffer);
 
 #ifdef _WIN32
-		int result = sscanf_s(buffer.c_str(), "m%*2s: %f", &glm::value_ptr(transform)[i]);
+		sscanf_s(buffer.c_str(), "m%*2s: %f", &glm::value_ptr(transform)[i]);
 #else
-		int result = sscanf(buffer.c_str(), "m%*2s: %f", &glm::value_ptr(transform)[i]);
+		sscanf(buffer.c_str(), "m%*2s: %f", &glm::value_ptr(transform)[i]);
 #endif
 	}
 
@@ -830,7 +830,7 @@ vector<size_t> SpimStack::calculateHistogram(const Threshold& t) const
 
 		*/
 		int j = (int)floor(getValue(i) - t.min);
-		if (j >= 0 && j < histogram.size())
+		if (j >= 0 && j < (int)histogram.size())
 			++histogram[j];
 
 	}
@@ -1076,8 +1076,8 @@ void SpimStackU16::loadImage(const std::string& filename)
 		}
 		else
 		{
-			assert(width == w);
-			assert(height = h);
+			assert(width == (unsigned int)w);
+			assert(height = (unsigned int)h);
 		}
 
 
@@ -1205,8 +1205,8 @@ void SpimStackU8::loadImage(const std::string& filename)
 		}
 		else
 		{
-			assert(width == w);
-			assert(height = h);
+			assert(width == (unsigned int)w);
+			assert(height = (unsigned int)h);
 		}
 
 
