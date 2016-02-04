@@ -166,7 +166,6 @@ private:
 	bool					drawGrid;
 	bool					drawBboxes;
 	bool					drawSlices;
-	bool					drawRegistrationPoints;
 
 
 	std::vector<InteractionVolume*>		interactionVolumes;
@@ -180,10 +179,9 @@ private:
 	Shader*					volumeShader;
 	Shader*					sliceShader;
 
-	Shader*					volumeDifferenceShader;
 	Shader*					volumeRaycaster;
 	Shader*					drawQuad;
-		
+	Shader*					volumeDifferenceShader;		
 	Shader*					drawPosition;
 
 	// for contrast mapping
@@ -238,7 +236,7 @@ private:
 
 	// this is the read-back image. used for inspection etc
 	std::vector<glm::vec4>	renderTargetReadback;
-	bool					renderTargetReadbackCurrent = false;
+	bool					renderTargetReadbackCurrent;
 
 	void readbackRenderTarget();
 
