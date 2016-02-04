@@ -184,6 +184,8 @@ private:
 	Shader*					volumeRaycaster;
 	Shader*					drawQuad;
 		
+	Shader*					drawPosition;
+
 	// for contrast mapping
 	Shader*					tonemapper;
 
@@ -197,6 +199,7 @@ private:
 	std::vector<VolumeTransform> transformUndoChain;
 		
 	Framebuffer*			volumeRenderTarget;	
+	Framebuffer*			rayStartTarget;
 
 	void updateGlobalBbox();
 
@@ -211,11 +214,17 @@ private:
 	void drawAxisAlignedSlices(const glm::mat4& mvp, const glm::vec3& axis, const Shader* shader) const;
 	void drawAxisAlignedSlices(const Viewport* vp, const Shader* shader) const;
 	void drawViewplaneSlices(const Viewport* vp, const Shader* shader) const;
-	void raycastVolumes(const Viewport* vp, const Shader* shader) const;
+	
+	
+	// ray tracing section
+	void raytraceVolumes(const Viewport* vp) const;
+	void initializeRayTargets(const Viewport* vp);
 
 	void drawPointclouds(const Viewport* vp);
 	
 	void drawRays(const Viewport* vp);
+
+
 
 	bool useImageAutoContrast;
 	float minImageContrast;

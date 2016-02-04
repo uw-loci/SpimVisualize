@@ -153,6 +153,34 @@ void AABB::draw() const
 	//glDisableClientState(GL_VERTEX_ARRAY);
 
 }
+
+
+void AABB::drawSolid() const
+{
+	vec4 vertices[] = { vec4(min.x, min.y, min.z, 1.f),
+						vec4(min.x, min.y, max.z, 1.f),
+						vec4(max.x, min.y, max.z, 1.f),
+						vec4(max.x, min.y, min.z, 1.f),
+						vec4(min.x, max.y, min.z, 1.f),
+						vec4(min.x, max.y, max.z, 1.f),
+						vec4(max.x, max.y, max.z, 1.f),
+						vec4(max.x, max.y, min.z, 1.f) };
+
+	static const unsigned char indices[] =
+	{
+		0,3,2,1,		// bottom
+		4,5,6,7,		// top
+		1,2,6,5,		// front
+		6,2,3,7,		// right
+		7,3,0,4,		// back
+		0,1,5,4			// left
+	};
+
+	glVertexPointer(4, GL_FLOAT, 0, value_ptr(vertices[0]));
+	glDrawElements(GL_QUADS, 24, GL_UNSIGNED_BYTE, indices);
+
+}
+
 #endif // NO_GRAPHICS
 
 

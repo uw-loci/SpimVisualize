@@ -387,14 +387,10 @@ int main(int argc, const char** argv)
 
 		regoApp->centerCamera();
 		regoApp->loadStackTransformations();
-		regoApp->loadContrastSettings();
+		//regoApp->loadContrastSettings();
 		
 		regoApp->reloadShaders();
 
-		/*
-		regoApp->addSpimStack("e:/spim/test_beads/spim_TL01_Angle0.ome.tiff");
-		regoApp->centerCamera(); 
-		*/
 	}
 	catch (const std::runtime_error& e)
 	{

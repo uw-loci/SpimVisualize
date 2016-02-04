@@ -31,11 +31,14 @@ const unsigned int MIN_SLICE_COUNT = 20;
 const unsigned int MAX_SLICE_COUNT = 1500;
 const unsigned int STD_SLICE_COUNT = 100;
 
+
+#define USE_RAYTRACER 
+
 SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(nullptr), sliceShader(nullptr), volumeShader(nullptr),
 	volumeRaycaster(nullptr), drawQuad(nullptr), volumeDifferenceShader(nullptr), tonemapper(nullptr), layout(nullptr),
 	drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), sliceCount(100),
 	configPath("./"), cameraMoving(false), runAlignment(false), histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f),
-	subsampleOnCameraMove(false), useImageAutoContrast(false), currentVolume(-1), solver(nullptr)
+	subsampleOnCameraMove(false), useImageAutoContrast(false), currentVolume(-1), solver(nullptr), drawPosition(nullptr)
 {
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
@@ -48,7 +51,10 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(nu
 	resetSliceCount();
 	reloadShaders();
 
-	volumeRenderTarget = new Framebuffer(512, 512, GL_RGBA32F, GL_FLOAT);
+	volumeRenderTarget = new Framebuffer(1024, 1024, GL_RGBA32F, GL_FLOAT);
+
+	rayStartTarget = new Framebuffer(512, 512, GL_RGBA32F, GL_FLOAT);
+
 
 	calculateScore = true;
 	
@@ -61,13 +67,15 @@ SpimRegistrationApp::~SpimRegistrationApp()
 	delete solver;
 	
 	delete volumeRenderTarget;
-	
+	delete rayStartTarget;
+
 	delete drawQuad;
 	delete pointShader;
 	delete sliceShader;
 	delete volumeShader;
 	delete volumeDifferenceShader;
 	delete volumeRaycaster;
+	delete drawPosition;
 
 
 	for (size_t i = 0; i < stacks.size(); ++i)
@@ -87,9 +95,11 @@ void SpimRegistrationApp::reloadShaders()
 {
 	
 	int numberOfVolumes = std::max(1, (int)stacks.size());
-	std::vector<std::string> defines;
-	defines.push_back("#define VOLUMES " + boost::lexical_cast<std::string>(numberOfVolumes) + "\n");
-		
+
+	std::vector<std::pair<std::string, std::string> > defines;
+	defines.push_back(std::make_pair("VOLUMES", boost::lexical_cast<std::string>(numberOfVolumes)));
+	
+
 	delete pointShader;
 	pointShader = new Shader("shaders/points2.vert", "shaders/points2.frag");
 
@@ -100,7 +110,7 @@ void SpimRegistrationApp::reloadShaders()
 	volumeShader = new Shader("shaders/volume2.vert", "shaders/volume2.frag", defines);
 
 	delete volumeRaycaster;
-	volumeRaycaster = new Shader("shaders/volumeRaycast.vert", "shaders/volumeRaycast.frag");
+	volumeRaycaster = new Shader("shaders/volumeRaycast.vert", "shaders/volumeRaycast.frag", defines);
 
 	delete drawQuad;
 	drawQuad = new Shader("shaders/drawQuad.vert", "shaders/drawQuad.frag");
@@ -110,6 +120,9 @@ void SpimRegistrationApp::reloadShaders()
 
 	delete tonemapper;
 	tonemapper = new Shader("shaders/drawQuad.vert", "shaders/tonemapper.frag", defines);
+
+	delete drawPosition;
+	drawPosition = new Shader("shaders/drawPosition.vert", "shaders/drawPosition.frag");
 
 }
 
@@ -146,6 +159,15 @@ void SpimRegistrationApp::draw()
 			}
 
 
+#ifdef USE_RAYTRACER
+
+			initializeRayTargets(vp);
+			raytraceVolumes(vp);
+
+			drawTexturedQuad(volumeRenderTarget->getColorbuffer());
+#else
+
+
 			/// actual drawing block begins
 			/// --------------------------------------------------------
 
@@ -173,11 +195,6 @@ void SpimRegistrationApp::draw()
 			glDisable(GL_BLEND);
 			
 
-			/*
-			if (!pointclouds.empty())
-				drawPointclouds(vp);
-			*/
-
 			//drawRays(vp);
 
 
@@ -197,6 +214,8 @@ void SpimRegistrationApp::draw()
 			
 			drawTonemappedQuad();
 			//drawTexturedQuad(volumeRenderTarget->getColorbuffer());
+#endif
+
 
 
 			if (drawGrid)
@@ -228,7 +247,6 @@ void SpimRegistrationApp::draw()
 
 	}
 
-
 	// draw the solver score here
 
 	/*
@@ -236,9 +254,11 @@ void SpimRegistrationApp::draw()
 		drawScoreHistory(solver->getHistory());
 	*/
 
-	if (calculateScore)
+	if (calculateScore || runAlignment)
 		drawScoreHistory(scoreHistory);
 	
+
+
 	
 }
 
@@ -1180,120 +1200,89 @@ void SpimRegistrationApp::drawAxisAlignedSlices(const Viewport* vp, const Shader
 
 
 
-void SpimRegistrationApp::raycastVolumes(const Viewport* vp, const Shader* shader) const
+void SpimRegistrationApp::raytraceVolumes(const Viewport* vp) const
 {
-	glm::mat4 mvp;// = vp.proj * vp.view;
+	glm::mat4 mvp(1.f);
 	vp->camera->getMVP(mvp);
+
+	glm::mat4 imvp = glm::inverse(mvp);
+
+	volumeRenderTarget->bind();
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
-	shader->bind();
-	const glm::vec3 camPos = vp->camera->getPosition();
-	const glm::vec3 viewDir = glm::normalize(vp->camera->target - camPos);
-
-
-	// the smallest and largest projected bounding box vertices -- used to calculate the extend of planes
-	// to draw
-	glm::vec3 minPVal(std::numeric_limits<float>::max()), maxPVal(std::numeric_limits<float>::lowest());
-
-	for (size_t i = 0; i < stacks.size(); ++i)
-	{
-		if (!stacks[i]->enabled)
-			continue;
-
-
-		// draw screen filling quads
-		// find max/min distances of bbox cube from camera
-		std::vector<glm::vec3> boxVerts = stacks[i]->getBBox().getVertices();
-
-		// calculate max/min distance
-		float maxDist = 0.f, minDist = std::numeric_limits<float>::max();
-		for (size_t k = 0; k < boxVerts.size(); ++k)
-		{
-			glm::vec4 p = mvp * stacks[i]->transform * glm::vec4(boxVerts[k], 1.f);
-			p /= p.w;
-
-			minPVal = glm::min(minPVal, glm::vec3(p));
-			maxPVal = glm::max(maxPVal, glm::vec3(p));
-
-		}
-
-	}
-
-	maxPVal = glm::min(maxPVal, glm::vec3(1.f));
-	minPVal = glm::max(minPVal, glm::vec3(-1.f));
-
-
+	volumeRaycaster->bind();
+	
+	// bind all the volumes
 	for (size_t i = 0; i < stacks.size(); ++i)
 	{
 		glActiveTexture((GLenum)(GL_TEXTURE0 + i));
 		glBindTexture(GL_TEXTURE_3D, stacks[i]->getTexture());
-
+		
 #ifdef _WIN32
 
 		char uname[256];
 		sprintf_s(uname, "volume[%d].texture", i);
-		shader->setUniform(uname, (int)i);
+		volumeRaycaster->setUniform(uname, (int)i);
+
+		sprintf_s(uname, "volume[%d].transform", i);
+		volumeRaycaster->setMatrix4(uname, stacks[i]->transform);
+
+		sprintf_s(uname, "volume[%d].inverseTransform", i);
+		volumeRaycaster->setMatrix4(uname, glm::inverse(stacks[i]->transform));
 
 		AABB bbox = stacks[i]->getBBox();
 		sprintf_s(uname, "volume[%d].bboxMax", i);
-		shader->setUniform(uname, bbox.max);
+		volumeRaycaster->setUniform(uname, bbox.max);
 		sprintf_s(uname, "volume[%d].bboxMin", i);
-		shader->setUniform(uname, bbox.min);
+		volumeRaycaster->setUniform(uname, bbox.min);
 
-		sprintf_s(uname, "volume[%d].enabled", i);
-		shader->setUniform(uname, stacks[i]->enabled);
-
-		sprintf_s(uname, "volume[%d].inverseMVP", i);
-		shader->setMatrix4(uname, glm::inverse(mvp * stacks[i]->transform));
-
-		sprintf_s(uname, "volume[%d].transform", i);
-		shader->setMatrix4(uname, stacks[i]->transform);
-
-		sprintf_s(uname, "volume[%d].inverseTransform", i);
-		shader->setMatrix4(uname, glm::inverse(stacks[i]->transform));
 
 #else
 		char uname[256];
-		sprintf(uname, "volume[%d].texture", (int)i);
-		shader->setUniform(uname, (int)i);
+		sprintf(uname, "volume[%d].texture", i);
+		volumeRaycaster->setUniform(uname, (int)i);
 
 		AABB bbox = stacks[i]->getBBox();
-		sprintf(uname, "volume[%d].bboxMax", (int)i);
-		shader->setUniform(uname, bbox.max);
-		sprintf(uname, "volume[%d].bboxMin", (int)i);
-		shader->setUniform(uname, bbox.min);
+		sprintf(uname, "volume[%d].bboxMax", i);
+		volumeRaycaster->setUniform(uname, bbox.max);
+		sprintf(uname, "volume[%d].bboxMin", i);
+		volumeRaycaster->setUniform(uname, bbox.min);
 
-		sprintf(uname, "volume[%d].enabled", (int)i);
-		shader->setUniform(uname, stacks[i]->enabled);
+		sprintf(uname, "volume[%d].transform", i);
+		volumeRaycaster->setMatrix4(uname, stacks[i]->transform);
 
-		sprintf(uname, "volume[%d].inverseMVP", (int)i);
-		shader->setMatrix4(uname, glm::inverse(mvp * stacks[i]->transform));
-	
-		sprintf(uname, "volume[%d].transform", (int)i);
-		shader->setMatrix4(uname, stacks[i]->transform);
-	
-		sprintf(uname, "volume[%d].inverseTransform", (int)i);
-		shader->setMatrix4(uname, glm::inverse(stacks[i]->transform));
+		sprintf(uname, "volume[%d].inverseTransform", i);
+		volumeRaycaster->setMatrix4(uname, glm::inverse(stacks[i]->transform));
 #endif
 	}
 
-	shader->setUniform("minRayDist", minPVal.z);
-	shader->setUniform("maxRayDist", maxPVal.z);
-	shader->setUniform("inverseMVP", glm::inverse(mvp));
-	shader->setUniform("cameraPos", camPos);
+	// set the global contrast
+	volumeRaycaster->setUniform("minThreshold", (float)globalThreshold.min);
+	volumeRaycaster->setUniform("maxThreshold", (float)globalThreshold.max);
 
-	// draw only the frontmost slice
-	glBegin(GL_QUADS);
-	float z = minPVal.z;// glm::mix(minPVal.z, maxPVal.z, 0.5f);
-	glVertex3f(minPVal.x, maxPVal.y, z);
-	glVertex3f(minPVal.x, minPVal.y, z);
-	glVertex3f(maxPVal.x, minPVal.y, z);
-	glVertex3f(maxPVal.x, maxPVal.y, z);
-	glEnd();
-		
-	glActiveTexture(GL_TEXTURE0);
 
-	shader->disable();
+	// bind the ray start/end textures
+	int offset = stacks.size();
+	volumeRaycaster->setTexture2D("rayStart", rayStartTarget->getColorbuffer(), offset);
 	
+	volumeRaycaster->setMatrix4("inverseMVP", imvp);
+
+	glDisable(GL_DEPTH_TEST);
+	glDepthMask(GL_FALSE);
+
+	// draw a screen-filling quad, tex coords will be calculated in shader
+	glBegin(GL_QUADS);
+	glVertex2i(0, 0);
+	glVertex2i(1, 0);
+	glVertex2i(1, 1);
+	glVertex2i(0, 1);
+	glEnd();
+	
+	glEnable(GL_DEPTH_TEST);
+	glDepthMask(GL_TRUE);
+
+	volumeRaycaster->disable();
+	volumeRenderTarget->disable();
 }
 
 
@@ -1768,3 +1757,37 @@ void SpimRegistrationApp::readbackRenderTarget()
 	renderTargetReadbackCurrent = true;
 	glReadBuffer(GL_BACK);
 }
+
+void SpimRegistrationApp::initializeRayTargets(const Viewport* vp)
+{
+	
+
+
+	vp->camera->setup();
+	glm::mat4 mvp;
+	vp->camera->getMVP(mvp);
+
+	drawPosition->bind();
+	drawPosition->setMatrix4("mvp", mvp);
+
+	glEnableClientState(GL_VERTEX_ARRAY);
+
+	glEnable(GL_CULL_FACE);
+	glFrontFace(GL_CCW);
+
+	// draw back faces
+	rayStartTarget->bind();
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glCullFace(GL_FRONT);
+	
+	globalBBox.drawSolid();
+
+	rayStartTarget->disable();
+	
+	glCullFace(GL_BACK);
+	glDisableClientState(GL_VERTEX_ARRAY);
+
+	drawPosition->disable();
+
+}
+

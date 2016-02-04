@@ -2,92 +2,124 @@
 
 #version 130
 
-in vec3 rayDirection;
-in vec3 rayOrigin;
-
-
-const float stepSize = 0.1;
-uniform float maxRayDist;
-
-
 struct Volume
 {
 	isampler3D		texture;
-	vec3			bboxMin, bboxMax;
-	mat4			inverseMVP;
 	mat4			inverseTransform;
-	bool			enabled;
+	mat4			transform;
+	vec3			bboxMin, bboxMax;
 };
 
 #define VOLUMES 2
+#define STEPS 500
+#define STEP_LENGTH 5.0
+
 uniform Volume volume[VOLUMES];
 
+uniform sampler2D	rayStart;
+
+uniform float		minThreshold;
+uniform float		maxThreshold;
+
+uniform mat4		inverseMVP;
+
+in vec2 texcoord;
 out vec4 fragColor;
 
 
 void main()
 {
+	vec4 finalValue = vec4(0.0);
 
-	vec3 color;
 
 
-	// total sum of all stuff along the ray
-	float sum = 0.0;
-
-	vec3 rayDirNormalized = normalize(rayDirection);
-
-	int iterations = 0;
-
-	float t = 0.0;
-	while(t < maxRayDist)
+	// create ray
+	if (texture(rayStart, texcoord).a > 0)
 	{
-		t += 0.01;
 
-		// world position along the ray
-		vec3 position = rayOrigin + rayDirNormalized * t;
+		vec3 rayOrigin = texture(rayStart, texcoord).xyz;
+		vec4 nearPlane = vec4(texcoord * 2.0 - vec2(1.0), -1.0, 1.0);
+		nearPlane = inverseMVP * nearPlane;
+		nearPlane /= nearPlane.w;
+		vec3 rayDestination = nearPlane.xyz;
+
+		float maxDistance = length(rayDestination - rayOrigin);
+		vec3 rayDirection = (rayDestination - rayOrigin) /maxDistance; // = farPlane.xyz;
+		rayDirection *= STEP_LENGTH;
 
 
-		for (int i = 0; i < VOLUMES; ++i)
+		//rayDirection /= float(STEPS);
+
+
+		float maxValue = 0.0;
+		float meanValue = 0.0;
+		float distanceTravelled = 0.0;
+
+		vec3 worldPosition = rayOrigin;
+		for (int i = 0; i < STEPS; ++i)
 		{
-			if (!volume[i].enabled)
-				continue;
+			if (distanceTravelled >= maxDistance)
+				break;
 
-			// transform into volume space
-			vec4 pos_vol = volume[i].inverseTransform * vec4(position, 1.0);
-			pos_vol /= pos_vol.w;
 
-			vec3 v = pos_vol.xyz;
+			float value[VOLUMES];
+			
 
-			vec3 texcoord = v - volume[i].bboxMin; 
-			texcoord /= (volume[i].bboxMax - volume[i].bboxMin);
-		
-			int t = texture(volume[i].texture, texcoord).r;
-
-			// check if the value is inside
-			if (v.x > volume[i].bboxMin.x && v.x < volume[i].bboxMax.x &&
-				v.y > volume[i].bboxMin.y && v.y < volume[i].bboxMax.y &&
-				v.z > volume[i].bboxMin.z && v.z < volume[i].bboxMax.z) 
+			for (int v = 0; v < VOLUMES; ++v)
 			{
-				sum += float(t) / VOLUMES;
 
-				++iterations;
+				// check all volumes
+				vec3 volPosition = vec3(volume[v].inverseTransform * vec4(worldPosition, 1.0));
+
+				if (volPosition.x > volume[v].bboxMin.x && volPosition.x < volume[v].bboxMax.x &&
+					volPosition.y > volume[v].bboxMin.y && volPosition.y < volume[v].bboxMax.y &&
+					volPosition.z > volume[v].bboxMin.z && volPosition.z < volume[v].bboxMax.z) 
+				{
+
+					vec3 volCoord = volPosition - volume[v].bboxMin; 
+					volCoord /= (volume[v].bboxMax - volume[v].bboxMin);
+
+					value[v] = texture(volume[v].texture, volCoord).r;
+				}
+				else
+					value[v] = 0.0;
+
 			}
 
 
+			float mean = 0.0;
+			for (int v = 0; v < VOLUMES; ++v)
+			{
+				// calcualte the max
+				maxValue = max(maxValue, value[v]);
+				mean += value[v];
+			}
+
+			mean /= float(VOLUMES);
+			meanValue = max(meanValue, mean);
+
+
+			worldPosition += rayDirection;
+			distanceTravelled += STEP_LENGTH;
+
 		}
 
-		color = position;
+
+		float val = (maxValue - minThreshold) / (maxThreshold - minThreshold);
+		val = (meanValue - minThreshold) / (maxThreshold - minThreshold);
+				
+
+		finalValue = vec4(vec3(val), 1.0);
+
+		
+	
+		//finalValue = vec4(1.0);
 
 	}
 
-/*
-	color = vec3(sum * 200.0);
-	color = vec3(float(iterations)/2);
-*/
+	fragColor = finalValue;
 
-	float alpha = 1.0 / 2.0;
-	fragColor = vec4(color, alpha);
-
-
+	//fragColor = texture(rayEnd, texcoord);
+	//fragColor = vec4(texcoord, 0.0, 1.0);
 }
 
