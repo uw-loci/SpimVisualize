@@ -355,17 +355,20 @@ int main(int argc, const char** argv)
 	glClampColor(GL_CLAMP_FRAGMENT_COLOR, GL_FALSE);
 
 	regoApp = new SpimRegistrationApp(glm::ivec2(1024,768));
+
+#ifdef _WIN32
 	regoApp->setConfigPath("e:/regoApp/");
+#endif
 
 	try
 	{
-		/*
+		
 		for (int i = 1; i < argc; ++i)
 		{
 			regoApp->addSpimStack(argv[i]);
 
 		}
-		*/
+		
 
 		/*
 		SimplePointcloud::resaveAsBin("e:/urs/ES_20151111.txt");
@@ -381,9 +384,11 @@ int main(int argc, const char** argv)
 		regoApp->addSpimStack("e:/spim/zebra/spim_TL01_Angle1.ome.tiff");
 		regoApp->addSpimStack("e:/spim/zebra/spim_TL01_Angle2.ome.tiff");
 
-		*/
+		
 		regoApp->addSpimStack("./spim_TL01_Angle0.ome.tiff");
 		regoApp->addSpimStack("./spim_TL01_Angle1.ome.tiff");
+		*/
+
 
 		regoApp->centerCamera();
 		regoApp->loadStackTransformations();
