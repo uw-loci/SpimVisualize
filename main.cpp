@@ -177,8 +177,6 @@ static void keyboardUp(unsigned char key, int x, int y)
 
 static void motion(int x, int y)
 {
-	glm::ivec2 d = mouse.coordinates - glm::ivec2(x, y);
-
 	float dt = (mouse.coordinates.y - y) * 0.1f;
 	float dp = (mouse.coordinates.x - x) * 0.1f;
 
@@ -278,16 +276,17 @@ static void special(int key, int x, int y)
 
 static void button(int button, int state, int x, int y)
 {
-	//std::cout << "Button: " << button << " state: " << state << " x " << x << " y " << y << std::endl;
+	assert(regoApp);
+
+	std::cout << "Button: " << button << " state: " << state << " x " << x << " y " << y << std::endl;
 
 	mouse.coordinates.x = x;
 	mouse.coordinates.y = y;
 
 	mouse.button[button] = (state == GLUT_DOWN);
 
-	if (state == GLUT_UP)
+	if (button == 2 && state == GLUT_UP)
 		regoApp->setCameraMoving(false);
-
 
 	if (button == 0 && state == GLUT_DOWN)
 		regoApp->startStackMove();

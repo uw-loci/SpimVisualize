@@ -252,7 +252,7 @@ private:
 	
 	static glm::vec3 getRandomColor(unsigned int n);
 
-	inline bool currentVolumeValid() const { return currentVolume > -1 && currentVolume < interactionVolumes.size(); }
+	inline bool currentVolumeValid() const { return currentVolume > -1 && currentVolume < (int)interactionVolumes.size(); }
 	
 	void saveVolumeTransform(unsigned int n);
 	void addInteractionVolume(InteractionVolume* v);
