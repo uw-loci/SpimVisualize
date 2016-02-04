@@ -11,8 +11,8 @@ struct Volume
 };
 
 #define VOLUMES 2
-#define STEPS 1000
-#define STEP_LENGTH 1.0
+#define STEPS 500
+#define STEP_LENGTH 5.0
 
 uniform Volume volume[VOLUMES];
 
@@ -52,38 +52,51 @@ void main()
 
 
 		float maxValue = 0.0;
+		float meanValue = 0.0;
 		float distanceTravelled = 0.0;
 
 		vec3 worldPosition = rayOrigin;
 		for (int i = 0; i < STEPS; ++i)
 		{
-			if (distanceTravelled > maxDistance)
+			if (distanceTravelled >= maxDistance)
 				break;
 
 
-			float value = 0.0;
+			float value[VOLUMES];
 			
-			
-			// check all volumes
-			vec3 volPosition = vec3(volume[0].inverseTransform * vec4(worldPosition, 1.0));
 
-			if (volPosition.x > volume[0].bboxMin.x && volPosition.x < volume[0].bboxMax.x &&
-				volPosition.y > volume[0].bboxMin.y && volPosition.y < volume[0].bboxMax.y &&
-				volPosition.z > volume[0].bboxMin.z && volPosition.z < volume[0].bboxMax.z) 
+			for (int v = 0; v < VOLUMES; ++v)
 			{
 
-				vec3 volCoord = volPosition - volume[0].bboxMin; 
-				volCoord /= (volume[0].bboxMax - volume[0].bboxMin);
+				// check all volumes
+				vec3 volPosition = vec3(volume[v].inverseTransform * vec4(worldPosition, 1.0));
 
+				if (volPosition.x > volume[v].bboxMin.x && volPosition.x < volume[v].bboxMax.x &&
+					volPosition.y > volume[v].bboxMin.y && volPosition.y < volume[v].bboxMax.y &&
+					volPosition.z > volume[v].bboxMin.z && volPosition.z < volume[v].bboxMax.z) 
+				{
 
-				value = texture(volume[0].texture, volCoord).r;
+					vec3 volCoord = volPosition - volume[v].bboxMin; 
+					volCoord /= (volume[v].bboxMax - volume[v].bboxMin);
 
-				//values[v] = 1;
+					value[v] = texture(volume[v].texture, volCoord).r;
+				}
+				else
+					value[v] = 0.0;
+
 			}
-			else
-				value = 0.0;
 
-			maxValue = max(maxValue, value);
+
+			float mean = 0.0;
+			for (int v = 0; v < VOLUMES; ++v)
+			{
+				// calcualte the max
+				maxValue = max(maxValue, value[v]);
+				mean += value[v];
+			}
+
+			mean /= float(VOLUMES);
+			meanValue = max(meanValue, mean);
 
 
 			worldPosition += rayDirection;
@@ -92,12 +105,10 @@ void main()
 		}
 
 
-		finalValue = vec4(rayOrigin, 1.0);
-		finalValue = vec4(rayDestination, 1.0);
-		finalValue = vec4(rayDirection, 1.0);
-
-
 		float val = (maxValue - minThreshold) / (maxThreshold - minThreshold);
+		val = (meanValue - minThreshold) / (maxThreshold - minThreshold);
+				
+
 		finalValue = vec4(vec3(val), 1.0);
 
 		
