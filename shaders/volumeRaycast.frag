@@ -12,15 +12,11 @@ struct Volume
 
 #define VOLUMES 2
 #define STEPS 1000
-#define STEP_LENGTH 2.0
-#define MAX_DISTANCE 2000
+#define STEP_LENGTH 1.0
 
 uniform Volume volume[VOLUMES];
 
-
 uniform sampler2D	rayStart;
-uniform sampler2D	rayEnd;
-
 
 uniform float		minThreshold;
 uniform float		maxThreshold;
@@ -37,43 +33,18 @@ void main()
 
 
 
-
-
 	// create ray
-	if (texture(rayEnd, texcoord).a > 0)
+	if (texture(rayStart, texcoord).a > 0)
 	{
 
-		vec3 rayOrigin; // = nearPlane.xyz;
-		vec3 rayDirection; // = farPlane.xyz;
+		vec3 rayOrigin = texture(rayStart, texcoord).xyz;
+		vec4 nearPlane = vec4(texcoord * 2.0 - vec2(1.0), -1.0, 1.0);
+		nearPlane = inverseMVP * nearPlane;
+		nearPlane /= nearPlane.w;
+		vec3 rayDestination = nearPlane.xyz;
 
-
-		if (texture(rayStart, texcoord).a > 0)
-		{
-			rayOrigin = texture(rayStart, texcoord).xyz;
-			rayDirection = texture(rayEnd, texcoord).xyz;
-			
-		}
-		else
-		{
-
-			vec4 nearPlane = vec4(texcoord * 2.0 - vec2(1.0), -1.0, 1.0);
-			vec4 farPlane = vec4(texcoord * 2.0 - vec2(1.0), 1.0, 1.0);
-
-			nearPlane = inverseMVP * nearPlane;
-			nearPlane /= nearPlane.w;
-
-			farPlane = inverseMVP * farPlane;
-			farPlane /= farPlane.w;
-
-			rayOrigin = nearPlane.xyz;
-			rayDirection = farPlane.xyz;
-
-		}
-
-
-		rayDirection -= rayOrigin;
-
-		rayDirection = normalize(rayDirection);
+		float maxDistance = length(rayDestination - rayOrigin);
+		vec3 rayDirection = (rayDestination - rayOrigin) /maxDistance; // = farPlane.xyz;
 		rayDirection *= STEP_LENGTH;
 
 
@@ -81,13 +52,12 @@ void main()
 
 
 		float maxValue = 0.0;
-
 		float distanceTravelled = 0.0;
 
 		vec3 worldPosition = rayOrigin;
 		for (int i = 0; i < STEPS; ++i)
 		{
-			if (distanceTravelled > MAX_DISTANCE)
+			if (distanceTravelled > maxDistance)
 				break;
 
 
@@ -107,6 +77,7 @@ void main()
 
 
 				value = texture(volume[0].texture, volCoord).r;
+
 				//values[v] = 1;
 			}
 			else
@@ -117,25 +88,27 @@ void main()
 
 			worldPosition += rayDirection;
 			distanceTravelled += STEP_LENGTH;
+
 		}
 
 
+		finalValue = vec4(rayOrigin, 1.0);
+		finalValue = vec4(rayDestination, 1.0);
+		finalValue = vec4(rayDirection, 1.0);
+
 
 		float val = (maxValue - minThreshold) / (maxThreshold - minThreshold);
-
-
-
 		finalValue = vec4(vec3(val), 1.0);
-		//finalValue = vec4(rayDirection, 1.0);
 
-		//finalValue = vec4(rayOrigin, 1.0);
+		
+	
 		//finalValue = vec4(1.0);
 
 	}
 
 	fragColor = finalValue;
 
-
+	//fragColor = texture(rayEnd, texcoord);
 	//fragColor = vec4(texcoord, 0.0, 1.0);
 }
 

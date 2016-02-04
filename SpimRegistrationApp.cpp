@@ -54,8 +54,6 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(nu
 	volumeRenderTarget = new Framebuffer(1024, 1024, GL_RGBA32F, GL_FLOAT);
 
 	rayStartTarget = new Framebuffer(512, 512, GL_RGBA32F, GL_FLOAT);
-	rayEndTarget = new Framebuffer(512, 512, GL_RGBA32F, GL_FLOAT);
-	displayRayTarget = rayStartTarget;
 
 
 	calculateScore = true;
@@ -70,7 +68,6 @@ SpimRegistrationApp::~SpimRegistrationApp()
 	
 	delete volumeRenderTarget;
 	delete rayStartTarget;
-	delete rayEndTarget;
 
 	delete drawQuad;
 	delete pointShader;
@@ -1274,8 +1271,7 @@ void SpimRegistrationApp::raytraceVolumes(const Viewport* vp) const
 
 	// bind the ray start/end textures
 	int offset = stacks.size();
-	volumeRaycaster->setTexture2D("rayStart", rayStartTarget->getColorbuffer(), offset + 0);
-	volumeRaycaster->setTexture2D("rayEnd", rayEndTarget->getColorbuffer(), offset + 1);
+	volumeRaycaster->setTexture2D("rayStart", rayStartTarget->getColorbuffer(), offset);
 	
 	volumeRaycaster->setMatrix4("inverseMVP", imvp);
 
@@ -1788,27 +1784,16 @@ void SpimRegistrationApp::initializeRayTargets(const Viewport* vp)
 	glFrontFace(GL_CCW);
 
 	// draw back faces
-	rayEndTarget->bind();
+	rayStartTarget->bind();
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glCullFace(GL_FRONT);
 	
 	globalBBox.drawSolid();
 
-	rayEndTarget->disable();
-
-	
-	// draw front faces
-
-	rayStartTarget->bind();
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glCullFace(GL_BACK);
-
-	globalBBox.drawSolid();
-
 	rayStartTarget->disable();
-
+	
+	glCullFace(GL_BACK);
 	glDisableClientState(GL_VERTEX_ARRAY);
-
 
 	drawPosition->disable();
 

@@ -90,10 +90,6 @@ static void keyboard(unsigned char key, int x, int y)
 		regoApp->contrastEditorApplyThresholds();
 
 
-	if (key == 'v')
-		regoApp->toggleRayTarget();
-
-
 	if (key == ';')
 		regoApp->decreaseSliceCount();
 	if (key == '\'')

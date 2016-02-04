@@ -117,14 +117,6 @@ public:
 	void centerCamera();
 	void maximizeViews();
 	
-	inline void toggleRayTarget()
-	{
-		if (displayRayTarget == rayStartTarget)
-			displayRayTarget = rayEndTarget;
-		else
-			displayRayTarget = rayStartTarget;
-	};
-
 	/// \}
 
 	inline void setCameraMoving(bool m) { cameraMoving = m; }
@@ -207,9 +199,7 @@ private:
 	std::vector<VolumeTransform> transformUndoChain;
 		
 	Framebuffer*			volumeRenderTarget;	
-
-	Framebuffer*			rayStartTarget, *rayEndTarget, *displayRayTarget;
-
+	Framebuffer*			rayStartTarget;
 
 	void updateGlobalBbox();
 
