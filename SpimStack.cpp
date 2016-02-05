@@ -100,7 +100,11 @@ void SpimStack::load(const std::string& file)
 
 		cout << "[Debug] " << s << endl;
 		ivec3 res;
+#ifdef _WIN32
+		assert(sscanf_s(s.c_str(), "_%dx%dx%d.bin", &res.x, &res.y, &res.z) == 3);
+#else
 		assert(sscanf(s.c_str(), "_%dx%dx%d.bin", &res.x, &res.y, &res.z) == 3);
+#endif
 		cout << "[Debug] Reading binary volume with resolution " << res << endl;
 
 		loadBinary(filename, res);
@@ -817,8 +821,7 @@ std::vector<glm::vec3> SpimStack::calculateVolumeNormals() const
 
 vector<size_t> SpimStack::calculateHistogram(const Threshold& t) const
 {
-	vector<size_t> histogram(std::ceil(t.getSpread()));
-	//throw(std::runtime_error("Not implemented!"));
+	vector<size_t> histogram((size_t)std::ceil(t.getSpread()));
 	
 	
 	for (size_t i = 0; i < width*height*depth; ++i)
