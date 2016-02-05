@@ -78,7 +78,7 @@ void SimplePointcloud::draw() const
 	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[2]);
 	glNormalPointer(GL_FLOAT, 0, 0);
 
-	glDrawArrays(GL_POINTS, 0, pointCount);
+	glDrawArrays(GL_POINTS, 0, (GLsizei)pointCount);
 	
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
@@ -115,7 +115,7 @@ void SimplePointcloud::saveBin(const std::string& filename)
 	assert(vertices.size() == colors.size());
 
 	std::ofstream file(filename, std::ios::binary);
-	uint32_t points = vertices.size();
+	uint32_t points = (uint32_t)vertices.size();
 	file.write(reinterpret_cast<const char*>(&points), sizeof(size_t));
 	file.write(reinterpret_cast<const char*>(glm::value_ptr(vertices[0])), sizeof(glm::vec3)*points);
 	file.write(reinterpret_cast<const char*>(glm::value_ptr(normals[0])), sizeof(glm::vec3)*points);
@@ -149,9 +149,9 @@ void SimplePointcloud::loadTxt(const std::string& filename)
 #else
 		sscanf(tmp.c_str(), "%f %f %f %d %d %d %f %f %f", &pos.x, &pos.y, &pos.z, &r, &g, &b, &normal.x, &normal.y, &normal.z);
 #endif
-		color.r = r;
-		color.g = g;
-		color.b = b;
+		color.r = (float)r;
+		color.g = (float)g;
+		color.b = (float)b;
 
 		vertices.push_back(pos);
 		colors.push_back(color / 255.f);

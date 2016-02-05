@@ -687,7 +687,7 @@ void SpimRegistrationApp::changeContrast(const glm::ivec2& cursor)
 		}
 
 		
-		unsigned int value = globalThreshold.min + (int)(currentContrastCursor * globalThreshold.getSpread());
+		unsigned int value = (unsigned int)(globalThreshold.min + (int)(currentContrastCursor * globalThreshold.getSpread()));
 
 		if (value != lastValue)
 		{
@@ -846,8 +846,8 @@ void SpimRegistrationApp::drawContrastEditor(const Viewport* vp)
 
 
 
-	const float leftLimit = globalThreshold.min;
-	const float rightLimit = globalThreshold.max;
+	const double leftLimit = globalThreshold.min;
+	const double rightLimit = globalThreshold.max;
 
 
 	glLineWidth(2.f);
@@ -858,13 +858,13 @@ void SpimRegistrationApp::drawContrastEditor(const Viewport* vp)
 	glVertex2f(maxCursor, 1.f);
 
 	glColor3f(1.f, 1.f, 0.f);
-	glVertex2f(minCursor, 0.f);
-	glVertex2f(minCursor, 1.f);
+	glVertex2d(minCursor, 0);
+	glVertex2d(minCursor, 1);
 
 	glColor3f(0.1f, 0.1f, 0.1f);
-	glVertex2f(minCursor, 0.f);
+	glVertex2d(minCursor, 0);
 	glColor3f(1, 1, 1);
-	glVertex2f(maxCursor, 1.f);
+	glVertex2d(maxCursor, 1);
 
 	glEnd();
 	
@@ -1270,9 +1270,7 @@ void SpimRegistrationApp::raytraceVolumes(const Viewport* vp) const
 
 
 	// bind the ray start/end textures
-	int offset = stacks.size();
-	volumeRaycaster->setTexture2D("rayStart", rayStartTarget->getColorbuffer(), offset);
-	
+	volumeRaycaster->setTexture2D("rayStart", rayStartTarget->getColorbuffer(), (int)stacks.size());
 	volumeRaycaster->setMatrix4("inverseMVP", imvp);
 
 	glDisable(GL_DEPTH_TEST);
@@ -1652,7 +1650,7 @@ void SpimRegistrationApp::drawScoreHistory(const TinyHistory<double>& hist) cons
 	{
 		double d = hist.history[i];
 
-		glVertex2d(i-offset, d);
+		glVertex2d((double)i-offset, d);
 	}
 	glEnd();
 
