@@ -106,7 +106,7 @@ void main()
 
 
 		float val = (maxValue - minThreshold) / (maxThreshold - minThreshold);
-		val = (meanValue - minThreshold) / (maxThreshold - minThreshold);
+		//val = (meanValue - minThreshold) / (maxThreshold - minThreshold);
 				
 
 		finalValue = vec4(vec3(val), 1.0);
