@@ -27,6 +27,9 @@ int main(int argc, const char** argv)
 	// create n slices through resampling
 	const size_t SLICES = 5;
 
+	// basic resolution
+	glm::ivec3 res(1000, 1000, 150);
+
 	for (size_t i = 0; i < SLICES; ++i)
 	{
 		// create random transformation
@@ -36,7 +39,7 @@ int main(int argc, const char** argv)
 
 		SpimStack* newStack = new SpimStackU16;
 		newStack->transform = transform;
-
+		newStack->setContent(res, 0);
 
 
 		// resample original stack here

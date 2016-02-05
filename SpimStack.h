@@ -28,6 +28,11 @@ public:
 
 	// halfs the internal resolution of the dataset
 	virtual void subsample(bool updateTexture=true) = 0;
+
+	virtual void setContent(const glm::ivec3& resolution, const void* data) = 0;
+
+	virtual void getSample(const glm::vec3& worldCoords, void* value) const;
+
 		
 	// extracts the points in world coords. The w coordinate contains the point's value
 	std::vector<glm::vec4> extractTransformedPoints() const;
@@ -96,6 +101,7 @@ public:
 	~SpimStackU16();
 
 	virtual void subsample(bool updateTexture = true);
+	virtual void setContent(const glm::ivec3& resolution, const void* data);
 
 private:
 	unsigned short*			volume;

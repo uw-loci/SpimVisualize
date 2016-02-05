@@ -1015,7 +1015,6 @@ void SpimStack::updateStats()
 
 
 
-
 SpimStackU16::~SpimStackU16()
 {
 	delete[] volume;
@@ -1141,6 +1140,28 @@ void SpimStackU16::updateTexture()
 	assert(volume);
 	glTexImage3D(GL_TEXTURE_3D, 0, GL_R16UI, width, height, depth, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, volume);
 	cout << "done.\n";
+}
+
+
+void SpimStackU16::setContent(const glm::ivec3& res, const void* data)
+{
+	delete[] volume;
+
+	width = res.x;
+	height = res.y;
+	depth = res.z;
+
+	filename = "";
+	
+	volume = new unsigned short[width*height*depth];
+
+	if (data)
+		memcpy(volume, data, width*height*depth*sizeof(unsigned short));
+	else
+		memset(volume, 0, width*height*depth*sizeof(unsigned short));
+	
+	updateTexture();
+	updateStats();
 }
 
 
