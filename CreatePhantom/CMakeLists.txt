@@ -23,8 +23,6 @@ else()
 endif()
 
 
-
-
 find_package (OpenGL REQUIRED)
 find_package (GLU REQUIRED)
 find_package (GLM REQUIRED)
@@ -38,7 +36,7 @@ include_directories("..")
 
 #add_executable(CreatePhantom main.cpp ../AABB.h ../AABB.cpp ../Framebuffer.h ../Framebuffer.cpp ../GeometryImage.h GeometryImage.cpp glmIO.h Layout.h Layout.cpp nanoflann.hpp OrbitCamera.h OrbitCamera.cpp InteractionVolume.h InteractionVolume.cpp Ray.h Ray.cpp Shader.h Shader.cpp SimplePointcloud.h SimplePointcloud.cpp SpimPlane.h SpimPlane.cpp SpimRegistrationApp.h SpimRegistrationApp.cpp SpimStack.h SpimStack.cpp StackTransformationSolver.h StackTransformationSolver.cpp stb_image.h stb_image.c stb_image_write.c TinyStats.h)
 
-add_executable(CreatePhantom main.cpp)
+add_executable(CreatePhantom main.cpp ../AABB.h ../AABB.cpp ../SpimStack.h ../SpimStack.cpp ../InteractionVolume.h ../InteractionVolume.cpp ../Shader.h ../Shader.cpp)
 
 if (OPENGL_FOUND)
 	#include_directories(${OPENGL_INCLUDE_DIR})
