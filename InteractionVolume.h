@@ -8,7 +8,6 @@
 class InteractionVolume : boost::noncopyable
 {
 public:
-	glm::mat4		transform;
 	bool			enabled;
 	
 	InteractionVolume();
@@ -28,9 +27,17 @@ public:
 	virtual void move(const glm::vec3& delta);
 	virtual void rotate(float d);
 
+
+	inline const glm::mat4& getTransform() const { return transform; }
+	inline const glm::mat4& getInverseTransform() const { return inverseTransform; }
+	inline void setTransform(const glm::mat4& t) { transform = t; inverseTransform = glm::inverse(t); }
+
 	
 protected:
 	AABB			bbox;
+	
+private:
+	glm::mat4		transform, inverseTransform;
 
 };
 

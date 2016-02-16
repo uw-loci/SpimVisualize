@@ -29,9 +29,10 @@ public:
 	// halfs the internal resolution of the dataset
 	virtual void subsample(bool updateTexture=true) = 0;
 
+	// sets the contents for the whole stack. It also erases the data and resizes it
 	virtual void setContent(const glm::ivec3& resolution, const void* data) = 0;
 
-	virtual void getSample(const glm::vec3& worldCoords, void* value) const;
+	virtual double getSample(const glm::vec3& worldCoords);
 
 		
 	// extracts the points in world coords. The w coordinate contains the point's value

@@ -152,7 +152,7 @@ std::vector<glm::vec4> SpimStack::extractRegistrationPoints(unsigned short thres
 glm::vec3 SpimStack::getCentroid() const
 {
 	glm::vec3 center = dimensions * vec3(width, height, depth) * 0.5f;
-	glm::vec4 c = transform * glm::vec4(center, 1.f);
+	glm::vec4 c = getTransform() * glm::vec4(center, 1.f);
 	
 	return glm::vec3(c);
 }
@@ -223,11 +223,16 @@ void SpimStack::loadRegistration(const string& filename)
 		std::string buffer;
 		std::getline(file, buffer);
 
+		mat4 T(1.f);
+
 #ifdef _WIN32
-		int result = sscanf_s(buffer.c_str(), "m%*2s: %f", &glm::value_ptr(transform)[i]);
+		int result = sscanf_s(buffer.c_str(), "m%*2s: %f", &glm::value_ptr(T)[i]);
 #else
-		int result = sscanf(buffer.c_str(), "m%*2s: %f", &glm::value_ptr(transform)[i]);
+		int result = sscanf(buffer.c_str(), "m%*2s: %f", &glm::value_ptr(T)[i]);
 #endif
+
+		setTransform(T);
+
 	}
 
 	/*
@@ -239,7 +244,7 @@ void SpimStack::loadRegistration(const string& filename)
 
 	*/
 
-	std::cout << "[SpimPlane] Read transform: " << transform << std::endl;
+	std::cout << "[SpimPlane] Read transform: " << getTransform() << std::endl;
 }
 
 
@@ -437,7 +442,7 @@ vector<vec4> SpimStack::extractTransformedPoints() const
 				vec4 point(coord * dimensions, 1.f);
 
 				// transform to world space
-				point = transform * point;
+				point = getTransform() * point;
 				//point.w = float(val) / std::numeric_limits<unsigned short>::max();
 				point.w = (float)getRelativeValue(getIndex(x, y, z));
 				points.push_back(point);
@@ -457,7 +462,6 @@ vector<vec4> SpimStack::extractTransformedPoints(const SpimStack* clip, const Th
 	points.reserve(width*height*depth);
 
 
-	mat4 invMat = inverse(clip->transform);
 	const AABB bbox = clip->getBBox();
 
 	for (unsigned int z = 0; z < depth; ++z)
@@ -477,10 +481,10 @@ vector<vec4> SpimStack::extractTransformedPoints(const SpimStack* clip, const Th
 					vec4 point(coord * dimensions, 1.f);
 
 					// transform to world space
-					point = transform * point;
+					point = getTransform() * point;
 
 					// transform to the other's clip space
-					vec4 pt = invMat * point;
+					vec4 pt = getInverseTransform() * point;
 					if (bbox.isInside(vec3(pt)))
 					{
 						point.w = (float)getRelativeValue(getIndex(x, y, z));
@@ -980,7 +984,7 @@ AABB SpimStack::getTransformedBBox() const
 	vector<vec3> verts = getBBox().getVertices();
 	for (size_t i = 0; i < verts.size(); ++i)
 	{
-		vec4 v = this->transform * vec4(verts[i], 1.f);
+		vec4 v = this->getTransform() * vec4(verts[i], 1.f);
 
 		if (i == 0)
 			result.reset(vec3(v));
@@ -1011,6 +1015,27 @@ void SpimStack::updateStats()
 	bbox.min = vec3(0.f); // -vol * 0.5f;
 	bbox.max = vol;// *0.5f;
 	cout << "done.\n";
+}
+
+
+double SpimStack::getSample(const glm::vec3& worldCoords)
+{
+	vec4 stackCoords = getInverseTransform() * vec4(worldCoords, 1.f);
+
+	double result = 0.f;
+
+	// clamp stack coords
+	if (stackCoords.x > 0.f && stackCoords.x <= width &&
+		stackCoords.y > 0.f && stackCoords.y <= height &&
+		stackCoords.z > 0.f && stackCoords.z <= depth)
+	{
+		ivec3 c = ivec3(round(stackCoords));
+		size_t index = getIndex(c.x, c.y, c.z);
+
+		result = getValue(index);
+	}
+	
+	return result;
 }
 
 
