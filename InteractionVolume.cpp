@@ -95,5 +95,3 @@ void InteractionVolume::rotate(float angle)
 
 }
 
-
-

@@ -920,7 +920,7 @@ void SpimRegistrationApp::drawBoundingBoxes() const
 		if (stacks[i]->enabled)
 		{
 			glPushMatrix();
-			glMultMatrixf(glm::value_ptr(stacks[i]->transform));
+			glMultMatrixf(glm::value_ptr(stacks[i]->getTransform()));
 
 
 			if (i == currentVolume)
@@ -936,7 +936,7 @@ void SpimRegistrationApp::drawBoundingBoxes() const
 	for (size_t i = 0; i < pointclouds.size(); ++i)
 	{
 		glPushMatrix();
-		glMultMatrixf(glm::value_ptr(pointclouds[i]->transform));
+		glMultMatrixf(glm::value_ptr(pointclouds[i]->getTransform()));
 
 
 		if (i == currentVolume)
@@ -1033,7 +1033,7 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 		float maxDist = 0.f, minDist = std::numeric_limits<float>::max();
 		for (size_t k = 0; k < boxVerts.size(); ++k)
 		{
-			glm::vec4 p = mvp * stacks[i]->transform * glm::vec4(boxVerts[k], 1.f);
+			glm::vec4 p = mvp * stacks[i]->getTransform() * glm::vec4(boxVerts[k], 1.f);
 			p /= p.w;
 
 			minPVal = glm::min(minPVal, glm::vec3(p));
@@ -1078,7 +1078,7 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 		shader->setUniform(uname, reorderedStacks[i]->enabled);
 
 		sprintf_s(uname, "volume[%d].inverseMVP", i);
-		shader->setMatrix4(uname, glm::inverse(mvp * reorderedStacks[i]->transform));
+		shader->setMatrix4(uname, glm::inverse(mvp * reorderedStacks[i]->getTransform()));
 
 #else
 		char uname[256];
@@ -1140,7 +1140,7 @@ void SpimRegistrationApp::drawAxisAlignedSlices(const glm::mat4& mvp, const glm:
 	{
 		if (stacks[i]->enabled)
 		{
-			shader->setMatrix4("transform", stacks[i]->transform);
+			shader->setMatrix4("transform", stacks[i]->getTransform());
 			
 			stacks[i]->drawSlices(volumeShader, viewAxis);
 		}
@@ -1178,11 +1178,11 @@ void SpimRegistrationApp::drawAxisAlignedSlices(const Viewport* vp, const Shader
 	{
 		if (stacks[i]->enabled)
 		{
-			shader->setMatrix4("transform", stacks[i]->transform);
+			shader->setMatrix4("transform", stacks[i]->getTransform());
 			
 			// calculate view vector in volume coordinates
 			glm::vec3 view = vp->camera->getViewDirection();
-			glm::vec4(localView) = glm::inverse(stacks[i]->transform) * glm::vec4(view, 0.0);
+			glm::vec4(localView) = stacks[i]->getInverseTransform() * glm::vec4(view, 0.0);
 			view = glm::vec3(localView);
 
 			stacks[i]->drawSlices(volumeShader, view);
@@ -1227,10 +1227,10 @@ void SpimRegistrationApp::raytraceVolumes(const Viewport* vp) const
 		volumeRaycaster->setUniform(uname, (int)i);
 
 		sprintf_s(uname, "volume[%d].transform", i);
-		volumeRaycaster->setMatrix4(uname, stacks[i]->transform);
+		volumeRaycaster->setMatrix4(uname, stacks[i]->getTransform());
 
 		sprintf_s(uname, "volume[%d].inverseTransform", i);
-		volumeRaycaster->setMatrix4(uname, glm::inverse(stacks[i]->transform));
+		volumeRaycaster->setMatrix4(uname, stacks[i]->getInverseTransform());
 
 		AABB bbox = stacks[i]->getBBox();
 		sprintf_s(uname, "volume[%d].bboxMax", i);
@@ -1334,7 +1334,7 @@ void SpimRegistrationApp::undoLastTransform()
 
 	
 	VolumeTransform vt = transformUndoChain.back();
-	vt.volume->transform = vt.matrix;
+	vt.volume->setTransform(vt.matrix);
 
 	transformUndoChain.pop_back();
 	updateGlobalBbox();
@@ -1363,7 +1363,7 @@ void SpimRegistrationApp::saveVolumeTransform(unsigned int n)
 	assert(n < interactionVolumes.size());
 
 	VolumeTransform vt;
-	vt.matrix = interactionVolumes[n]->transform;
+	vt.matrix = interactionVolumes[n]->getTransform();
 	vt.volume = interactionVolumes[n];
 
 	transformUndoChain.push_back(vt);
@@ -1619,7 +1619,7 @@ void SpimRegistrationApp::inspectPointclouds(const Ray& r)
 		{
 
 			float dist = -1.f;
-			size_t hit = r.getClosestPoint(spc->getPoints(), spc->transform, dist);
+			size_t hit = r.getClosestPoint(spc->getPoints(), spc->getTransform(), dist);
 
 			std::cout << "[Debug] Ray intersects point cloud " << i << " at point index: " <<hit  << ", dist: " << sqrtf(dist) << std::endl;
 

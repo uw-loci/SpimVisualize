@@ -60,6 +60,7 @@ SpimStack::SpimStack() : filename(""), dimensions(DEFAULT_DIMENSIONS), width(0),
 	volumeList[0] = 0;
 	volumeList[1] = 0;
 
+#ifndef NO_GRAPHICS
 	glGenTextures(1, &volumeTextureId);
 	cout << "[Stack] Created new texture id: " << volumeTextureId << endl;
 	glBindTexture(GL_TEXTURE_3D, volumeTextureId);
@@ -70,17 +71,18 @@ SpimStack::SpimStack() : filename(""), dimensions(DEFAULT_DIMENSIONS), width(0),
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 	glBindTexture(GL_TEXTURE_3D, 0);
-
+#endif
 
 
 }
 
 SpimStack::~SpimStack()
 {
+#ifndef NO_GRAPHICS
 	glDeleteTextures(1, &volumeTextureId);
 	glDeleteLists(volumeList[0], 1);
 	glDeleteLists(volumeList[1], 1);
-
+#endif
 }
 
 void SpimStack::load(const std::string& file)
@@ -113,6 +115,16 @@ void SpimStack::load(const std::string& file)
 	updateTexture();
 	updateStats();
 }
+
+void SpimStack::save(const std::string& file)
+{
+	if (filename.find(".bin") == string::npos)
+		saveImage(file);
+	else
+		saveBinary(file);
+}
+
+
 
 /*
 std::vector<glm::vec4> SpimStack::extractRegistrationPoints(unsigned short threshold) const
@@ -157,8 +169,24 @@ glm::vec3 SpimStack::getCentroid() const
 	return glm::vec3(c);
 }
 
+glm::vec3 SpimStack::getWorldPosition(const glm::ivec3& coordinate) const
+{
+	/*
+	if (coordinate.x >= 0 && coordinate.x < width &&
+		coordinate.y >= 0 && coordinate.y < height &&
+		coordinate.z >= 0 && coordinate.z < height)
+	*/
+		
+	// apply non-uniform pixel scaling
+	vec4 pt(vec3(coordinate) * dimensions, 1.f);
+	pt = getTransform() * pt;
+		
+	return vec3(pt);
+}
+
 void SpimStack::drawSlices(Shader* s, const glm::vec3& view) const
 {
+#ifndef NO_GRAPHICS
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_3D, volumeTextureId);
 	
@@ -206,7 +234,7 @@ void SpimStack::drawSlices(Shader* s, const glm::vec3& view) const
 
 	glBindTexture(GL_TEXTURE_3D, 0);
 
-
+#endif
 
 }
 
@@ -247,7 +275,7 @@ void SpimStack::loadRegistration(const string& filename)
 	std::cout << "[SpimPlane] Read transform: " << getTransform() << std::endl;
 }
 
-
+#ifndef NO_GRAPHICS
 void SpimStack::drawZPlanes(const glm::vec3& view) const
 {
 	glBegin(GL_QUADS);
@@ -424,7 +452,7 @@ void SpimStack::drawXPlanes(const glm::vec3& view) const
 
 	glEnd();
 }
-
+#endif
 
 vector<vec4> SpimStack::extractTransformedPoints() const
 {
@@ -1038,7 +1066,9 @@ double SpimStack::getSample(const glm::vec3& worldCoords)
 	return result;
 }
 
-
+SpimStackU16::SpimStackU16() : SpimStack(), volume(nullptr)
+{
+}
 
 SpimStackU16::~SpimStackU16()
 {
@@ -1065,9 +1095,6 @@ void SpimStackU16::loadBinary(const std::string& filename, const glm::ivec3& res
 	cout << "[Stack] Loaded binary volume: " << width << "x" << height << "x" << depth << endl;
 
 }
-
-
-
 
 void SpimStackU16::loadImage(const std::string& filename)
 {
@@ -1123,6 +1150,42 @@ void SpimStackU16::loadImage(const std::string& filename)
 
 }
 
+void SpimStackU16::saveBinary(const std::string& filename)
+{
+	std::ofstream file(filename, ios::binary);
+	assert(file.is_open());
+
+	const size_t size = width*height*depth*sizeof(unsigned short);
+
+	file.write(reinterpret_cast<const char*>(volume), size);
+
+	cout << "[Stack] Saved " << size << " bytes to binary file \"" << filename << "\".\n";
+}
+
+void SpimStackU16::saveImage(const std::string& filename)
+{
+	FIMULTIBITMAP* fmb = FreeImage_OpenMultiBitmap(FIF_TIFF, filename.c_str(), TRUE, FALSE);
+	assert(fmb);
+
+
+	for (unsigned int z = 0; z < depth; ++z)
+	{
+		FIBITMAP* bm = FreeImage_AllocateT(FIT_UINT16, width, height, 16);
+		assert(bm);
+
+		BYTE* data = FreeImage_GetBits(bm);
+		memcpy(data, &volume[width*height*z], width*height*sizeof(unsigned short));
+		
+		FreeImage_AppendPage(fmb, bm);
+
+		FreeImage_Unload(bm);
+	}
+
+	FreeImage_CloseMultiBitmap(fmb);
+}
+
+
+
 void SpimStackU16::subsample(bool updateTextureData)
 {
 	assert(volume);
@@ -1160,11 +1223,15 @@ void SpimStackU16::subsample(bool updateTextureData)
 
 void SpimStackU16::updateTexture()
 {
+#ifndef NO_GRAPHICS
 	cout << "[Stack] Updating 3D texture ... ";
 	glBindTexture(GL_TEXTURE_3D, volumeTextureId);
 	assert(volume);
 	glTexImage3D(GL_TEXTURE_3D, 0, GL_R16UI, width, height, depth, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, volume);
 	cout << "done.\n";
+#else
+	cout << "[Stack] Compiled with NO_GRAPHICS, texture will not be updated.\n";
+#endif
 }
 
 
@@ -1189,6 +1256,15 @@ void SpimStackU16::setContent(const glm::ivec3& res, const void* data)
 	updateStats();
 }
 
+
+/// Note: _YOU_ have to make sure that the coordinates are within a valid range!
+void SpimStackU16::setSample(const glm::ivec3& pos, double value)
+{
+	size_t index = getIndex(pos.x, pos.y, pos.z);
+	assert(index < width*height*depth);
+
+	volume[index] = static_cast<unsigned short>(value);
+}
 
 
 SpimStackU8::~SpimStackU8()
@@ -1311,9 +1387,11 @@ void SpimStackU8::subsample(bool updateTextureData)
 
 void SpimStackU8::updateTexture()
 {
+#ifndef NO_GRAPHICS
 	cout << "[Stack] Updating 3D texture ... ";
 	glBindTexture(GL_TEXTURE_3D, volumeTextureId);
 	assert(volume);
 	glTexImage3D(GL_TEXTURE_3D, 0, GL_R8UI, width, height, depth, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, volume);
 	cout << "done.\n";
+#endif
 }

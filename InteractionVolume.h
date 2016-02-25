@@ -32,6 +32,9 @@ public:
 	inline const glm::mat4& getInverseTransform() const { return inverseTransform; }
 	inline void setTransform(const glm::mat4& t) { transform = t; inverseTransform = glm::inverse(t); }
 
+	inline bool isInsideVolume(const glm::vec4& worldSpacePt) const { return bbox.isInside(glm::vec3(transform * worldSpacePt)); }
+	inline bool isInsideVolume(const glm::vec3& worldSpacePt) const { return isInsideVolume(glm::vec4(worldSpacePt, 1.f)); }
+
 	
 protected:
 	AABB			bbox;

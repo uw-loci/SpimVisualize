@@ -21,6 +21,7 @@ public:
 	virtual ~SpimStack();
 	
 	void load(const std::string& filename);
+	void save(const std::string& filename);
 
 	virtual void drawSlices(Shader* s, const glm::vec3& viewDir) const;
 
@@ -31,6 +32,9 @@ public:
 
 	// sets the contents for the whole stack. It also erases the data and resizes it
 	virtual void setContent(const glm::ivec3& resolution, const void* data) = 0;
+	
+	// sets a single sample at a specific location
+	virtual void setSample(const glm::ivec3& pos, double value) = 0;
 
 	virtual double getSample(const glm::vec3& worldCoords);
 
@@ -44,6 +48,10 @@ public:
 
 	virtual AABB getTransformedBBox() const;
 	glm::vec3 getCentroid() const;
+
+	// returns the world position of the given coordinate
+	glm::vec3 getWorldPosition(const glm::ivec3& coordinate) const;
+
 
 	inline const unsigned int getTexture() const { return volumeTextureId; }
 	
@@ -83,6 +91,9 @@ protected:
 	virtual void loadImage(const std::string& filename) = 0;
 	virtual void loadBinary(const std::string& filename, const glm::ivec3& resolution) = 0;
 
+	virtual void saveBinary(const std::string& filename) = 0;
+	virtual void saveImage(const std::string& filename) = 0;
+
 	inline size_t getIndex(unsigned int x, unsigned int y, unsigned int z) const { return x + y*width + z*width*height; }
 	
 	void createPlaneLists();
@@ -99,24 +110,30 @@ protected:
 class SpimStackU16 : public SpimStack
 {
 public:
+	SpimStackU16();
 	~SpimStackU16();
 
 	virtual void subsample(bool updateTexture = true);
 	virtual void setContent(const glm::ivec3& resolution, const void* data);
+	virtual void setSample(const glm::ivec3& pos, double value);
 
 private:
 	unsigned short*			volume;
+
+	SpimStackU16(const SpimStackU16& cp);
 
 	virtual void updateTexture();
 
 	virtual void loadImage(const std::string& filename);
 	virtual void loadBinary(const std::string& filename, const glm::ivec3& resolution);
 
+	virtual void saveBinary(const std::string& filename);
+	virtual void saveImage(const std::string& filename);
 	
 	inline double getValue(size_t index) const
 	{
-		//assert(index < width*heigth*depth);
-		return (float)volume[index];
+		assert(index < width*height*depth);
+		return (double)volume[index];
 	}
 
 	inline double getRelativeValue(size_t index) const

@@ -14,7 +14,7 @@
 
 SimplePointcloud::SimplePointcloud(const std::string& filename, const glm::mat4& t)
 {
-	this->transform = t;
+	this->setTransform(t);
 
 	std::string ext = filename.substr(filename.find_last_of("."));
 
@@ -63,7 +63,7 @@ SimplePointcloud::~SimplePointcloud()
 void SimplePointcloud::draw() const
 {
 	glPushMatrix();
-	glMultMatrixf(glm::value_ptr(transform[0]));
+	glMultMatrixf(glm::value_ptr(getTransform()[0]));
 	
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);

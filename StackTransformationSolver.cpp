@@ -151,7 +151,7 @@ const IStackTransformationSolver::Solution& UniformSamplingSolver::getBestSoluti
 void DXSolver::createCandidateSolutions(const InteractionVolume* v)
 {
 	using namespace glm;
-	std::mt19937 rng(std::chrono::system_clock::now().time_since_epoch().count());;
+	std::mt19937 rng((unsigned int)std::chrono::system_clock::now().time_since_epoch().count());;
 
 	solutions.clear();
 
@@ -172,7 +172,7 @@ void DXSolver::createCandidateSolutions(const InteractionVolume* v)
 void DYSolver::createCandidateSolutions(const InteractionVolume* v)
 {
 	using namespace glm;
-	std::mt19937 rng(std::chrono::system_clock::now().time_since_epoch().count());;
+	std::mt19937 rng((unsigned int)std::chrono::system_clock::now().time_since_epoch().count());;
 
 	solutions.clear();
 
@@ -194,7 +194,7 @@ void DYSolver::createCandidateSolutions(const InteractionVolume* v)
 void DZSolver::createCandidateSolutions(const InteractionVolume* v)
 {
 	using namespace glm;
-	std::mt19937 rng(std::chrono::system_clock::now().time_since_epoch().count());;
+	std::mt19937 rng((unsigned int)std::chrono::system_clock::now().time_since_epoch().count());;
 
 	solutions.clear();
 
@@ -247,7 +247,7 @@ MultiDimensionalHillClimb::MultiDimensionalHillClimb() : solutionCounter(0)
 void MultiDimensionalHillClimb::initialize(const InteractionVolume* v)
 {
 	// initialize rng
-	rng = std::mt19937(std::chrono::system_clock::now().time_since_epoch().count());;
+	rng = std::mt19937((unsigned int)std::chrono::system_clock::now().time_since_epoch().count());;
 
 	resetSolution();
 	history.reset();
@@ -366,14 +366,14 @@ void SimulatedAnnealingSolver::initialize(const InteractionVolume* v)
 	cooling = 0.998;
 
 	currentSolution.score = 0;
-	currentSolution.matrix = v->transform;
+	currentSolution.matrix = v->getTransform();
 	bestSolution = currentSolution;
 
 	iteration = 0;
 	currentVolume = v;
 
 	// initialize rng
-	rng = std::mt19937(std::chrono::system_clock::now().time_since_epoch().count());;
+	rng = std::mt19937((unsigned int)std::chrono::system_clock::now().time_since_epoch().count());;
 
 	history.reset();
 }

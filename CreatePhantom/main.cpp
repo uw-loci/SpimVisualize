@@ -20,6 +20,11 @@ int main(int argc, const char** argv)
 	{
 		std::cerr << "No input file given.\n";
 		std::cerr << "Usage: " << argv[0] << " <filename>\n";
+
+#ifdef _WIN32
+		system("pause");
+#endif
+
 		return 1;
 	}
 
@@ -74,7 +79,54 @@ int main(int argc, const char** argv)
 		newStack->setTransform(T * R);
 		newStack->setContent(res, 0);
 		
+
+		std::cout << "[Resampling] ";
+
+		unsigned int dots = res.x*res.y*res.z / 20;
+		unsigned int counter = 0;
+
 		// resample original stack here
+		for (int x = 0; x < res.x; ++x)
+		{
+			for (int y = 0; y < res.y; ++y)
+			{
+				for (int z = 0; z < res.z; ++z)
+				{
+					// transform point to world space
+					vec3 pt = newStack->getWorldPosition(ivec3(x, y, z));
+
+					double value = 0;
+					if (reference->isInsideVolume(pt))
+					{
+						// sample original volume
+						value = reference->getSample(pt);
+					}
+
+
+					newStack->setSample(ivec3(x, y, z), value);
+				
+					if (counter >= dots)
+					{
+						std::cout << ".";
+						counter = 0;
+					}
+					else
+						++counter;
+				
+				}
+
+			}
+
+
+		}
+
+		std::cout << " done.\n";
+
+
+		// create filename
+		std::string filename = std::string("./phantom_") + std::to_string(i) + std::string(".tiff");
+		newStack->saveTransform(filename + ".registration");
+		newStack->save(filename);
 		
 
 		// save stack
