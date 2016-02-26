@@ -107,6 +107,10 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == 'u')
 		app->subsampleAllStacks();
 
+
+	if (key == 's')
+		app->createEmptyRandomStack();
+
 	
 	if (key == '1')
 		app->toggleSelectStack(0);

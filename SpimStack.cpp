@@ -1262,7 +1262,18 @@ void SpimStackU16::setContent(const glm::ivec3& res, const void* data)
 		memset(volume, 0, width*height*depth*sizeof(unsigned short));
 	
 	updateTexture();
-	updateStats();
+	
+	if (data)
+		updateStats();
+	else
+	{
+		maxVal = 0; 
+		minVal = 0;
+
+		vec3 vol = dimensions * vec3(width, height, depth);
+		bbox.min = vec3(0.f); // -vol * 0.5f;
+		bbox.max = vol;// *0.5f;
+	}
 }
 
 

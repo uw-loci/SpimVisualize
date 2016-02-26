@@ -1553,3 +1553,37 @@ void CreatePhantomApp::initializeRayTargets(const Viewport* vp)
 	drawPosition->disable();
 
 }
+
+void CreatePhantomApp::createEmptyRandomStack()
+{
+	assert(!stacks.empty());
+	using namespace glm;
+
+	auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+	auto rand = std::bind(std::uniform_real_distribution<float>(-1.f, 1.f), std::mt19937(seed));
+
+	const glm::ivec3 resolution(1000, 1000, 150);
+
+	SpimStackU16* stack = new SpimStackU16;
+	stack->setContent(resolution, 0);
+
+
+	// copy the transform of the base stack
+	stack->setTransform(stacks[0]->getTransform());
+
+	// create random translation
+	vec3 delta(rand(), rand(), rand());
+
+	delta *= vec3(100, 40, 100);
+	stack->move(delta);
+
+	
+	// create random rotation
+	float a = rand() * 25.f;
+	stack->setRotation(a);
+	
+	std::cout << "[App] Created random stack with dT " << delta << " and R=" << a << std::endl;
+
+	stacks.push_back(stack);
+	addInteractionVolume(stack);
+}

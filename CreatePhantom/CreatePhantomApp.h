@@ -42,6 +42,8 @@ public:
 
 	void resize(const glm::ivec2& newSize);
 	
+	void createEmptyRandomStack();
+
 	//inline size_t getStacksCount() const { return stacks.size(); }
 	void toggleSelectStack(int n);
 	void toggleStack(int n);
@@ -119,9 +121,9 @@ private:
 	std::map<std::string, ILayout*>	prevLayouts;
 
 
-
+	// reference stack is always 0, the rest follow
 	std::vector<SpimStack*>	stacks;
-
+	
 	AABB					globalBBox;
 
 	// global contrast settings

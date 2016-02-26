@@ -23,8 +23,10 @@ public:
 	virtual void loadTransform(const std::string& filename);
 	virtual void applyTransform(const glm::mat4& t);
 
+	/// sets the rotation around its center in degrees
 	virtual void setRotation(float angle);
 	virtual void move(const glm::vec3& delta);
+	/// rotate around its center in d degrees
 	virtual void rotate(float d);
 
 
