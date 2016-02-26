@@ -71,6 +71,7 @@ void InteractionVolume::loadTransform(const std::string& filename)
 void InteractionVolume::applyTransform(const glm::mat4& t)
 {
 	transform = t * transform;
+	inverseTransform = glm::inverse(transform);
 }
 
 void InteractionVolume::setRotation(float angle)
@@ -79,11 +80,14 @@ void InteractionVolume::setRotation(float angle)
 	transform = glm::rotate(transform, glm::radians(angle), glm::vec3(0, 1, 0));
 	transform = translate(transform, getBBox().getCentroid() * -1.f);
 
+	setTransform(transform);
 }
+
 
 void InteractionVolume::move(const glm::vec3& delta)
 {
-	transform = glm::translate(delta) * transform;//  glm::translate(transform, delta);
+	setTransform(glm::translate(delta) * transform);//  glm::translate(transform, delta);
+
 }
 
 void InteractionVolume::rotate(float angle)
@@ -92,6 +96,6 @@ void InteractionVolume::rotate(float angle)
 	transform = glm::rotate(transform, angle, glm::vec3(0, 1, 0));
 	transform = translate(transform, getBBox().getCentroid() * -1.f);
 
-
+	setTransform(transform);
 }
 

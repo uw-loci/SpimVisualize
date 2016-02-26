@@ -184,6 +184,17 @@ glm::vec3 SpimStack::getWorldPosition(const glm::ivec3& coordinate) const
 	return vec3(pt);
 }
 
+glm::ivec3 SpimStack::getStackVoxelCoords(const glm::vec4& worldCoords) const
+{
+	// get stack coordinates
+	glm::vec4 stackCoords = getInverseTransform() * worldCoords;
+	stackCoords /= glm::vec4(dimensions, 1.0);
+
+	return glm::ivec3(stackCoords.x, stackCoords.y, stackCoords.z);
+}
+
+
+
 void SpimStack::drawSlices(Shader* s, const glm::vec3& view) const
 {
 #ifndef NO_GRAPHICS
@@ -1048,18 +1059,16 @@ void SpimStack::updateStats()
 
 double SpimStack::getSample(const glm::vec3& worldCoords)
 {
-	vec4 stackCoords = getInverseTransform() * vec4(worldCoords, 1.f);
 
+	ivec3 stackCoords = getStackVoxelCoords(worldCoords);
 	double result = 0.f;
 
 	// clamp stack coords
-	if (stackCoords.x > 0.f && stackCoords.x <= width &&
-		stackCoords.y > 0.f && stackCoords.y <= height &&
-		stackCoords.z > 0.f && stackCoords.z <= depth)
+	if (stackCoords.x >= 0 && stackCoords.x < width &&
+		stackCoords.y >= 0 && stackCoords.y < height &&
+		stackCoords.z >= 0 && stackCoords.z < depth)
 	{
-		ivec3 c = ivec3(round(stackCoords));
-		size_t index = getIndex(c.x, c.y, c.z);
-
+		size_t index = getIndex(stackCoords);
 		result = getValue(index);
 	}
 	

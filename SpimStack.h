@@ -52,6 +52,11 @@ public:
 	// returns the world position of the given coordinate
 	glm::vec3 getWorldPosition(const glm::ivec3& coordinate) const;
 
+	// returns the internal stack voxel coordinates for a given world coordinate
+	glm::ivec3 getStackVoxelCoords(const glm::vec4& worldCoords) const;
+	inline glm::ivec3 getStackVoxelCoords(const glm::vec3& worldCoords) const { return getStackVoxelCoords(glm::vec4(worldCoords, 1.f)); }
+
+
 
 	inline const unsigned int getTexture() const { return volumeTextureId; }
 	
@@ -95,7 +100,8 @@ protected:
 	virtual void saveImage(const std::string& filename) = 0;
 
 	inline size_t getIndex(unsigned int x, unsigned int y, unsigned int z) const { return x + y*width + z*width*height; }
-	
+	inline size_t getIndex(const glm::ivec3& coords) const { return getIndex(coords.x, coords.y, coords.z); }
+
 	void createPlaneLists();
 
 
