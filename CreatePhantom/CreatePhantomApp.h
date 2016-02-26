@@ -43,6 +43,11 @@ public:
 	void resize(const glm::ivec2& newSize);
 	
 	void createEmptyRandomStack();
+	void sliceStack(int stack);
+
+	void startSampleStack(int stack);
+	void clearSampleStack();
+	void endSampleStack();
 
 	//inline size_t getStacksCount() const { return stacks.size(); }
 	void toggleSelectStack(int n);
@@ -196,6 +201,17 @@ private:
 	bool useImageAutoContrast;
 	float minImageContrast;
 	float maxImageContrast;
+
+	int sampleStack = -1;
+
+	
+	std::vector<glm::vec4>		stackSamples;
+	void drawStackSamples() const;
+
+	size_t						lastStackSample;
+	void addStackSamples();
+
+
 
 	void calculateImageContrast(const std::vector<glm::vec4>& rgbaImage);
 	double calculateImageScore();

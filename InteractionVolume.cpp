@@ -61,9 +61,13 @@ void InteractionVolume::loadTransform(const std::string& filename)
 		return;
 	}
 
-	float* m = glm::value_ptr(transform);
+	glm::mat4 M(1.f);
+
+	float* m = glm::value_ptr(M);
 	for (int i = 0; i < 16; ++i)
 		file >> m[i];
+
+	setTransform(M);
 
 	std::cout << "[SpimStack] Read transform: " << transform << " from \"" << filename << "\"\n";
 }

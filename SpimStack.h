@@ -9,6 +9,7 @@
 
 struct AABB;
 class Shader;
+class Framebuffer;
 class ReferencePoints;
 struct Threshold;
 struct Hourglass;
@@ -24,6 +25,7 @@ public:
 	void save(const std::string& filename);
 
 	virtual void drawSlices(Shader* s, const glm::vec3& viewDir) const;
+	virtual void drawZSlices() const;
 
 	void loadRegistration(const std::string& filename);
 
@@ -35,10 +37,11 @@ public:
 	
 	// sets a single sample at a specific location
 	virtual void setSample(const glm::ivec3& pos, double value) = 0;
-
 	virtual double getSample(const glm::vec3& worldCoords);
 
-		
+	// updates the internal stats and the texture
+	virtual void update();
+			
 	// extracts the points in world coords. The w coordinate contains the point's value
 	std::vector<glm::vec4> extractTransformedPoints() const;
 	// extracts the points in world space and clip them against the other's transformed bounding box. The w coordinate contains the point's value
@@ -52,21 +55,29 @@ public:
 	// returns the world position of the given coordinate
 	glm::vec3 getWorldPosition(const glm::ivec3& coordinate) const;
 
+	// returns the world position of the given index
+	glm::vec3 getWorldPosition(const unsigned int index) const;
+
 	// returns the internal stack voxel coordinates for a given world coordinate
 	glm::ivec3 getStackVoxelCoords(const glm::vec4& worldCoords) const;
 	inline glm::ivec3 getStackVoxelCoords(const glm::vec3& worldCoords) const { return getStackVoxelCoords(glm::vec4(worldCoords, 1.f)); }
-
-
-
+	
 	inline const unsigned int getTexture() const { return volumeTextureId; }
 	
 	Threshold getLimits() const;
 	std::vector<size_t> calculateHistogram(const Threshold& t) const;
 
 
+	glm::ivec3 getStackCoords(size_t index) const;
+
 
 	inline const std::string& getFilename() const { return filename;  }
 
+
+	inline unsigned int getWidth() const { return width; }
+	inline unsigned int getHeight() const { return height; }
+	inline unsigned int getDepth() const { return depth; }
+	inline size_t getVoxelCount() const { return width*height*depth; }
 
 protected:
 	glm::vec3			dimensions;
@@ -101,6 +112,7 @@ protected:
 
 	inline size_t getIndex(unsigned int x, unsigned int y, unsigned int z) const { return x + y*width + z*width*height; }
 	inline size_t getIndex(const glm::ivec3& coords) const { return getIndex(coords.x, coords.y, coords.z); }
+	
 
 	void createPlaneLists();
 

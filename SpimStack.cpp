@@ -85,6 +85,12 @@ SpimStack::~SpimStack()
 #endif
 }
 
+void SpimStack::update()
+{
+	updateStats();
+	updateTexture();
+}
+
 void SpimStack::load(const std::string& file)
 {
 	if (!filename.empty())
@@ -184,6 +190,33 @@ glm::vec3 SpimStack::getWorldPosition(const glm::ivec3& coordinate) const
 	return vec3(pt);
 }
 
+
+
+glm::vec3 SpimStack::getWorldPosition(const unsigned int index) const
+{
+	glm::ivec3 sc = getStackCoords(index);
+	return getWorldPosition(sc);
+}
+
+glm::ivec3 SpimStack::getStackCoords(size_t index) const
+{
+	assert(index < width*height*depth);
+
+	// see: http://stackoverflow.com/questions/10903149/how-do-i-compute-the-linear-index-of-a-3d-coordinate-and-vice-versa
+
+	glm::ivec3 coords;
+
+	coords.x = index % (width + 1);
+	index /= (width + 1);
+
+	coords.y = index % (height + 1);
+	index /= (height + 1);
+
+	coords.z = index;
+
+	return coords;
+}
+
 glm::ivec3 SpimStack::getStackVoxelCoords(const glm::vec4& worldCoords) const
 {
 	// get stack coordinates
@@ -248,6 +281,26 @@ void SpimStack::drawSlices(Shader* s, const glm::vec3& view) const
 #endif
 
 }
+
+void SpimStack::drawZSlices() const
+{
+#ifndef NO_GRAPHICS
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_3D, volumeTextureId);
+
+	glPushAttrib(GL_ENABLE_BIT);
+	glDisable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+
+	glColor3f(1, 1, 1);
+	drawZPlanes(glm::vec3(0, 0, 1));
+
+	glPopAttrib();
+	glBindTexture(GL_TEXTURE_3D, 0);
+
+#endif
+}
+
 
 void SpimStack::loadRegistration(const string& filename)
 {

@@ -108,8 +108,22 @@ static void keyboard(unsigned char key, int x, int y)
 		app->subsampleAllStacks();
 
 
-	if (key == 's')
+	if (key == 'e')
 		app->createEmptyRandomStack();
+	if (key == 'S')
+		app->endSampleStack();
+
+	if (key == '!')
+		app->clearSampleStack();
+
+	if (key == '@')
+		app->startSampleStack(1);
+	if (key == '#')
+		app->startSampleStack(2);
+	if (key == '$')
+		app->startSampleStack(3);
+	if (key == '%')
+		app->startSampleStack(4);
 
 	
 	if (key == '1')
@@ -128,6 +142,8 @@ static void keyboard(unsigned char key, int x, int y)
 		app->toggleSelectStack(4);
 
 	
+
+
 	/*
 	if (key == 't')
 		app->loadStackTransformations();
@@ -347,6 +363,8 @@ int main(int argc, const char** argv)
 		app->loadStackTransformations();
 		//app->loadContrastSettings();
 		
+		app->createEmptyRandomStack();
+
 		app->reloadShaders();
 
 	}

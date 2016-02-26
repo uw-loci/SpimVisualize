@@ -23,6 +23,8 @@
 #include <glm/gtx/quaternion.hpp>
 
 
+#include <FreeImage.h>
+
 #include <GL/glut.h>
 
 #include <boost/lexical_cast.hpp>
@@ -147,8 +149,7 @@ void CreatePhantomApp::draw()
 
 			volumeRenderTarget->bind();
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-				
+							
 
 			glEnable(GL_BLEND);
 			//glBlendEquation(GL_FUNC_ADD);
@@ -196,6 +197,10 @@ void CreatePhantomApp::draw()
 				drawGroundGrid(vp);
 			if (drawBboxes)
 				drawBoundingBoxes();
+
+
+			if (!stackSamples.empty())
+				drawStackSamples();
 
 		}
 
@@ -1286,6 +1291,9 @@ void CreatePhantomApp::update(float dt)
 		calculateImageContrast(pixels);
 	}
 
+	if (sampleStack != -1)
+		addStackSamples();
+
 }
 
 void CreatePhantomApp::maximizeViews()
@@ -1562,7 +1570,7 @@ void CreatePhantomApp::createEmptyRandomStack()
 	auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
 	auto rand = std::bind(std::uniform_real_distribution<float>(-1.f, 1.f), std::mt19937(seed));
 
-	const glm::ivec3 resolution(1000, 1000, 150);
+	const glm::ivec3 resolution(100, 100, 80);
 
 	SpimStackU16* stack = new SpimStackU16;
 	stack->setContent(resolution, 0);
@@ -1586,4 +1594,191 @@ void CreatePhantomApp::createEmptyRandomStack()
 
 	stacks.push_back(stack);
 	addInteractionVolume(stack);
+}
+
+
+void CreatePhantomApp::sliceStack(int stack)
+{
+	if (stack < 1 || stack >= stacks.size())
+	{
+		std::cerr << "[Slice] Invalid stack number: " << stack << std::endl;
+		return;
+	}
+
+	SpimStack* s = stacks[stack];
+
+	Framebuffer* fbo = new Framebuffer(s->getWidth(), s->getHeight(), GL_RGBA, GL_UNSIGNED_BYTE);
+	
+
+	// temp pixel holder
+	std::vector<unsigned char> pixels(s->getWidth()*s->getHeight()*4);
+
+
+	std::string filename("c:/temp/stack.tif");
+
+	FIMULTIBITMAP* fmb = FreeImage_OpenMultiBitmap(FIF_TIFF, filename.c_str(), TRUE, FALSE);
+	assert(fmb);
+	
+
+	std::cout << "[Slice] Slicing reference stack ";
+
+	for (unsigned int z = 0; z < s->getDepth(); ++z)
+	{
+		fbo->bind();
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// setup correct projection based on stack
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		glOrtho(0, s->getWidth(), 0, s->getHeight(), z, z + 1);
+		
+		
+		glMatrixMode(GL_MODELVIEW);
+
+		glm::mat4 t = s->getTransform();
+		glm::vec3 e = s->getWorldPosition(glm::ivec3(0));
+		glm::vec3 c = e + glm::vec3(t[2]);
+
+		gluLookAt(e.x, e.y, e.z, c.x, c.y, c.z, 0, 1, 0);
+		
+		glMultMatrixf(glm::value_ptr(stacks[0]->getTransform()));
+		stacks[0]->drawZSlices();
+		
+		// disable writing so the driver can update mipmaps etc
+		fbo->disable();
+
+		fbo->bind();
+
+		// read back fbo 
+		glReadBuffer(GL_COLOR_ATTACHMENT0);
+		glReadPixels(0, 0, s->getWidth(), s->getHeight(), GL_RGBA, GL_UNSIGNED_BYTE, &pixels[0]);
+		glReadBuffer(GL_BACK);
+		
+		fbo->disable();
+
+		// save to disk?
+		//FIBITMAP* bm = FreeImage_AllocateT(FIT_UINT16, s->getWidth(), s->getHeight(), 16);
+		FIBITMAP* bm = FreeImage_Allocate(s->getWidth(), s->getHeight(), 32);
+		assert(bm);
+
+		BYTE* data = FreeImage_GetBits(bm);
+		memcpy(data, &pixels[0], s->getWidth()*s->getHeight()*sizeof(unsigned char)*4);
+		
+		FreeImage_AppendPage(fmb, bm);
+		FreeImage_Unload(bm);
+
+		std::cout << ".";
+	}
+
+	std::cout << "done.\n";
+
+	FreeImage_CloseMultiBitmap(fmb);
+
+
+	delete fbo;
+}
+
+
+void CreatePhantomApp::drawStackSamples() const
+{
+	using namespace glm;
+
+	const vec3 red(1.f, 0.f, 0.f);
+	const vec3 grn(0.f, 0.8f, 0.f); 
+
+	glColor3f(1, 1, 1);
+	glBegin(GL_POINTS);
+	for (size_t i = 0; i < stackSamples.size(); ++i)
+	{
+		float a = stackSamples[i].a / 120.0f;
+
+		vec3 color = mix(red, grn, a);
+
+		glColor3fv(value_ptr(color));
+		glVertex3fv(value_ptr(stackSamples[i]));
+
+	}
+	glEnd();
+}
+
+void CreatePhantomApp::addStackSamples()
+{
+	if (sampleStack == -1)
+		return;
+
+	SpimStack* stack = stacks[sampleStack];
+
+	const size_t maxIndex = stack->getWidth()*stack->getHeight()*stack->getDepth();
+
+	const int SAMPLE_COUNT = 512;
+	for (int i = 0; i < SAMPLE_COUNT; ++i)
+	{		
+		// create new sample
+		glm::vec3 worldPos = stack->getWorldPosition(lastStackSample);
+		
+		/*
+		if (i % 1000 == 0)
+		{
+			std::cout << "[Debug] Stack sample: " << lastStackSample << " -> " << stack->getStackCoords(lastStackSample) << " -> " << stack->getWorldPosition(lastStackSample) << std::endl;
+			
+		}
+		*/
+
+		float val = 0.f;
+		if (stacks[0]->isInsideVolume(worldPos))
+		{
+			val = (float)stacks[0]->getSample(worldPos);
+		}
+
+		stackSamples.push_back(glm::vec4(worldPos, val));	
+		stack->setSample(stack->getStackCoords(lastStackSample), val);
+
+
+
+		++lastStackSample;
+		if (lastStackSample >= maxIndex)
+		{
+
+			char filename[256];
+			sprintf_s(filename, "c:/temp/stack_%d.tif", sampleStack);
+
+			// save result
+			std::cout << "[Sample] Saving result to \"" << filename << "\" ... \n";
+			
+
+			stack->update();
+
+			sampleStack = -1;
+			break;
+		}
+
+	}
+	
+}
+
+
+void CreatePhantomApp::startSampleStack(int n)
+{
+	if (n == 0 || n >= stacks.size())
+	{
+		std::cout << "[Sample] Invalid target stack: " << n << std::endl;
+		return;
+	}
+
+	clearSampleStack();
+	sampleStack = n;
+
+	stackSamples.reserve(stacks[n]->getVoxelCount());
+}
+
+void CreatePhantomApp::endSampleStack()
+{
+	sampleStack = -1;
+	lastStackSample = 0;
+}
+
+void CreatePhantomApp::clearSampleStack()
+{
+	stackSamples.clear();
+	lastStackSample = 0;
 }
