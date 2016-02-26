@@ -1738,15 +1738,19 @@ void CreatePhantomApp::addStackSamples()
 		++lastStackSample;
 		if (lastStackSample >= maxIndex)
 		{
+			// update actual stack
+			stack->update();
+
 
 			char filename[256];
 			sprintf_s(filename, "c:/temp/stack_%d.tif", sampleStack);
 
 			// save result
 			std::cout << "[Sample] Saving result to \"" << filename << "\" ... \n";
+			stack->save(filename);
 			
 
-			stack->update();
+
 
 			sampleStack = -1;
 			break;

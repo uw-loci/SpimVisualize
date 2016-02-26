@@ -74,6 +74,16 @@ public:
 	inline const std::string& getFilename() const { return filename;  }
 
 
+
+	/// \name Filtering methods
+	/// \{
+
+	virtual void addNoise(float amount, double valueRange);
+
+
+
+	/// \}
+
 	inline unsigned int getWidth() const { return width; }
 	inline unsigned int getHeight() const { return height; }
 	inline unsigned int getDepth() const { return depth; }

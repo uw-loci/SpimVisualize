@@ -10,7 +10,8 @@
 #include <fstream>
 #include <cstdio>
 
-
+#include <random>
+#include <chrono>
 
 //#define ENABLE_PCL
 
@@ -1467,4 +1468,32 @@ void SpimStackU8::updateTexture()
 	glTexImage3D(GL_TEXTURE_3D, 0, GL_R8UI, width, height, depth, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, volume);
 	cout << "done.\n";
 #endif
+}
+
+void SpimStack::addNoise(float amount, double valueRange)
+{
+#if 0
+
+	if (amount == 0.f)
+		return;
+
+	if (amount > 1.f)
+		amount = 1.f;
+
+	auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+	std::mt19937 rng(seed);
+	auto randVal = std::uniform_real_distribution<double>(-valueRange, valueRange);
+	
+	auto randIdx = std::uniform_real_distribution<unsigned int>(0, getVoxelCount());
+
+	for (unsigned int i = 0; i < (unsigned int)floor(getVoxelCount()*amount); ++i)
+	{
+		unsigned int idx = randIdx(rng);
+		
+
+		//TODO: implement rest ...
+	}
+
+#endif
+	
 }
