@@ -352,11 +352,11 @@ int main(int argc, const char** argv)
 	glClampColor(GL_CLAMP_VERTEX_COLOR, GL_FALSE);
 	glClampColor(GL_CLAMP_FRAGMENT_COLOR, GL_FALSE);
 
-	app = new CreatePhantomApp(glm::ivec2(1024, 768));
-	app->setConfigPath("e:/app/");
-
 	try
 	{
+		app = new CreatePhantomApp(glm::ivec2(1024, 768));
+		app->setConfigPath("e:/app/");
+
 		app->addSpimStack("e:/spim/zebra/spim_TL01_Angle0.ome.tiff");
 		
 		app->centerCamera();

@@ -36,7 +36,9 @@ public:
 	virtual void setContent(const glm::ivec3& resolution, const void* data) = 0;
 	
 	// sets a single sample at a specific location
-	virtual void setSample(const glm::ivec3& pos, double value) = 0;
+	inline void setSample(const glm::ivec3& pos, double value) { setSample(getIndex(pos.x, pos.y, pos.z), value);	}
+	virtual void setSample(const size_t index, double value) = 0;
+
 	virtual double getSample(const glm::vec3& worldCoords);
 
 	// updates the internal stats and the texture
@@ -69,6 +71,8 @@ public:
 
 
 	glm::ivec3 getStackCoords(size_t index) const;
+
+	inline glm::ivec3 getResolution() const { return glm::ivec3(width, height, depth); }
 
 
 	inline const std::string& getFilename() const { return filename;  }
@@ -143,7 +147,7 @@ public:
 
 	virtual void subsample(bool updateTexture = true);
 	virtual void setContent(const glm::ivec3& resolution, const void* data);
-	virtual void setSample(const glm::ivec3& pos, double value);
+	virtual void setSample(const size_t index, double value);
 
 private:
 	unsigned short*			volume;

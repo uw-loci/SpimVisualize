@@ -1331,12 +1331,9 @@ void SpimStackU16::setContent(const glm::ivec3& res, const void* data)
 }
 
 
-/// Note: _YOU_ have to make sure that the coordinates are within a valid range!
-void SpimStackU16::setSample(const glm::ivec3& pos, double value)
+void SpimStackU16::setSample(size_t index, double value)
 {
-	size_t index = getIndex(pos.x, pos.y, pos.z);
 	assert(index < width*height*depth);
-
 	volume[index] = static_cast<unsigned short>(value);
 }
 

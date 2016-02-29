@@ -1570,7 +1570,7 @@ void CreatePhantomApp::createEmptyRandomStack()
 	auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
 	auto rand = std::bind(std::uniform_real_distribution<float>(-1.f, 1.f), std::mt19937(seed));
 
-	const glm::ivec3 resolution(100, 100, 80);
+	const glm::ivec3 resolution(200, 200, 80);
 
 	SpimStackU16* stack = new SpimStackU16;
 	stack->setContent(resolution, 0);
@@ -1711,26 +1711,23 @@ void CreatePhantomApp::addStackSamples()
 	const size_t maxIndex = stack->getWidth()*stack->getHeight()*stack->getDepth();
 
 	const int SAMPLE_COUNT = 512;
+
+
+
+#ifdef USE_OLD_SAMPLING
 	for (int i = 0; i < SAMPLE_COUNT; ++i)
 	{		
 		// create new sample
 		glm::vec3 worldPos = stack->getWorldPosition(lastStackSample);
 		
-		/*
-		if (i % 1000 == 0)
-		{
-			std::cout << "[Debug] Stack sample: " << lastStackSample << " -> " << stack->getStackCoords(lastStackSample) << " -> " << stack->getWorldPosition(lastStackSample) << std::endl;
-			
-		}
-		*/
-
 		float val = 0.f;
 		if (stacks[0]->isInsideVolume(worldPos))
 		{
 			val = (float)stacks[0]->getSample(worldPos);
 		}
 
-		stackSamples.push_back(glm::vec4(worldPos, val));	
+		//stackSamples.push_back(glm::vec4(worldPos, val));	
+		stackSamples[lastStackSample] = glm::vec4(worldPos, val);
 		stack->setSample(stack->getStackCoords(lastStackSample), val);
 
 
@@ -1749,15 +1746,61 @@ void CreatePhantomApp::addStackSamples()
 			std::cout << "[Sample] Saving result to \"" << filename << "\" ... \n";
 			stack->save(filename);
 			
-
-
-
 			sampleStack = -1;
 			break;
 		}
 
 	}
-	
+#else
+
+#pragma omp parallel for shared(stackSamples)
+	for (int i = lastStackSample; i < std::min(maxIndex, lastStackSample + SAMPLE_COUNT); ++i)
+	{
+		// create new sample
+		glm::vec3 worldPos = stack->getWorldPosition(i);
+
+		float val = 0.f;
+		if (stacks[0]->isInsideVolume(worldPos))
+		{
+			val = (float)stacks[0]->getSample(worldPos);
+		}
+
+		stackSamples[i] = glm::vec4(worldPos, val);
+
+	}
+
+	lastStackSample += SAMPLE_COUNT;
+
+	if (lastStackSample >= maxIndex)
+	{
+		std::cout << "[Sample] Updating actual stack data ... ";
+
+		// NOTE: this assumes that the stack will be a u16 stack
+		assert(dynamic_cast<SpimStackU16*>(stack));
+
+		std::vector<unsigned short> data(stackSamples.size());
+		for (size_t i = 0; i < stackSamples.size(); ++i)
+			data[i] = static_cast<unsigned short>(stackSamples[i].a);
+
+		stack->setContent(stack->getResolution(), &data[0]);
+		
+		// update actual stack
+		stack->update();
+		
+		std::cout << "done.\n";
+
+		char filename[256];
+		sprintf_s(filename, "c:/temp/stack_%d.tif", sampleStack);
+
+		// save result
+		std::cout << "[Sample] Saving result to \"" << filename << "\" ... \n";
+		stack->save(filename);
+
+		sampleStack = -1;
+	}
+
+#endif
+
 }
 
 
@@ -1772,7 +1815,7 @@ void CreatePhantomApp::startSampleStack(int n)
 	clearSampleStack();
 	sampleStack = n;
 
-	stackSamples.reserve(stacks[n]->getVoxelCount());
+	stackSamples.resize(stacks[n]->getVoxelCount());
 }
 
 void CreatePhantomApp::endSampleStack()
