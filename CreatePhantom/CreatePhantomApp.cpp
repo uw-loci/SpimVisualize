@@ -1578,7 +1578,7 @@ void CreatePhantomApp::createEmptyRandomStack()
 	auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
 	auto rand = std::bind(std::uniform_real_distribution<float>(-1.f, 1.f), std::mt19937(seed));
 
-	const glm::ivec3 resolution(1000, 1000, 80);
+	const glm::ivec3 resolution(1300, 1000, 100);
 
 	SpimStackU16* stack = new SpimStackU16;
 	stack->setContent(resolution, 0);
@@ -1789,6 +1789,6 @@ void CreatePhantomApp::deleteSelectedStack()
 
 	delete s;
 	updateGlobalBbox();
-	
+		
 	currentVolume = -1;
 }

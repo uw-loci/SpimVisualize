@@ -197,7 +197,14 @@ static void motion(int x, int y)
 		regoApp->panCamera(glm::vec2(dx, dy));
 
 	if (mouse.button[2])
-		regoApp->rotateCamera(glm::vec2(dt, dp));
+	{
+		if (glutGetModifiers() & GLUT_ACTIVE_SHIFT)
+			regoApp->panCamera(glm::vec2(dx, dy));
+		else
+			regoApp->rotateCamera(glm::vec2(dt, dp));
+
+
+	}
 
 	if (mouse.button[0])
 	{
@@ -376,9 +383,10 @@ int main(int argc, const char** argv)
 		*/
 
 	
-		regoApp->addSpimStack("e:/spim/zebra/spim_TL01_Angle0.ome.tiff");
-		regoApp->addSpimStack("e:/spim/zebra/spim_TL01_Angle1.ome.tiff");
-		regoApp->addSpimStack("e:/spim/zebra/spim_TL01_Angle2.ome.tiff");
+		regoApp->addSpimStack("e:/spim/phantom/test/phantom_1.tiff");
+		regoApp->addSpimStack("e:/spim/phantom/test/phantom_2.tiff");
+		regoApp->addSpimStack("e:/spim/phantom/test/phantom_3.tiff");
+		regoApp->addSpimStack("e:/spim/phantom/test/phantom_4.tiff");
 
 		regoApp->centerCamera();
 		regoApp->loadStackTransformations();
