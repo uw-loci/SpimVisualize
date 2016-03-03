@@ -43,8 +43,6 @@ public:
 	void resize(const glm::ivec2& newSize);
 	
 	void createEmptyRandomStack();
-	void sliceStack(int stack);
-
 	void startSampleStack(int stack);
 	void clearSampleStack();
 	void endSampleStack();
