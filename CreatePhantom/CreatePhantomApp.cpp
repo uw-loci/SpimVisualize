@@ -1734,6 +1734,12 @@ void CreatePhantomApp::addStackSamples()
 	gpuStackSampler->setUniform("planeScale", stack->getVoxelDimensions());
 
 	// set reference volume
+	gpuStackSampler->setUniform("inverseVolumeTransform", stacks[0]->getInverseTransform());
+	gpuStackSampler->setUniform("volumeScale", stacks[0]->getVoxelDimensions());
+	gpuStackSampler->setUniform("volumeResolution", stacks[0]->getWidth(), stacks[0]->getHeight(), stacks[0]->getDepth());
+
+
+
 
 	// draw the correct z-plane
 	glBegin(GL_QUADS);
@@ -1760,8 +1766,9 @@ void CreatePhantomApp::addStackSamples()
 
 
 	//fill in the correct slice of points
-	stackSamples.insert(stackSamples.end(), sliceSamples.begin(), sliceSamples.end());
-	//stackSamples.insert(std::end(sliceSamples), std::begin(sliceSamples), std::end(sliceSamples));
+	//stackSamples.insert(stackSamples.end(), sliceSamples.begin(), sliceSamples.end());
+	
+	stackSamples = sliceSamples;
 
 	
 	++lastStackSample;
