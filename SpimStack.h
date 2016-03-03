@@ -74,7 +74,7 @@ public:
 	glm::ivec3 getStackCoords(size_t index) const;
 
 	inline glm::ivec3 getResolution() const { return glm::ivec3(width, height, depth); }
-
+	inline const glm::vec3& getVoxelDimensions() const { return dimensions; }
 
 	inline const std::string& getFilename() const { return filename;  }
 

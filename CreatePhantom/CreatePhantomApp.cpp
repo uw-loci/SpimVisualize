@@ -1577,7 +1577,7 @@ void CreatePhantomApp::createEmptyRandomStack()
 	auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
 	auto rand = std::bind(std::uniform_real_distribution<float>(-1.f, 1.f), std::mt19937(seed));
 
-	const glm::ivec3 resolution(1000, 1000, 100);
+	const glm::ivec3 resolution(500, 500, 80);
 
 	SpimStackU16* stack = new SpimStackU16;
 	stack->setContent(resolution, 0);
@@ -1713,110 +1713,58 @@ void CreatePhantomApp::addStackSamples()
 	if (sampleStack == -1)
 		return;
 
+
+
 	SpimStack* stack = stacks[sampleStack];
 
-	const size_t maxIndex = stack->getWidth()*stack->getHeight()*stack->getDepth();
+	if (lastStackSample == stack->getDepth())
+		return;
+	
+	std::cout << "[Sampling] Rendering slice " << lastStackSample << " ... \n";
 
-	// one scanline at a time
-	const int SAMPLE_COUNT = 128;// stack->getWidth() / 2;
+	stackSamplerTarget->bind();
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	
+	gpuStackSampler->bind();
+	
+	// set sampling volume
+	gpuStackSampler->setUniform("planeTransform", stack->getTransform());
+	gpuStackSampler->setUniform("zPlane", (float)lastStackSample);
+	gpuStackSampler->setUniform("planeResolution", (float)stack->getWidth(), (float)stack->getHeight());
+	gpuStackSampler->setUniform("planeScale", stack->getVoxelDimensions());
+
+	// set reference volume
+
+	// draw the correct z-plane
+	glBegin(GL_QUADS);
+	glVertex2i(0, 0);
+	glVertex2i(1, 0);
+	glVertex2i(1, 1);
+	glVertex2i(0, 1);
+	glEnd();
 
 
-
-#ifdef USE_OLD_SAMPLING
-	for (int i = 0; i < SAMPLE_COUNT; ++i)
-	{		
-		// create new sample
-		glm::vec3 worldPos = stack->getWorldPosition(lastStackSample);
+	gpuStackSampler->disable();
+	stackSamplerTarget->disable();
 		
-		float val = 0.f;
-		if (stacks[0]->isInsideVolume(worldPos))
-		{
-			val = (float)stacks[0]->getSample(worldPos);
-		}
 
-		//stackSamples.push_back(glm::vec4(worldPos, val));	
-		stackSamples[lastStackSample] = glm::vec4(worldPos, val);
-		stack->setSample(stack->getStackCoords(lastStackSample), val);
+	// read back
+	stackSamplerTarget->bind();
+	std::vector<glm::vec4> sliceSamples(stack->getWidth()*stack->getHeight());
+	glReadBuffer(GL_COLOR_ATTACHMENT0);
 
+	glReadPixels(0, 0, stackSamplerTarget->getWidth(), stackSamplerTarget->getHeight(), GL_RGBA, GL_FLOAT, glm::value_ptr(sliceSamples[0]));
 
-
-		++lastStackSample;
-		if (lastStackSample >= maxIndex)
-		{
-			// update actual stack
-			stack->update();
+	stackSamplerTarget->disable();
+	glReadBuffer(GL_BACK);
 
 
-			char filename[256];
-			sprintf_s(filename, "c:/temp/stack_%d.tif", sampleStack);
-
-			// save result
-			std::cout << "[Sample] Saving result to \"" << filename << "\" ... \n";
-			stack->save(filename);
-			
-			sampleStack = -1;
-			break;
-		}
-
-	}
-#else
+	//fill in the correct slice of points
+	stackSamples.insert(stackSamples.end(), sliceSamples.begin(), sliceSamples.end());
+	//stackSamples.insert(std::end(sliceSamples), std::begin(sliceSamples), std::end(sliceSamples));
 
 	
-	int i = 0;
-	int minI = lastStackSample;
-	int maxI = std::min(maxIndex, lastStackSample + SAMPLE_COUNT);
-
-	
-#pragma loop(hint_parallel(8))
-		for (i = lastStackSample; i < maxI; ++i)
-		{
-			// create new sample
-			glm::vec3 worldPos = stack->getWorldPosition(i);
-
-			float val = 0.f;
-			if (stacks[0]->isInsideVolume(worldPos))
-			{
-				val = (float)stacks[0]->getSample(worldPos);
-			}
-
-			stackSamples[i] = glm::vec4(worldPos, val);
-
-		}
-
-
-	lastStackSample += SAMPLE_COUNT;
-
-	if (lastStackSample >= maxIndex)
-	{
-		std::cout << "[Sample] Updating actual stack data ... ";
-
-		// NOTE: this assumes that the stack will be a u16 stack
-		assert(dynamic_cast<SpimStackU16*>(stack));
-
-		std::vector<unsigned short> data(stackSamples.size());
-		for (size_t i = 0; i < stackSamples.size(); ++i)
-			data[i] = static_cast<unsigned short>(stackSamples[i].a);
-
-		stack->setContent(stack->getResolution(), &data[0]);
-		
-
-		std::cout << "done.\n";
-
-		// update actual stack
-		stack->update();
-		
-
-		char filename[256];
-		sprintf_s(filename, "c:/temp/stack_%d.tif", sampleStack);
-
-		// save result
-		std::cout << "[Sample] Saving result to \"" << filename << "\" ... \n";
-		stack->save(filename);
-
-		sampleStack = -1;
-	}
-
-#endif
+	++lastStackSample;
 
 }
 
@@ -1832,7 +1780,12 @@ void CreatePhantomApp::startSampleStack(int n)
 	clearSampleStack();
 	sampleStack = n;
 
-	stackSamples.resize(stacks[n]->getVoxelCount());
+	stackSamples.reserve(stacks[n]->getVoxelCount());
+
+	delete stackSamplerTarget;
+	stackSamplerTarget = new Framebuffer(stacks[n]->getWidth(), stacks[n]->getHeight(), GL_RGBA32F, GL_FLOAT);
+
+
 }
 
 void CreatePhantomApp::endSampleStack()
