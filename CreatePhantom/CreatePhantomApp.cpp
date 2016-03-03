@@ -1718,10 +1718,10 @@ void CreatePhantomApp::addStackSamples()
 
 	SpimStack* stack = stacks[sampleStack];
 
-	if (lastStackSample == stack->getDepth())
+	if (lastStackSample >= stack->getDepth() || lastStackSample < 0)
 		return;
 	
-	std::cout << "[Sampling] Rendering slice " << lastStackSample << " ... \n";
+	//std::cout << "[Sampling] Rendering slice " << lastStackSample << " ... \n";
 
 	stackSamplerTarget->bind();
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1766,6 +1766,15 @@ void CreatePhantomApp::addStackSamples()
 	glReadBuffer(GL_BACK);
 
 
+
+	// set the sample
+	std::vector<double> samples(sliceSamples.size());
+	for (size_t i = 0; i < samples.size(); ++i)
+		samples[i] = sliceSamples[i].a;
+
+	stack->setPlaneSamples(samples, lastStackSample);
+	
+
 	//fill in the correct slice of points
 	//stackSamples.insert(stackSamples.end(), sliceSamples.begin(), sliceSamples.end());
 	
@@ -1773,6 +1782,13 @@ void CreatePhantomApp::addStackSamples()
 
 	
 	++lastStackSample;
+	if (lastStackSample == stack->getDepth())
+	{
+		stack->update();
+		endSampleStack();
+
+		stackSamples.clear();
+	}
 
 }
 
@@ -1787,8 +1803,9 @@ void CreatePhantomApp::startSampleStack(int n)
 
 	clearSampleStack();
 	sampleStack = n;
+	std::cout << "[Sample] Selecting stack " << sampleStack << " for sampling.\n";
 
-	stackSamples.reserve(stacks[n]->getVoxelCount());
+	stackSamples.reserve(stacks[n]->getPlanePixelCount());
 
 	delete stackSamplerTarget;
 	stackSamplerTarget = new Framebuffer(stacks[n]->getWidth(), stacks[n]->getHeight(), GL_RGBA32F, GL_FLOAT);

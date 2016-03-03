@@ -1128,6 +1128,25 @@ double SpimStack::getSample(const glm::ivec3& stackCoords) const
 }
 
 
+void SpimStack::setPlaneSamples(const std::vector<double>& values, size_t zplane)
+{
+	if (zplane >= depth)
+		throw std::runtime_error("[Stack] Plane " + std::to_string(zplane) + " is invalid.");
+
+	size_t planeSize = width*height;
+
+	if (values.size() < planeSize)
+		throw std::runtime_error("[Stack] Too few values, got " + std::to_string(values.size()) + ", expected at least " + std::to_string(planeSize));
+
+
+	size_t offset = planeSize*zplane;
+	for (size_t i = 0; i < planeSize; ++i)
+		this->setSample(offset + i, values[i]);
+	
+}
+
+
+
 SpimStackU16::SpimStackU16() : SpimStack(), volume(nullptr)
 {
 }

@@ -41,6 +41,11 @@ public:
 
 	inline double getSample(const glm::vec3& worldCoords) const { return getSample(getStackVoxelCoords(worldCoords)); }
 	double getSample(const glm::ivec3& stackCoords) const;
+	
+	// set all samples of a single z plane
+	void setPlaneSamples(const std::vector<double>& values, size_t zplane);
+
+
 
 	// updates the internal stats and the texture
 	virtual void update();
@@ -65,6 +70,8 @@ public:
 	glm::ivec3 getStackVoxelCoords(const glm::vec4& worldCoords) const;
 	inline glm::ivec3 getStackVoxelCoords(const glm::vec3& worldCoords) const { return getStackVoxelCoords(glm::vec4(worldCoords, 1.f)); }
 	
+	inline size_t getPlanePixelCount() const { return width*height; }
+
 	inline const unsigned int getTexture() const { return volumeTextureId; }
 	
 	Threshold getLimits() const;
