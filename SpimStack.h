@@ -39,7 +39,8 @@ public:
 	inline void setSample(const glm::ivec3& pos, double value) { setSample(getIndex(pos.x, pos.y, pos.z), value);	}
 	virtual void setSample(const size_t index, double value) = 0;
 
-	virtual double getSample(const glm::vec3& worldCoords);
+	inline double getSample(const glm::vec3& worldCoords) const { return getSample(getStackVoxelCoords(worldCoords)); }
+	double getSample(const glm::ivec3& stackCoords) const;
 
 	// updates the internal stats and the texture
 	virtual void update();

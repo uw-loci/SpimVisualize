@@ -11,6 +11,7 @@
 #include "StackRegistration.h"
 #include "TinyStats.h"
 
+class IStackSampler;
 class Framebuffer;
 class Shader;
 class ILayout;
@@ -163,6 +164,10 @@ private:
 		
 	Shader*					drawPosition;
 
+	// for GPU stack sampling
+	Shader*					gpuStackSampler;
+	Framebuffer*			stackSamplerTarget;
+
 	// for contrast mapping
 	Shader*					tonemapper;
 
@@ -205,6 +210,7 @@ private:
 	int sampleStack = -1;
 
 	
+	IStackSampler*				stackSampler;
 	std::vector<glm::vec4>		stackSamples;
 	void drawStackSamples() const;
 

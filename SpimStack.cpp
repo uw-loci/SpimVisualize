@@ -1111,10 +1111,8 @@ void SpimStack::updateStats()
 }
 
 
-double SpimStack::getSample(const glm::vec3& worldCoords)
+double SpimStack::getSample(const glm::ivec3& stackCoords) const
 {
-
-	ivec3 stackCoords = getStackVoxelCoords(worldCoords);
 	double result = 0.f;
 
 	// clamp stack coords
@@ -1125,9 +1123,10 @@ double SpimStack::getSample(const glm::vec3& worldCoords)
 		size_t index = getIndex(stackCoords);
 		result = getValue(index);
 	}
-	
+
 	return result;
 }
+
 
 SpimStackU16::SpimStackU16() : SpimStack(), volume(nullptr)
 {

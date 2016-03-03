@@ -35,12 +35,14 @@ const unsigned int STD_SLICE_COUNT = 100;
 
 
 #define USE_RAYTRACER 
+#define USE_GPU_SAMPLING
 
 CreatePhantomApp::CreatePhantomApp(const glm::ivec2& res) : pointShader(nullptr), sliceShader(nullptr), volumeShader(nullptr),
-	volumeRaycaster(nullptr), drawQuad(nullptr), volumeDifferenceShader(nullptr), tonemapper(nullptr), layout(nullptr),
+volumeRaycaster(nullptr), drawQuad(nullptr), volumeDifferenceShader(nullptr), gpuStackSampler(nullptr), stackSamplerTarget(nullptr),
+	tonemapper(nullptr), layout(nullptr),
 	drawGrid(true), drawBboxes(false), drawSlices(false), sliceCount(100),
 	configPath("./"), cameraMoving(false), histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f),
-	subsampleOnCameraMove(false), useImageAutoContrast(false), currentVolume(-1), drawPosition(nullptr)
+	subsampleOnCameraMove(false), useImageAutoContrast(false), currentVolume(-1), drawPosition(nullptr), stackSampler(nullptr)
 {
 	shaderPath = "../shaders/";
 
@@ -58,6 +60,8 @@ CreatePhantomApp::CreatePhantomApp(const glm::ivec2& res) : pointShader(nullptr)
 	volumeRenderTarget = new Framebuffer(1024, 1024, GL_RGBA32F, GL_FLOAT);
 
 	rayStartTarget = new Framebuffer(512, 512, GL_RGBA32F, GL_FLOAT);
+
+	
 
 }
 
@@ -118,6 +122,9 @@ void CreatePhantomApp::reloadShaders()
 
 	delete drawPosition;
 	drawPosition = new Shader(shaderPath + "drawPosition.vert", shaderPath + "drawPosition.frag");
+
+	delete gpuStackSampler;
+	gpuStackSampler = new Shader(shaderPath + "samplePlane.vert", shaderPath + "samplePlane.frag");
 
 }
 
@@ -1570,7 +1577,7 @@ void CreatePhantomApp::createEmptyRandomStack()
 	auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
 	auto rand = std::bind(std::uniform_real_distribution<float>(-1.f, 1.f), std::mt19937(seed));
 
-	const glm::ivec3 resolution(200, 200, 80);
+	const glm::ivec3 resolution(1000, 1000, 100);
 
 	SpimStackU16* stack = new SpimStackU16;
 	stack->setContent(resolution, 0);
@@ -1710,7 +1717,8 @@ void CreatePhantomApp::addStackSamples()
 
 	const size_t maxIndex = stack->getWidth()*stack->getHeight()*stack->getDepth();
 
-	const int SAMPLE_COUNT = 512;
+	// one scanline at a time
+	const int SAMPLE_COUNT = 128;// stack->getWidth() / 2;
 
 
 
@@ -1753,21 +1761,28 @@ void CreatePhantomApp::addStackSamples()
 	}
 #else
 
-#pragma omp parallel for shared(stackSamples)
-	for (int i = lastStackSample; i < std::min(maxIndex, lastStackSample + SAMPLE_COUNT); ++i)
-	{
-		// create new sample
-		glm::vec3 worldPos = stack->getWorldPosition(i);
+	
+	int i = 0;
+	int minI = lastStackSample;
+	int maxI = std::min(maxIndex, lastStackSample + SAMPLE_COUNT);
 
-		float val = 0.f;
-		if (stacks[0]->isInsideVolume(worldPos))
+	
+#pragma loop(hint_parallel(8))
+		for (i = lastStackSample; i < maxI; ++i)
 		{
-			val = (float)stacks[0]->getSample(worldPos);
+			// create new sample
+			glm::vec3 worldPos = stack->getWorldPosition(i);
+
+			float val = 0.f;
+			if (stacks[0]->isInsideVolume(worldPos))
+			{
+				val = (float)stacks[0]->getSample(worldPos);
+			}
+
+			stackSamples[i] = glm::vec4(worldPos, val);
+
 		}
 
-		stackSamples[i] = glm::vec4(worldPos, val);
-
-	}
 
 	lastStackSample += SAMPLE_COUNT;
 
@@ -1784,10 +1799,12 @@ void CreatePhantomApp::addStackSamples()
 
 		stack->setContent(stack->getResolution(), &data[0]);
 		
+
+		std::cout << "done.\n";
+
 		// update actual stack
 		stack->update();
 		
-		std::cout << "done.\n";
 
 		char filename[256];
 		sprintf_s(filename, "c:/temp/stack_%d.tif", sampleStack);
