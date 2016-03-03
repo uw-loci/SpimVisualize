@@ -11,7 +11,6 @@
 #include "StackRegistration.h"
 #include "TinyStats.h"
 
-class IStackSampler;
 class Framebuffer;
 class Shader;
 class ILayout;
@@ -208,16 +207,13 @@ private:
 	float maxImageContrast;
 
 	int sampleStack = -1;
-
-	
-	IStackSampler*				stackSampler;
+		
 	std::vector<glm::vec4>		stackSamples;
 	void drawStackSamples() const;
 
 	size_t						lastStackSample;
 	void addStackSamples();
-
-
+	
 
 	void calculateImageContrast(const std::vector<glm::vec4>& rgbaImage);
 	double calculateImageScore();

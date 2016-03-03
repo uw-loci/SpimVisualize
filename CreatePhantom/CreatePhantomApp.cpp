@@ -42,7 +42,7 @@ volumeRaycaster(nullptr), drawQuad(nullptr), volumeDifferenceShader(nullptr), gp
 	tonemapper(nullptr), layout(nullptr),
 	drawGrid(true), drawBboxes(false), drawSlices(false), sliceCount(100),
 	configPath("./"), cameraMoving(false), histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f),
-	subsampleOnCameraMove(false), useImageAutoContrast(false), currentVolume(-1), drawPosition(nullptr), stackSampler(nullptr)
+	subsampleOnCameraMove(false), useImageAutoContrast(false), currentVolume(-1), drawPosition(nullptr)
 {
 	shaderPath = "../shaders/";
 
@@ -77,7 +77,8 @@ CreatePhantomApp::~CreatePhantomApp()
 	delete volumeDifferenceShader;
 	delete volumeRaycaster;
 	delete drawPosition;
-
+	delete gpuStackSampler;
+	delete stackSamplerTarget;
 
 	for (size_t i = 0; i < stacks.size(); ++i)
 		delete stacks[i];
