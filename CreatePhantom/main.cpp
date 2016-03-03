@@ -68,6 +68,9 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == '\b')
 		app->undoLastTransform();
 
+	// delete
+	if (key == 127)
+		app->deleteSelectedStack();
 	
 	if (key == ',')
 		app->decreaseMinThreshold();
@@ -357,7 +360,7 @@ int main(int argc, const char** argv)
 		app = new CreatePhantomApp(glm::ivec2(1024, 768));
 		app->setConfigPath("e:/app/");
 
-		app->addSpimStack("e:/spim/zebra/spim_TL01_Angle0.ome.tiff");
+		app->addSpimStack("e:/spim/phantom/spim_TL01_Angle4.ome.tiff");
 		
 		app->centerCamera();
 		app->loadStackTransformations();

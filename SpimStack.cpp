@@ -125,10 +125,13 @@ void SpimStack::load(const std::string& file)
 
 void SpimStack::save(const std::string& file)
 {
-	if (filename.find(".bin") == string::npos)
+	if (file.find(".bin") == string::npos)
 		saveImage(file);
 	else
 		saveBinary(file);
+
+	if (filename.empty())
+		filename = file;
 }
 
 

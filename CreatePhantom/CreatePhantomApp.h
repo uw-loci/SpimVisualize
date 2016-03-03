@@ -42,10 +42,16 @@ public:
 
 	void resize(const glm::ivec2& newSize);
 	
+
+	/// \name Resampling
+	/// \{
+
 	void createEmptyRandomStack();
 	void startSampleStack(int stack);
 	void clearSampleStack();
 	void endSampleStack();
+
+	/// \}
 
 	//inline size_t getStacksCount() const { return stacks.size(); }
 	void toggleSelectStack(int n);
@@ -60,6 +66,8 @@ public:
 	void undoLastTransform();
 	void moveStack(const glm::vec2& delta);
 	void rotateCurrentStack(float rotY);
+
+	void deleteSelectedStack();
 
 	void inspectOutputImage(const glm::ivec2& cursor);
 

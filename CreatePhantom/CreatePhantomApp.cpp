@@ -1583,7 +1583,10 @@ void CreatePhantomApp::createEmptyRandomStack()
 	SpimStackU16* stack = new SpimStackU16;
 	stack->setContent(resolution, 0);
 
-
+	stacks.push_back(stack);
+	addInteractionVolume(stack);
+	saveVolumeTransform(stacks.size() - 1);
+	
 	// copy the transform of the base stack
 	stack->setTransform(stacks[0]->getTransform());
 
@@ -1600,8 +1603,6 @@ void CreatePhantomApp::createEmptyRandomStack()
 	
 	std::cout << "[App] Created random stack with dT " << delta << " and R=" << a << std::endl;
 
-	stacks.push_back(stack);
-	addInteractionVolume(stack);
 }
 
 
@@ -1753,4 +1754,41 @@ void CreatePhantomApp::clearSampleStack()
 {
 	stackSamples.clear();
 	lastStackSample = 0;
+}
+
+void CreatePhantomApp::deleteSelectedStack()
+{
+	if (currentVolume == -1)
+	{
+		std::cout << "[Stack] No valid stack selected.\n";
+		return;
+	}
+
+	if (currentVolume == 0)
+	{
+		std::cout << "[Stack] Cannot delete the first stack.\n";
+		return;
+	}
+
+	std::cout << "[Stack] Deleting volume " << currentVolume << std::endl;
+	InteractionVolume* s = stacks[currentVolume];
+	
+	stacks.erase(stacks.begin() + currentVolume);
+	interactionVolumes.erase(interactionVolumes.begin() + currentVolume);
+
+	// also remove all transformation history containing this stack
+	auto it = transformUndoChain.begin();
+	while (it != transformUndoChain.end())
+	{
+		if (it->volume == s)
+			transformUndoChain.erase(it);
+		else
+			++it;
+	}
+
+
+	delete s;
+	updateGlobalBbox();
+	
+	currentVolume = -1;
 }
