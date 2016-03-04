@@ -1,6 +1,7 @@
 
 #include "SpimRegistrationApp.h"
 #include "SimplePointcloud.h"
+#include "SpimStack.h"
 
 #include <GL/glew.h>
 #include <GL/freeglut.h>
@@ -381,12 +382,17 @@ int main(int argc, const char** argv)
 		regoApp->addPointcloud("e:/urs/ES_20151111.bin");
 		regoApp->addPointcloud("e:/urs/ES_20151122.bin");
 		*/
-
-	
+		
+		/*
 		regoApp->addSpimStack("e:/spim/phantom/test/phantom_1.tiff");
 		regoApp->addSpimStack("e:/spim/phantom/test/phantom_2.tiff");
 		regoApp->addSpimStack("e:/spim/phantom/test/phantom_3.tiff");
 		regoApp->addSpimStack("e:/spim/phantom/test/phantom_4.tiff");
+		*/
+
+		SpimStack* stack = new SpimStackU8;
+		stack->load("e:/Volumes/frog_256x256x44.8bit.raw");
+		regoApp->addSpimStack(stack);
 
 		regoApp->centerCamera();
 		regoApp->loadStackTransformations();

@@ -335,14 +335,13 @@ void SpimRegistrationApp::addSpimStack(const std::string& filename)
 	stack->load(filename);
 	stack->subsample();
 
-	/*
-	stack->subsample(false);
-	stack->subsample();
-	*/
+	addSpimStack(stack);
+}
 
+void SpimRegistrationApp::addSpimStack(SpimStack* stack)
+{
 	stacks.push_back(stack);
 	addInteractionVolume(stack);
-	
 }
 
 void SpimRegistrationApp::addPointcloud(const std::string& filename)

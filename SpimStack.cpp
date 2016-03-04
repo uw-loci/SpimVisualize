@@ -100,11 +100,13 @@ void SpimStack::load(const std::string& file)
 	filename = file;
 
 
-	if (filename.find(".bin") == string::npos)
-		loadImage(filename);
-	else
-	{
+	const std::string ext = filename.substr(filename.find_last_of(".")+1);
+	std::cout << "[Debug] Extension: " << ext << std::endl;
 
+	if (ext == "tiff")
+		loadImage(filename);
+	else if (ext == "bin")
+	{
 		string s = filename.substr(filename.find_last_of("_"));
 
 		cout << "[Debug] " << s << endl;
@@ -118,6 +120,28 @@ void SpimStack::load(const std::string& file)
 
 		loadBinary(filename, res);
 	}
+	else if (ext == "raw")
+	{
+		
+		string s = filename.substr(filename.find_last_of("_"));
+
+		cout << "[Debug] " << s << endl;
+
+		ivec3 res;
+		int bits;
+#ifdef _WIN32
+		assert(sscanf_s(s.c_str(), "_%dx%dx%d.%dbit.raw", &res.x, &res.y, &res.z, &bits) == 4);
+#endif
+		cout << "[Debug] Reading binary volume with resolution " << res << endl;
+		assert(getBytesPerVoxel() == bits / 8);
+
+		assert(res.x > 0 && res.y > 0 && res.z > 0);
+
+		loadBinary(filename, res);
+	}
+
+	else
+		throw std::runtime_error("Unknown file extension \"" + ext + "\"");
 
 	updateTexture();
 	updateStats();
@@ -133,6 +157,7 @@ void SpimStack::save(const std::string& file)
 	if (filename.empty())
 		filename = file;
 }
+
 
 
 
@@ -521,6 +546,8 @@ void SpimStack::drawXPlanes(const glm::vec3& view) const
 	glEnd();
 }
 #endif
+
+
 
 vector<vec4> SpimStack::extractTransformedPoints() const
 {
@@ -1268,8 +1295,6 @@ void SpimStackU16::saveImage(const std::string& filename)
 	FreeImage_CloseMultiBitmap(fmb);
 }
 
-
-
 void SpimStackU16::subsample(bool updateTextureData)
 {
 	assert(volume);
@@ -1514,4 +1539,55 @@ void SpimStack::addNoise(float amount, double valueRange)
 
 #endif
 	
+}
+
+
+void SpimStackU8::setContent(const glm::ivec3& resolution, const void* data)
+{
+	delete volume;
+	width = resolution.x;
+	height = resolution.y;
+	depth = resolution.z;
+	
+	volume = new unsigned char[width*height*depth];
+	memcpy(volume, data, width*height*depth*sizeof(unsigned char));
+
+	update();
+}
+
+void SpimStackU8::setSample(const size_t index, double value)
+{
+	assert(index < width*height*depth);
+	volume[index] = static_cast<unsigned char>(value);
+}
+
+void SpimStackU8::saveBinary(const std::string& filename)
+{
+	assert(volume);
+	std::ofstream file(filename);
+	assert(file.is_open());
+	file.write(reinterpret_cast<const char*>(volume), width*height*depth*sizeof(unsigned char));
+}
+
+void SpimStackU8::saveImage(const std::string& filename)
+{
+
+	FIMULTIBITMAP* fmb = FreeImage_OpenMultiBitmap(FIF_TIFF, filename.c_str(), TRUE, FALSE);
+	assert(fmb);
+
+	for (unsigned int z = 0; z < depth; ++z)
+	{
+		FIBITMAP* bm = FreeImage_Allocate(width, height, 8);
+		assert(bm);
+
+		BYTE* data = FreeImage_GetBits(bm);
+		memcpy(data, &volume[width*height*z], width*height*sizeof(unsigned char));
+
+		FreeImage_AppendPage(fmb, bm);
+
+		FreeImage_Unload(bm);
+	}
+
+	FreeImage_CloseMultiBitmap(fmb);
+
 }

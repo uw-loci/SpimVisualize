@@ -50,6 +50,9 @@ public:
 	// updates the internal stats and the texture
 	virtual void update();
 			
+
+	virtual size_t getBytesPerVoxel() const = 0;
+
 	// extracts the points in world coords. The w coordinate contains the point's value
 	std::vector<glm::vec4> extractTransformedPoints() const;
 	// extracts the points in world space and clip them against the other's transformed bounding box. The w coordinate contains the point's value
@@ -157,6 +160,8 @@ public:
 	virtual void setContent(const glm::ivec3& resolution, const void* data);
 	virtual void setSample(const size_t index, double value);
 
+	virtual size_t getBytesPerVoxel() const { return 2; }
+
 private:
 	unsigned short*			volume;
 
@@ -166,6 +171,7 @@ private:
 
 	virtual void loadImage(const std::string& filename);
 	virtual void loadBinary(const std::string& filename, const glm::ivec3& resolution);
+	
 
 	virtual void saveBinary(const std::string& filename);
 	virtual void saveImage(const std::string& filename);
@@ -188,6 +194,10 @@ public:
 	~SpimStackU8();
 
 	virtual void subsample(bool updateTexture = true);
+	virtual void setContent(const glm::ivec3& resolution, const void* data);
+	virtual void setSample(const size_t index, double value);
+
+	virtual size_t getBytesPerVoxel() const { return 1; }
 
 private:
 	unsigned char*			volume;
@@ -197,6 +207,8 @@ private:
 	virtual void loadImage(const std::string& filename);
 	virtual void loadBinary(const std::string& filename, const glm::ivec3& resolution);
 
+	virtual void saveBinary(const std::string& filename);
+	virtual void saveImage(const std::string& filename);
 
 	inline double getValue(size_t index) const
 	{

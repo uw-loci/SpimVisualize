@@ -28,7 +28,7 @@ public:
 	SpimRegistrationApp(const glm::ivec2& resolution);
 	~SpimRegistrationApp();
 	
-
+	void addSpimStack(SpimStack* stack);
 	void addSpimStack(const std::string& filename);
 	void subsampleAllStacks();
 
