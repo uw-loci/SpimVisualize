@@ -130,7 +130,8 @@ void SpimStack::load(const std::string& file)
 		ivec3 res;
 		int bits;
 #ifdef _WIN32
-		assert(sscanf_s(s.c_str(), "_%dx%dx%d.%dbit.raw", &res.x, &res.y, &res.z, &bits) == 4);
+		int count = sscanf_s(s.c_str(), "_%dx%dx%d.%dbit.raw", &res.x, &res.y, &res.z, &bits);
+		assert( count == 4);
 #endif
 		cout << "[Debug] Reading binary volume with resolution " << res << endl;
 		assert(getBytesPerVoxel() == bits / 8);

@@ -383,17 +383,22 @@ int main(int argc, const char** argv)
 		regoApp->addPointcloud("e:/urs/ES_20151122.bin");
 		*/
 		
-		/*
+		
 		regoApp->addSpimStack("e:/spim/phantom/test/phantom_1.tiff");
 		regoApp->addSpimStack("e:/spim/phantom/test/phantom_2.tiff");
 		regoApp->addSpimStack("e:/spim/phantom/test/phantom_3.tiff");
 		regoApp->addSpimStack("e:/spim/phantom/test/phantom_4.tiff");
-		*/
-
+		
+		/*
 		SpimStack* stack = new SpimStackU8;
 		stack->load("e:/Volumes/frog_256x256x44.8bit.raw");
-		regoApp->addSpimStack(stack);
+		*/
+		/*
+		SpimStack* stack = new SpimStackU16;
+		stack->load("e:/Volumes/Tooth_256x256x161.16bit.raw");
 
+		regoApp->addSpimStack(stack);
+		*/
 		regoApp->centerCamera();
 		regoApp->loadStackTransformations();
 		//regoApp->loadContrastSettings();
