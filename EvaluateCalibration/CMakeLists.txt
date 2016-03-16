@@ -5,7 +5,7 @@ project (EvaluateCalibration)
 add_definitions( -DBOOST_ALL_NO_LIB )
 
 # disable graphics
-# add_definitions( -DNO_GRAPHICS)
+add_definitions( -DNO_GRAPHICS)
 
 set(Boost_USE_STATIC_LIBS OFF) 
 set(Boost_USE_MULTITHREADED ON)  
@@ -13,6 +13,7 @@ set(Boost_USE_STATIC_RUNTIME OFF)
 
 SET(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} "C:/dev/boost_1_59_0")
 SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} "C:/dev/boost_1_59_0/lib64-msvc-12.0")
+
 
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
@@ -28,11 +29,12 @@ endif()
 
 find_package (GLM REQUIRED)
 find_package (Boost 1.57.0 REQUIRED COMPONENTS)
+find_package (FreeImage REQUIRED)
 
 include_directories("${PROJECT_BINARY_DIR}")
 include_directories("..")
 
-add_executable(EvaluateCalibration main.cpp)
+add_executable(EvaluateCalibration main.cpp ../AABB.h ../AABB.cpp ../TinyStats.h ../SpimStack.h ../SpimStack.cpp ../InteractionVolume.h ../InterActionVolume.cpp)
 
 if (GLM_FOUND)
 	include_directories(${GLM_INCLUDE_DIRS})
@@ -44,3 +46,7 @@ if (Boost_FOUND)
 	target_link_libraries(EvaluateCalibration ${Boost_LIBRARIES})
 endif (Boost_FOUND)
 
+if (FREEIMAGE_FOUND)
+	include_directories(${FREEIMAGE_INCLUDE_PATH})
+	target_link_libraries(EvaluateCalibration ${FREEIMAGE_LIBRARIES})
+endif (FREEIMAGE_FOUND)

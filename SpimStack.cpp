@@ -25,7 +25,10 @@
 #include <glm/gtx/transform2.hpp>
 
 #include <FreeImage.h>
+
+#ifndef NO_GRAPHICS
 #include <GL/glew.h>
+#endif
 
 #ifdef ENABLE_PCL
 #include <pcl/common/common.h>
