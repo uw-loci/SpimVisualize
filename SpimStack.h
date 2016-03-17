@@ -18,10 +18,10 @@ struct Hourglass;
 class SpimStack : public InteractionVolume
 {
 public:
-	SpimStack();
+	static SpimStack* load(const std::string& filename);
+		
 	virtual ~SpimStack();
 	
-	void load(const std::string& filename);
 	void save(const std::string& filename);
 
 	virtual void drawSlices(Shader* s, const glm::vec3& viewDir) const;
@@ -85,6 +85,7 @@ public:
 
 	inline glm::ivec3 getResolution() const { return glm::ivec3(width, height, depth); }
 	inline const glm::vec3& getVoxelDimensions() const { return dimensions; }
+	void setVoxelDimensions(const glm::vec3& dimensions);
 
 	inline const std::string& getFilename() const { return filename;  }
 
@@ -105,6 +106,8 @@ public:
 	inline size_t getVoxelCount() const { return width*height*depth; }
 
 protected:
+	SpimStack();
+	
 	glm::vec3			dimensions;
 
 	unsigned int		width, height, depth;
@@ -191,6 +194,7 @@ private:
 class SpimStackU8 : public SpimStack
 {
 public:
+	SpimStackU8(); 
 	~SpimStackU8();
 
 	virtual void subsample(bool updateTexture = true);
@@ -202,6 +206,8 @@ public:
 private:
 	unsigned char*			volume;
 
+	SpimStackU8(const SpimStackU8&);
+	
 	virtual void updateTexture();
 
 	virtual void loadImage(const std::string& filename);

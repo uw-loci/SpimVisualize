@@ -250,7 +250,9 @@ void CreatePhantomApp::saveContrastSettings() const
 	if (file.is_open())
 	{
 
-		assert(file.is_open());
+		if (!file.is_open())
+			throw std::runtime_error("Unable to open contrast file \"" + filename + "\"!");
+
 
 		std::cout << "[File] Saving contrast settings to \"" << filename << "\"\n";
 
@@ -286,16 +288,19 @@ void CreatePhantomApp::loadContrastSettings()
 
 void CreatePhantomApp::addSpimStack(const std::string& filename)
 {
-	SpimStack* stack = new SpimStackU16;
-	
-	stack->load(filename);
-	stack->subsample();
+	SpimStack* stack = SpimStack::load(filename);
 
 	/*
 	stack->subsample(false);
 	stack->subsample();
 	*/
 
+	this->addSpimStack(stack);
+}
+
+
+void CreatePhantomApp::addSpimStack(SpimStack* stack)
+{
 	stacks.push_back(stack);
 	addInteractionVolume(stack);
 	

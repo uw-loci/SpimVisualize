@@ -95,59 +95,105 @@ void SpimStack::update()
 	updateTexture();
 }
 
-void SpimStack::load(const std::string& file)
+
+static void getStackInfoFromFilename(const std::string& filename, glm::ivec3& res, int& depth)
 {
-	if (!filename.empty())
-		throw std::runtime_error("File already loaded: \"" + filename + "\"!");
+	string s = filename.substr(filename.find_last_of("_")+1);
+	s = s.substr(0, s.find_last_of("."));
+
+	cout << "[Debug] " << s << endl;
 	
-	filename = file;
+#ifdef _WIN32
+	int result = sscanf_s(s.c_str(), "%dx%dx%d.%dbit", &res.x, &res.y, &res.z, &depth);
+	assert( result == 4);
+#else
+	int result = sscanf_s(s.c_str(), "%dx%dx%d.%dbit", &res.x, &res.y, &res.z, &depth);
+	assert(result == 4);
+#endif
 
 
-	const std::string ext = filename.substr(filename.find_last_of(".")+1);
+	cout << "[Stack] Read volume info: " << res << ", " << depth << " bits.\n";
+
+}
+
+void SpimStack::setVoxelDimensions(const glm::vec3& dim)
+{
+	this->dimensions = dim;
+
+	// update bbox
+
+	cout << "[Stack] Calculating bbox ... ";
+	vec3 vol = dimensions * vec3(width, height, depth);
+	bbox.min = vec3(0.f); // -vol * 0.5f;
+	bbox.max = vol;// *0.5f;
+	cout << "done.\n";
+}
+
+
+SpimStack* SpimStack::load(const std::string& file)
+{
+	const std::string ext = file.substr(file.find_last_of(".")+1);
 	std::cout << "[Debug] Extension: " << ext << std::endl;
 
+
+	SpimStack* stack = nullptr;
+
+
 	if (ext == "tiff")
-		loadImage(filename);
-	else if (ext == "bin")
 	{
-		string s = filename.substr(filename.find_last_of("_"));
+		// find bit depth from image header
+		FIMULTIBITMAP* fmb = FreeImage_OpenMultiBitmap(FIF_TIFF, file.c_str(), FALSE, TRUE, 0L, FIF_LOAD_NOPIXELS);
 
-		cout << "[Debug] " << s << endl;
-		ivec3 res;
-#ifdef _WIN32
-		assert(sscanf_s(s.c_str(), "_%dx%dx%d.bin", &res.x, &res.y, &res.z) == 3);
-#else
-		assert(sscanf(s.c_str(), "_%dx%dx%d.bin", &res.x, &res.y, &res.z) == 3);
-#endif
-		cout << "[Debug] Reading binary volume with resolution " << res << endl;
+		if (!fmb)
+			throw std::runtime_error("Unable to open image \"" + file + "\"!");
 
-		loadBinary(filename, res);
+		assert(fmb);
+
+		// get the bit depth from the first image
+		FIBITMAP* bm = FreeImage_LockPage(fmb, 0);
+		int bpp = FreeImage_GetBPP(bm);
+
+		FreeImage_UnlockPage(fmb, 0, FALSE);
+		FreeImage_CloseMultiBitmap(fmb);
+
+
+		std::cout << "[Stack] Loaded found bitmap with depth " << bpp << std::endl;
+		if (bpp == 8)
+			stack = new SpimStackU8;
+		else if (bpp == 16)
+			stack = new SpimStackU16;
+
+		stack->loadImage(file);
+
 	}
-	else if (ext == "raw")
+	else if (ext == "bin" || ext == "raw")
 	{
-		
-		string s = filename.substr(filename.find_last_of("_"));
 
-		cout << "[Debug] " << s << endl;
+		ivec3 res(-1);
+		int depth = -1;
 
-		ivec3 res;
-		int bits;
-#ifdef _WIN32
-		assert(sscanf_s(s.c_str(), "_%dx%dx%d.%dbit.raw", &res.x, &res.y, &res.z, &bits) == 4);
-#endif
-		cout << "[Debug] Reading binary volume with resolution " << res << endl;
-		assert(getBytesPerVoxel() == bits / 8);
+		getStackInfoFromFilename(file, res, depth);
 
-		assert(res.x > 0 && res.y > 0 && res.z > 0);
+		if (depth == 8)
+			stack = new SpimStackU8;
 
-		loadBinary(filename, res);
+		else if (depth == 16)
+			stack = new SpimStackU16;
+
+
+		if (!stack)
+			throw runtime_error("Invalid bit depth: " + to_string(depth) + "!");
+
+		stack->loadBinary(file, res);
+
 	}
-
 	else
 		throw std::runtime_error("Unknown file extension \"" + ext + "\"");
 
-	updateTexture();
-	updateStats();
+	stack->updateTexture();
+	stack->updateStats();
+
+	return stack;
 }
 
 void SpimStack::save(const std::string& file)
@@ -1386,6 +1432,10 @@ void SpimStackU16::setSample(size_t index, double value)
 	volume[index] = static_cast<unsigned short>(value);
 }
 
+
+SpimStackU8::SpimStackU8() : SpimStack(), volume(nullptr)
+{
+}
 
 SpimStackU8::~SpimStackU8()
 {

@@ -1,6 +1,7 @@
 
 #include "CreatePhantomApp.h"
 #include "SimplePointcloud.h"
+#include "SpimStack.h"
 
 #include <GL/glew.h>
 #include <GL/freeglut.h>
@@ -360,10 +361,11 @@ int main(int argc, const char** argv)
 		app = new CreatePhantomApp(glm::ivec2(1024, 768));
 		app->setConfigPath("e:/app/");
 
-		app->addSpimStack("e:/spim/phantom/spim_TL01_Angle4.ome.tiff");
-		
+		app->addSpimStack(("e:/spim/phantom/cadaver/cadaver_512x512x106.16bit.raw"));
+
+
 		app->centerCamera();
-		app->loadStackTransformations();
+		//app->loadStackTransformations();
 		//app->loadContrastSettings();
 		
 		app->createEmptyRandomStack();
