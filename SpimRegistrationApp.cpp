@@ -330,12 +330,7 @@ void SpimRegistrationApp::loadContrastSettings()
 
 void SpimRegistrationApp::addSpimStack(const std::string& filename)
 {
-	SpimStack* stack = new SpimStackU16;
-	
-	stack->load(filename);
-	stack->subsample();
-
-	addSpimStack(stack);
+	addSpimStack(SpimStack::load(filename));
 }
 
 void SpimRegistrationApp::addSpimStack(SpimStack* stack)

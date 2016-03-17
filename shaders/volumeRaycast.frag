@@ -12,7 +12,6 @@ struct Volume
 
 #define VOLUMES 2
 #define STEPS 500
-#define STEP_LENGTH 5.0
 
 uniform Volume volume[VOLUMES];
 
@@ -22,6 +21,8 @@ uniform float		minThreshold;
 uniform float		maxThreshold;
 
 uniform mat4		inverseMVP;
+
+uniform float		stepLength = 1.0;
 
 in vec2 texcoord;
 out vec4 fragColor;
@@ -45,7 +46,7 @@ void main()
 
 		float maxDistance = length(rayDestination - rayOrigin);
 		vec3 rayDirection = (rayDestination - rayOrigin) /maxDistance; // = farPlane.xyz;
-		rayDirection *= STEP_LENGTH;
+		rayDirection *= stepLength;
 
 
 		//rayDirection /= float(STEPS);
@@ -100,7 +101,7 @@ void main()
 
 
 			worldPosition += rayDirection;
-			distanceTravelled += STEP_LENGTH;
+			distanceTravelled += stepLength;
 
 		}
 

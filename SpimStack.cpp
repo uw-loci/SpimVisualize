@@ -193,6 +193,9 @@ SpimStack* SpimStack::load(const std::string& file)
 	stack->updateTexture();
 	stack->updateStats();
 
+	// don;t forget to set the filename:
+	stack->filename = file;
+
 	return stack;
 }
 

@@ -47,7 +47,8 @@ public:
 	/// \name Resampling
 	/// \{
 
-	void createEmptyRandomStack();
+	void createEmptyRandomStack(const glm::ivec3& resolution);
+
 	void startSampleStack(int stack);
 	void clearSampleStack();
 	void endSampleStack();

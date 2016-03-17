@@ -113,7 +113,7 @@ static void keyboard(unsigned char key, int x, int y)
 
 
 	if (key == 'e')
-		app->createEmptyRandomStack();
+		app->createEmptyRandomStack(glm::ivec3(128, 256, 48));
 	if (key == 'S')
 		app->endSampleStack();
 
@@ -144,6 +144,15 @@ static void keyboard(unsigned char key, int x, int y)
 
 	if (key == '5')
 		app->toggleSelectStack(4);
+
+	if (key == '6')
+		app->toggleSelectStack(5);
+
+	if (key == '7')
+		app->toggleSelectStack(6);
+
+	if (key == '8')
+		app->toggleSelectStack(7);
 
 	
 
@@ -361,15 +370,14 @@ int main(int argc, const char** argv)
 		app = new CreatePhantomApp(glm::ivec2(1024, 768));
 		app->setConfigPath("e:/app/");
 
-		app->addSpimStack(("e:/spim/phantom/cadaver/cadaver_512x512x106.16bit.raw"));
+		//app->addSpimStack(("e:/spim/phantom/cadaver/cadaver_512x512x106.16bit.raw"));
+		app->addSpimStack(("e:/spim/phantom/frog/frog_256x256x44.8bit.raw"));
 
 
 		app->centerCamera();
 		//app->loadStackTransformations();
 		//app->loadContrastSettings();
-		
-		app->createEmptyRandomStack();
-
+				
 		app->reloadShaders();
 
 	}

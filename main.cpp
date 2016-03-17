@@ -78,6 +78,11 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == ',')
 		regoApp->decreaseMinThreshold();
 	if (key == '.')
+		regoApp->increaseMinThreshold();
+
+	if (key == '<')
+		regoApp->decreaseMaxThreshold();
+	if (key == '>')
 		regoApp->increaseMaxThreshold();
 	/*
 	if (key == '<')
@@ -87,9 +92,10 @@ static void keyboard(unsigned char key, int x, int y)
 	*/
 	if (key == 'C')
 		regoApp->autoThreshold();
+	/*
 	if (key == 't')
 		regoApp->contrastEditorApplyThresholds();
-
+	*/
 
 	if (key == ';')
 		regoApp->decreaseSliceCount();
@@ -131,14 +137,21 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == '5')
 		regoApp->toggleSelectStack(4);
 
+	if (key == '6')
+		regoApp->toggleSelectStack(5);
+
+
+	if (key == '7')
+		regoApp->toggleSelectStack(6);
+
+
 	
-	/*
 	if (key == 't')
 		regoApp->loadStackTransformations();
 
 	if (key == 'T')
 		regoApp->saveStackTransformations();
-	*/
+	
 
 	if (key == 'm')
 		regoApp->maximizeViews();
@@ -383,16 +396,14 @@ int main(int argc, const char** argv)
 		regoApp->addPointcloud("e:/urs/ES_20151122.bin");
 		*/
 		
-		/*
-		regoApp->addSpimStack("e:/spim/phantom/test/phantom_1.tiff");
-		regoApp->addSpimStack("e:/spim/phantom/test/phantom_2.tiff");
-		regoApp->addSpimStack("e:/spim/phantom/test/phantom_3.tiff");
-		regoApp->addSpimStack("e:/spim/phantom/test/phantom_4.tiff");
-		*/
+		
+		regoApp->addSpimStack("e:/spim/phantom/phantom_1.tiff");
+		regoApp->addSpimStack("e:/spim/phantom/phantom_2.tiff");
+		regoApp->addSpimStack("e:/spim/phantom/phantom_3.tiff");
+		regoApp->addSpimStack("e:/spim/phantom/phantom_4.tiff");
+		
 
-		SpimStack* stack = new SpimStackU8;
-		stack->load("e:/Volumes/frog_256x256x44.8bit.raw");
-		regoApp->addSpimStack(stack);
+
 
 		regoApp->centerCamera();
 		regoApp->loadStackTransformations();
