@@ -406,9 +406,6 @@ int main(int argc, const char** argv)
 		regoApp->addSpimStack("e:/spim/phantom/phantom_2.tiff");
 		regoApp->addSpimStack("e:/spim/phantom/phantom_3.tiff");
 		regoApp->addSpimStack("e:/spim/phantom/phantom_4.tiff");
-		
-
-
 
 		regoApp->centerCamera();
 		regoApp->loadStackTransformations();
