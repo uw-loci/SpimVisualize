@@ -14,6 +14,7 @@
 #include "SpimStack.h"
 #include "TinyStats.h"
 
+
 // goddamnit windows! :(
 #undef near
 #undef far
@@ -21,6 +22,8 @@
 
 using namespace std;
 using namespace glm;
+
+
 
 static mat4 loadRegistration(const string& filename)
 {
@@ -46,102 +49,127 @@ static mat4 loadRegistration(const string& filename)
 	return T;
 }
 
-int main(int argc, const char** argv)
+
+struct SuperSimpleStack
 {
-	
-	// records the individual and aggregate error
-	TinyHistory<double> error;
+	AABB			bbox;
+	mat4			reference;
+	mat4			solution;
 
-
-	ofstream output("e:/temp/comparison.csv");
-	output << "# stack, transform, solution, distance\n";
-
-	if (argc < 3)
+	// calculates the mean error for all bbox vertices
+	double calculateError() const
 	{
-		cout << "Usage: " << argv[0] << " <inputStack> <solutionTransform> [<inputStack> <solutionTransform>] [...]\n";
+		double e = 0;
+
+		vector<vec3> vertices = bbox.getVertices();
+		for (int i = 0; i < 8; ++i)
+		{
+			vec4 v(vertices[i], 1.f);
+			vec4 r = reference * v;
+			vec4 s = solution* v;
+
+			e += glm::distance(r, s);
+		}
+
+		return e / 8;
+	}
+
+
+	void load(const string& basefile, int i)
+	{
+		string stackFile = basefile + to_string(i) + ".tiff";
+		string referenceFile = basefile + to_string(i) + ".transform.txt";
+		string solutionFile = stackFile + ".registration.txt";
+
+		SpimStack* stack = SpimStack::load(stackFile);
+		assert(stack);
+		
+		bbox = stack->getBBox();
+		reference = loadRegistration(referenceFile);
+		solution = loadRegistration(solutionFile);
+		
+		delete stack;
+	}
+
+	void transform(const mat4& m)
+	{
+		reference = m * reference;
+		solution = m * solution;
+	}
+
+};
+
+
+
+
+
+int main(int argc, const char** argv)
+{	
+	vector<SuperSimpleStack> solutions;
+	
+	// load the data
+	for (int i = 1; i <= 4; ++i)
+	{
+		try
+		{
+			SuperSimpleStack stack;
+			stack.load("e:/spim/phantom/phantom_", i);
+
+			solutions.push_back(stack);
+		}
+		catch (const runtime_error& e)
+		{
+			cerr << "[Error:] " << e.what() << endl;
+		}
+	}
+
+
+	if (solutions.empty())
+	{
+		cerr << "[Error] No valid solutions found!\n";
+		
 
 #ifdef _WIN32
 		system("pause");
 #endif
-		return 1;
-	}
-
-
-	// parse command line here
-	vector<pair<string, string>> filepairs;
-	for (int i = 1; i < argc; i += 2)
-	{
-		filepairs.push_back(make_pair(argv[i], argv[i + 1]));
-	}
-
-
-
-
-
-	for (auto it = filepairs.begin(); it != filepairs.end(); ++it)
-	{	
-		SpimStack* ref = nullptr;
-
-		try
-		{
-			const string stackFile(it->first);
-			const string solutionFile(it->second);
-
-			// load references (phantoms)
-			ref = new SpimStackU16;
-			ref->load(stackFile);
-
-			// load their transforms
-			const string transformFile = stackFile + ".registration.txt";
-			ref->setTransform(loadRegistration(transformFile));
-
-
-			cout << "Reference:  " << transformFile << endl;
-			cout << "Dimensions: " << ref->getVoxelDimensions() * vec3(ref->getResolution()) << endl;
-
-			// load solutions
-			const mat4 solutionTransform = loadRegistration(solutionFile);
 		
-			// compare 
-			const vector<vec3> bboxVertices = ref->getBBox().getVertices();
-			
-
-			// transform
-			double aggregatedDistance = 0;
-			for (int i = 0; i < 8; ++i)
-			{
-
-				vec4 reference = ref->getTransform() * vec4(bboxVertices[i], 1.f);
-				vec4 solution = solutionTransform * vec4(bboxVertices[i], 1.f);
-				
-				double d = length(reference - solution);
-
-				//cout << bboxVertices[i] << " -> " << reference << " - " << solution << " = " << d << endl;
-
-				cout << "Vertex[" << i << "] distance: " << d << endl;
-				aggregatedDistance += d;
-			}
-
-			aggregatedDistance /= 8;
-
-			error.add(aggregatedDistance);
-
-			cout << "Mean distance: " << aggregatedDistance << endl;
-			
-			output << stackFile << ", " << transformFile << ", " << solutionFile << ", " << aggregatedDistance << endl;
-
-
-		}
-		catch (const runtime_error& e)
-		{
-			cerr << e.what() << endl;
-		}
-
-
-		delete ref;
+		
+		exit(1);
 	}
 
+	// offset all transformation in relation to the first
+	const mat4 roi = inverse(solutions[0].reference);
+	for (size_t i = 0; i < solutions.size(); ++i)
+	{
+		solutions[i].transform(roi);
 	
+
+		cout << "Reference  [" << i << "]:" << solutions[i].reference << endl;
+		cout << "Solution   [" << i << "]:" << solutions[i].solution << endl;
+	}
+	
+
+	// records the individual and aggregate error
+	TinyHistory<double> error;
+
+	for (size_t i = 0; i < solutions.size(); ++i)
+	{
+		double e = solutions[i].calculateError();
+		cout << "Error      [" << i << "]:" << e << endl;
+
+		error.add(e);
+	}
+
+	cout << "Mean error [" << error.getMean() << "]:" << endl;
+	cout << "Mean RMS   [" << error.getRMS() << "]:" << endl;
+
+
+
+
+
+
+
+
 #ifdef _WIN32
 	system("pause");
 #endif

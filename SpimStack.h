@@ -19,7 +19,8 @@ class SpimStack : public InteractionVolume
 {
 public:
 	static SpimStack* load(const std::string& filename);
-		
+	static InteractionVolume* loadHeader(const std::string& filename);
+
 	virtual ~SpimStack();
 	
 	void save(const std::string& filename);
