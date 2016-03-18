@@ -118,7 +118,7 @@ static void keyboard(unsigned char key, int x, int y)
 
 
 	if (key == 'e')
-		app->createEmptyRandomStack(glm::ivec3(128, 256, 48));
+		app->createEmptyRandomStack(glm::ivec3(256, 256, 48));
 	if (key == 'S')
 		app->endSampleStack();
 
@@ -184,7 +184,7 @@ static void keyboard(unsigned char key, int x, int y)
 		app->zoomCamera(0.7f);
 	if (key == '=')
 		app->zoomCamera(1.4f);
-	if (key == 'c')
+	if (key == 'f')
 		app->centerCamera();
 
 	/*

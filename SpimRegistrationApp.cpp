@@ -40,7 +40,7 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : configPath("./
 	pointShader(nullptr), volumeShader(nullptr), sliceShader(nullptr),
 	volumeRaycaster(nullptr), drawQuad(nullptr), volumeDifferenceShader(nullptr), drawPosition(nullptr), tonemapper(nullptr), 
 	volumeRenderTarget(nullptr), rayStartTarget(nullptr),
-	useImageAutoContrast(false),  runAlignment(false), renderTargetReadbackCurrent(false), calculateScore(false),
+	useImageAutoContrast(false), runAlignment(false), renderTargetReadbackCurrent(false), calculateScore(false), drawHistory(false),
 	solver(nullptr)
 {
 	globalBBox.reset();
@@ -637,6 +637,8 @@ void SpimRegistrationApp::moveStack(const glm::vec2& delta)
 		//stacks[currentStack]->move(vp->camera->calculatePlanarMovement(delta));
 		interactionVolumes[currentVolume]->move(vp->camera->calculatePlanarMovement(delta));
 	}
+
+	updateGlobalBbox();
 }
 
 void SpimRegistrationApp::contrastEditorApplyThresholds()
@@ -1660,6 +1662,9 @@ void SpimRegistrationApp::inspectPointclouds(const Ray& r)
 
 void SpimRegistrationApp::drawScoreHistory(const TinyHistory<double>& hist) const
 {
+	if (!drawHistory)
+		return;
+
 	
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
@@ -1740,6 +1745,12 @@ void SpimRegistrationApp::selectSolver(const std::string& name)
 		cout << "[Debug] Switched solvers.\n";
 	
 	}
+}
+
+void SpimRegistrationApp::toggleHistory()
+{
+	drawHistory = !drawHistory;
+	std::cout << "[Debug] " << (drawHistory ? "D" : "Not d") << "rawing score history.\n";
 }
 
 void SpimRegistrationApp::clearHistory()

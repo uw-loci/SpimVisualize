@@ -87,7 +87,7 @@ public:
 	/// Selects the currently active solver
 	void selectSolver(const std::string& solver);
 	
-
+	void toggleHistory();
 	void clearHistory();
 
 	/// \}
@@ -166,6 +166,7 @@ private:
 	bool					drawGrid;
 	bool					drawBboxes;
 	bool					drawSlices;
+	bool					drawHistory;
 
 
 	std::vector<InteractionVolume*>		interactionVolumes;

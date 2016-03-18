@@ -11,7 +11,7 @@ struct Volume
 };
 
 #define VOLUMES 2
-#define STEPS 1500
+#define STEPS 500
 
 uniform Volume volume[VOLUMES];
 

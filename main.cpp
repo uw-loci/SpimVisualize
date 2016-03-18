@@ -72,6 +72,9 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == ' ')
 		regoApp->beginAutoAlign();
 
+	if (key == 'h')
+		regoApp->toggleHistory();
+
 	if (key == 'H')
 		regoApp->clearHistory();
 	
@@ -151,10 +154,10 @@ static void keyboard(unsigned char key, int x, int y)
 
 
 	
-	if (key == 't')
+	if (key == 'T')
 		regoApp->loadStackTransformations();
 
-	if (key == 'T')
+	if (key == 't')
 		regoApp->saveStackTransformations();
 	
 
