@@ -45,8 +45,10 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(nu
 
 	prevLayouts["Perspective"] = layout;
 
-	globalThreshold.min = 100;
-	globalThreshold.max = 130; // std::numeric_limits<unsigned short>::max();
+	
+	globalThreshold.min = 0;
+	globalThreshold.max = 256; // std::numeric_limits<unsigned short>::max();
+	
 
 	resetSliceCount();
 	reloadShaders();
@@ -793,6 +795,8 @@ void SpimRegistrationApp::calculateHistograms()
 
 	size_t maxVal = 0;
 
+	std::cout << "[Contrast] Calculating histograms within " << globalThreshold.min << " -> " << globalThreshold.max << std::endl;
+
 	for (size_t i = 0; i < stacks.size(); ++i)
 	{
 		std::vector<size_t> histoRaw = stacks[i]->calculateHistogram(globalThreshold);
@@ -801,11 +805,14 @@ void SpimRegistrationApp::calculateHistograms()
 			maxVal = std::max(maxVal, histoRaw[j]);
 
 
-		std::vector<float> histoFloat(histoRaw.size());
+		std::cout << "[Debug] Size: " << histoRaw.size() << ", max: " << maxVal << std::endl;
+		// convert to floats
+		std::vector<float> histoFloat; 
+		histoFloat.reserve(histoRaw.size());
+		
 		for (size_t j = 0; j < histoRaw.size(); ++j)
-			histoFloat[j] = (float)histoRaw[j];
+			histoFloat.push_back((float)histoRaw[j]);
 
-		//histoRaw.begin(), histoRaw.end());
 		histograms.push_back(histoFloat);
 	}
 

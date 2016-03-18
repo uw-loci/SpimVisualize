@@ -1000,26 +1000,34 @@ std::vector<glm::vec3> SpimStack::calculateVolumeNormals() const
 
 vector<size_t> SpimStack::calculateHistogram(const Threshold& t) const
 {
-	vector<size_t> histogram((size_t)std::ceil(t.getSpread()));
+	
+	size_t buckets = (size_t)std::ceilf(t.getSpread()) + 1;
+	
+	const int MAX_BUCKETS = 512;
+	buckets = clamp((int)buckets, 1, MAX_BUCKETS);
 	
 	
-	for (size_t i = 0; i < width*height*depth; ++i)
+	vector<size_t> histogram(buckets, 0);
+	const double binWidth = t.getSpread() / buckets;
+		
+	size_t valid = 0;
+	for (size_t i = 0; i < getVoxelCount(); ++i)
 	{
-		/*
-		int j = (int)volume[i] - (int)t.min;
-		if (j >= 0 && j < histogram.size())
-			++histogram[j];
+		double v = getValue(i);
 
-		*/
-		int j = (int)floor(getValue(i) - t.min);
-		if (j >= 0 && j < histogram.size())
-			++histogram[j];
+		if (v >= t.min && v <= t.max)
+		{
+			size_t bin = (int)(v - t.min) / binWidth;
+			++histogram[bin];
+			++valid;
+		}
+
 
 	}
-	
+
+	std::cout << "[Histogram] Sorted " << valid << " valid values, discarded " << getVoxelCount() - valid << " invalid values into " << histogram.size() << " bins.\n";
 
 	return std::move(histogram);
-
 }
 
 /*

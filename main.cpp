@@ -92,10 +92,10 @@ static void keyboard(unsigned char key, int x, int y)
 	*/
 	if (key == 'C')
 		regoApp->autoThreshold();
-	/*
-	if (key == 't')
+	
+	if (key == 'c')
 		regoApp->contrastEditorApplyThresholds();
-	*/
+	
 
 	if (key == ';')
 		regoApp->decreaseSliceCount();
@@ -167,7 +167,7 @@ static void keyboard(unsigned char key, int x, int y)
 		regoApp->zoomCamera(0.7f);
 	if (key == '=')
 		regoApp->zoomCamera(1.4f);
-	if (key == 'c')
+	if (key == 'f')
 		regoApp->centerCamera();
 
 	/*
