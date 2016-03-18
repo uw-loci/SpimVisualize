@@ -24,6 +24,8 @@ uniform mat4		inverseMVP;
 
 uniform float		stepLength = 1.0;
 
+uniform int  		activeVolume;
+
 in vec2 texcoord;
 out vec4 fragColor;
 
@@ -56,6 +58,8 @@ void main()
 		float meanValue = 0.0;
 		float distanceTravelled = 0.0;
 
+		bool hitActiveVolume = false;
+
 		vec3 worldPosition = rayOrigin;
 		for (int i = 0; i < STEPS; ++i)
 		{
@@ -80,7 +84,12 @@ void main()
 					vec3 volCoord = volPosition - volume[v].bboxMin; 
 					volCoord /= (volume[v].bboxMax - volume[v].bboxMin);
 
-					value[v] = texture(volume[v].texture, volCoord).r;
+					float val = texture(volume[v].texture, volCoord).r;
+		
+					value[v] = val;
+
+					if (activeVolume > -1 && v == activeVolume && val > minThreshold && val < maxThreshold)
+						hitActiveVolume = true;
 				}
 				else
 					value[v] = 0.0;
@@ -109,8 +118,12 @@ void main()
 		float val = (maxValue - minThreshold) / (maxThreshold - minThreshold);
 		//val = (meanValue - minThreshold) / (maxThreshold - minThreshold);
 				
+		vec3 baseColor = vec3(1.0);
+		if (hitActiveVolume)
+			baseColor = vec3(1.0, 1.0, 0.0);
 
-		finalValue = vec4(vec3(val), 1.0);
+
+		finalValue = vec4(val * baseColor, 1.0);
 
 		
 	

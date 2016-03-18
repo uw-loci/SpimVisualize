@@ -1289,6 +1289,8 @@ void SpimRegistrationApp::raytraceVolumes(const Viewport* vp) const
 	volumeRaycaster->setUniform("maxThreshold", (float)globalThreshold.max);
 
 
+	volumeRaycaster->setUniform("activeVolume", (int)currentVolume);
+
 	// bind the ray start/end textures
 	volumeRaycaster->setTexture2D("rayStart", rayStartTarget->getColorbuffer(), (int)stacks.size());
 	volumeRaycaster->setMatrix4("inverseMVP", imvp);
