@@ -59,7 +59,7 @@ static void validate(unsigned int buffer)
 }
 
 Framebuffer::Framebuffer(unsigned int width, unsigned int height, GLenum internalFormat, GLenum type, unsigned int colorbufferCount, GLenum filter, bool depthTexture) :
-	mWidth(width), mHeight(height), mInternalFormat(internalFormat), mType(type), mFilter(filter), mColorbufferCount(colorbufferCount), mDepthBuffer(0), mDepthTexture(depthTexture)
+	mWidth(width), mHeight(height), mInternalFormat(internalFormat), mType(type), mFilter(filter), mColorbufferCount(colorbufferCount), mDepthTexture(depthTexture), mDepthBuffer(0)
 {	
 	glGenFramebuffers(1, &mBuffer);
 	glBindFramebuffer( GL_FRAMEBUFFER, mBuffer );

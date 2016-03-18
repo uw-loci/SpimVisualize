@@ -24,12 +24,12 @@ using namespace glm;
 using namespace std;
 
 
-static const glm::vec3& getRandomColor(int n)
+static const glm::vec3& getRandomColor(unsigned int n)
 {
 	static std::vector<glm::vec3> pool;
 	if (pool.empty() || n >= pool.size())
 	{
-		for (int i = 0; i < (n + 1) * 2; ++i)
+		for (unsigned int i = 0; i < (n + 1) * 2; ++i)
 		{
 			float r = (float)rand() / RAND_MAX;
 			float g = (float)rand() / RAND_MAX;

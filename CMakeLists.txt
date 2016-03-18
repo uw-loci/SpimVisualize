@@ -10,6 +10,8 @@ set(Boost_USE_STATIC_RUNTIME OFF)
 
 SET(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} "C:/dev/boost_1_59_0")
 SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} "C:/dev/boost_1_59_0/lib64-msvc-12.0")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -g -O0 -pedantic -Werror")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wall -O3")
 
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
@@ -25,6 +27,7 @@ endif()
 
 
 
+
 find_package (OpenGL REQUIRED)
 find_package (GLU REQUIRED)
 find_package (GLM REQUIRED)
@@ -36,7 +39,7 @@ find_package (FreeImage REQUIRED)
 include_directories("${PROJECT_BINARY_DIR}")
 
 
-add_executable(SpimVisualize main.cpp AABB.h AABB.cpp Framebuffer.h Framebuffer.cpp GeometryImage.h GeometryImage.cpp glmIO.h Layout.h Layout.cpp nanoflann.hpp OrbitCamera.h OrbitCamera.cpp InteractionVolume.h InteractionVolume.cpp Ray.h Ray.cpp Shader.h Shader.cpp SimplePointcloud.h SimplePointcloud.cpp SpimPlane.h SpimPlane.cpp SpimRegistrationApp.h SpimRegistrationApp.cpp SpimStack.h SpimStack.cpp StackTransformationSolver.h StackTransformationSolver.cpp stb_image.h stb_image.c stb_image_write.c TinyStats.h)
+add_executable(SpimVisualize main.cpp AABB.h AABB.cpp Framebuffer.h Framebuffer.cpp GeometryImage.h GeometryImage.cpp glmIO.h Layout.h Layout.cpp nanoflann.hpp OrbitCamera.h OrbitCamera.cpp InteractionVolume.h InteractionVolume.cpp Ray.h Ray.cpp Shader.h Shader.cpp SimplePointcloud.h SimplePointcloud.cpp SpimRegistrationApp.h SpimRegistrationApp.cpp SpimStack.h SpimStack.cpp StackTransformationSolver.h StackTransformationSolver.cpp stb_image.h stb_image.c stb_image_write.c TinyStats.h)
 
 if (OPENGL_FOUND)
 	#include_directories(${OPENGL_INCLUDE_DIR})

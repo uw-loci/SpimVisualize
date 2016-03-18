@@ -182,13 +182,13 @@ static void compileShader(const std::string& fileName, GLint shader, const std::
 		if (log.size() > 1)
 			ShaderLog::compileInfo("File: " + fileName);
 
-		for (int i = 0; i < log.size(); ++i)
+		for (int i = 0; i < (int)log.size(); ++i)
 			ShaderLog::compileInfo(log[i]);
 
 	}
 }
 
-Shader::Shader(const std::string& vpFile, const std::string& fpFile) : mGeometryShader(0), linkedSuccessfully(false), mVertexSource(vpFile), mFragmentSource(fpFile)
+Shader::Shader(const std::string& vpFile, const std::string& fpFile) : mGeometryShader(0), mVertexSource(vpFile), mFragmentSource(fpFile), linkedSuccessfully(false)
 {
 	mProgram = glCreateProgram();
 
@@ -199,7 +199,7 @@ Shader::Shader(const std::string& vpFile, const std::string& fpFile) : mGeometry
 	reload();
 }
 
-Shader::Shader(const std::string& vpFile, const std::string& gpFile, const std::string& fpFile) : linkedSuccessfully(false), mVertexSource(vpFile), mGeometrySource(gpFile), mFragmentSource(fpFile)
+Shader::Shader(const std::string& vpFile, const std::string& gpFile, const std::string& fpFile) : mVertexSource(vpFile), mGeometrySource(gpFile), mFragmentSource(fpFile), linkedSuccessfully(false)
 {
 	mProgram = glCreateProgram();
 
@@ -210,7 +210,7 @@ Shader::Shader(const std::string& vpFile, const std::string& gpFile, const std::
 	reload();
 }
 
-Shader::Shader(const std::string& vpFile, const std::string& fpFile, const std::vector<std::pair<std::string, std::string> >& defines) : mGeometryShader(0), linkedSuccessfully(false), mVertexSource(vpFile), mFragmentSource(fpFile)
+Shader::Shader(const std::string& vpFile, const std::string& fpFile, const std::vector<std::pair<std::string, std::string> >& defines) : mGeometryShader(0), mVertexSource(vpFile), mFragmentSource(fpFile), linkedSuccessfully(false)
 {
 	mProgram = glCreateProgram();
 
@@ -224,7 +224,7 @@ Shader::Shader(const std::string& vpFile, const std::string& fpFile, const std::
 	reload();
 }
 
-Shader::Shader(const std::string& vpFile, const std::string& gpFile, const std::string& fpFile, const std::vector<std::pair<std::string, std::string> >& defines) : linkedSuccessfully(false), mVertexSource(vpFile), mGeometrySource(gpFile), mFragmentSource(fpFile)
+Shader::Shader(const std::string& vpFile, const std::string& gpFile, const std::string& fpFile, const std::vector<std::pair<std::string, std::string> >& defines) : mVertexSource(vpFile), mGeometrySource(gpFile), mFragmentSource(fpFile), linkedSuccessfully(false)
 {
 	mProgram = glCreateProgram();
 

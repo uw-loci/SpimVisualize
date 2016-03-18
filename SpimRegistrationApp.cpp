@@ -34,11 +34,14 @@ const unsigned int STD_SLICE_COUNT = 100;
 
 #define USE_RAYTRACER 
 
-SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(nullptr), sliceShader(nullptr), volumeShader(nullptr),
-	volumeRaycaster(nullptr), drawQuad(nullptr), volumeDifferenceShader(nullptr), tonemapper(nullptr), layout(nullptr),
-	drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), sliceCount(100),
-	configPath("./"), cameraMoving(false), runAlignment(false), histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f),
-	subsampleOnCameraMove(false), useImageAutoContrast(false), currentVolume(-1), solver(nullptr), drawPosition(nullptr)
+SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : configPath("./"), layout(nullptr), 
+	histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f),
+	cameraMoving(false), drawGrid(true), drawBboxes(false), drawSlices(false), currentVolume(-1), sliceCount(100), subsampleOnCameraMove(false),
+	pointShader(nullptr), volumeShader(nullptr), sliceShader(nullptr),
+	volumeRaycaster(nullptr), drawQuad(nullptr), volumeDifferenceShader(nullptr), drawPosition(nullptr), tonemapper(nullptr), 
+	volumeRenderTarget(nullptr), rayStartTarget(nullptr),
+	useImageAutoContrast(false),  runAlignment(false), renderTargetReadbackCurrent(false), calculateScore(false),
+	solver(nullptr)
 {
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
@@ -396,7 +399,6 @@ void SpimRegistrationApp::drawTonemappedQuad()
 
 
 	// read back render target to determine largest and smallest value
-	bool readback = true;
 	glm::vec4 minVal(std::numeric_limits<float>::max());
 	glm::vec4 maxVal(std::numeric_limits<float>::lowest());
 
@@ -593,7 +595,7 @@ void SpimRegistrationApp::updateMouseMotion(const glm::ivec2& cursor)
 
 void SpimRegistrationApp::toggleSelectStack(int n)
 {
-	if (n >= interactionVolumes.size())
+	if (n >= (int)interactionVolumes.size())
 		currentVolume= -1;
 
 	if (currentVolume == n)
@@ -604,7 +606,7 @@ void SpimRegistrationApp::toggleSelectStack(int n)
 
 void SpimRegistrationApp::toggleStack(int n)
 {
-	if (n >= stacks.size() || n < 0)
+	if (n >= (int)stacks.size() || n < 0)
 		return;
 
 	stacks[n]->toggle();
@@ -865,10 +867,8 @@ void SpimRegistrationApp::drawContrastEditor(const Viewport* vp)
 	glEnd();
 
 
-
 	const double leftLimit = globalThreshold.min;
 	const double rightLimit = globalThreshold.max;
-
 
 	glLineWidth(2.f);
 	glBegin(GL_LINES);
@@ -943,7 +943,7 @@ void SpimRegistrationApp::drawBoundingBoxes() const
 			glMultMatrixf(glm::value_ptr(stacks[i]->getTransform()));
 
 
-			if (i == currentVolume)
+			if ((int)i == currentVolume)
 				glColor3f(1, 1, 0);
 			else
 				glColor3f(0.6f, 0.6f, 0.6f);
@@ -959,7 +959,7 @@ void SpimRegistrationApp::drawBoundingBoxes() const
 		glMultMatrixf(glm::value_ptr(pointclouds[i]->getTransform()));
 
 
-		if (i == currentVolume)
+		if ((int)i == currentVolume)
 			glColor3f(1, 1, 0);
 		else
 			glColor3f(0.6f, 0.6f, 0.6f);
@@ -1032,9 +1032,6 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 	
 	shader->bind();
 
-	const glm::vec3 camPos = vp->camera->getPosition();
-	const glm::vec3 viewDir = glm::normalize(vp->camera->target - camPos);
-
 	// the smallest and largest projected bounding box vertices -- used to calculate the extend of planes
 	// to draw
 	glm::vec3 minPVal(std::numeric_limits<float>::max()), maxPVal(std::numeric_limits<float>::lowest());
@@ -1050,7 +1047,6 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 		std::vector<glm::vec3> boxVerts = stacks[i]->getBBox().getVertices();
 
 		// calculate max/min distance
-		float maxDist = 0.f, minDist = std::numeric_limits<float>::max();
 		for (size_t k = 0; k < boxVerts.size(); ++k)
 		{
 			glm::vec4 p = mvp * stacks[i]->getTransform() * glm::vec4(boxVerts[k], 1.f);
@@ -1102,19 +1098,19 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 
 #else
 		char uname[256];
-		sprintf(uname, "volume[%d].texture", i);
+		sprintf(uname, "volume[%d].texture", (int)i);
 		shader->setUniform(uname, (int)i);
 
 		AABB bbox = reorderedStacks[i]->getBBox();
-		sprintf(uname, "volume[%d].bboxMax", i);
+		sprintf(uname, "volume[%d].bboxMax", (int)i);
 		shader->setUniform(uname, bbox.max);
-		sprintf(uname, "volume[%d].bboxMin", i);
+		sprintf(uname, "volume[%d].bboxMin", (int)i);
 		shader->setUniform(uname, bbox.min);
 
-		sprintf(uname, "volume[%d].enabled", i);
+		sprintf(uname, "volume[%d].enabled", (int)i);
 		shader->setUniform(uname, stacks[i]->enabled);
 
-		sprintf(uname, "volume[%d].inverseMVP", i);
+		sprintf(uname, "volume[%d].inverseMVP", (int)i);
 		shader->setMatrix4(uname, glm::inverse(mvp * reorderedStacks[i]->transform));
 #endif
 	}
@@ -1261,25 +1257,19 @@ void SpimRegistrationApp::raytraceVolumes(const Viewport* vp) const
 
 #else
 		char uname[256];
-		sprintf(uname, "volume[%d].texture", i);
+		sprintf(uname, "volume[%d].texture",(int) i);
 		volumeRaycaster->setUniform(uname, (int)i);
 
 		AABB bbox = stacks[i]->getBBox();
-		sprintf(uname, "volume[%d].bboxMax", i);
+		sprintf(uname, "volume[%d].bboxMax", (int)i);
 		volumeRaycaster->setUniform(uname, bbox.max);
-		sprintf(uname, "volume[%d].bboxMin", i);
+		sprintf(uname, "volume[%d].bboxMin", (int)i);
 		volumeRaycaster->setUniform(uname, bbox.min);
 
-		sprintf(uname, "volume[%d].enabled", i);
-		volumeRaycaster->setUniform(uname, stacks[i]->enabled);
-
-		sprintf(uname, "volume[%d].inverseMVP", i);
-		volumeRaycaster->setMatrix4(uname, glm::inverse(mvp * stacks[i]->transform));
-
-		sprintf(uname, "volume[%d].transform", i);
+		sprintf(uname, "volume[%d].transform", (int)i);
 		volumeRaycaster->setMatrix4(uname, stacks[i]->transform);
 
-		sprintf(uname, "volume[%d].inverseTransform", i);
+		sprintf(uname, "volume[%d].inverseTransform", (int)i);
 		volumeRaycaster->setMatrix4(uname, glm::inverse(stacks[i]->transform));
 #endif
 	}
@@ -1818,3 +1808,4 @@ void SpimRegistrationApp::initializeRayTargets(const Viewport* vp)
 	drawPosition->disable();
 
 }
+

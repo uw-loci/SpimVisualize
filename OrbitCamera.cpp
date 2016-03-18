@@ -16,7 +16,7 @@ static inline double deg2rad(double a)
 	return a * .017453292519943295; // (angle / 180) * Math.PI;
 }
 
-OrbitCamera::OrbitCamera() : fovy(60.f), theta(22), phi(10), radius(100)
+OrbitCamera::OrbitCamera() : fovy(60.f), radius(100), theta(22), phi(10)
 {
 	aspect = 1.3f;
 	near = 50.f;
@@ -152,7 +152,7 @@ void OrbitCamera::maximizeView(const AABB& bbox)
 }
 
 
-OrthoCamera::OrthoCamera(const glm::vec3& viewDir, const glm::vec3& up, float z) : viewDirection(normalize(viewDir)), zoomFactor(z)
+OrthoCamera::OrthoCamera(const glm::vec3& viewDir, const glm::vec3& up, float z) : zoomFactor(z), viewDirection(normalize(viewDir))
 {
 	this->up = up;
 	this->target = vec3(0.f);
@@ -256,8 +256,12 @@ void UnitCamera::getMVP(glm::mat4& mvp) const
 
 void UnitCamera::maximizeView(const AABB& bbox)
 {
+	/*
 	target = bbox.getCentroid();
 
 	vec3 maxVal = max(abs(bbox.min), bbox.max);
 	//zoomFactor = glm::max(maxVal.x, glm::max(maxVal.y, maxVal.z));
+	*/
+
+	throw std::runtime_error("UnitCamera::maximizeView not implemented!");
 }
