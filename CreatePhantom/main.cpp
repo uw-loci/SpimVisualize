@@ -85,8 +85,13 @@ static void keyboard(unsigned char key, int x, int y)
 	*/
 	if (key == 'C')
 		app->autoThreshold();
-	if (key == 't')
-		app->contrastEditorApplyThresholds();
+	if (key == 'c')
+	{
+		if (glutGetModifiers() == GLUT_ACTIVE_ALT)
+			app->contrastEditorResetThresholds();
+		else
+			app->contrastEditorApplyThresholds();
+	}
 
 
 	if (key == ';')

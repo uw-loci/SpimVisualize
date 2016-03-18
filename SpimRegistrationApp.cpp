@@ -853,7 +853,9 @@ void SpimRegistrationApp::calculateHistograms()
 	for (size_t i = 0; i < histograms.size(); ++i)
 	{
 		for (size_t j = 0; j < histograms[i].size(); ++j)
+		{
 			histograms[i][j] /= maxVal;
+		}
 	}
 
 
@@ -915,7 +917,8 @@ void SpimRegistrationApp::drawContrastEditor(const Viewport* vp)
 		glm::vec3 rc = getRandomColor((unsigned int)i);
 		glColor3fv(glm::value_ptr(rc));
 	
-
+		//std::cout << "[Debug] Drawing " << histograms[i].size() << " histogram bins.\n";
+			
 		for (unsigned int ix = 0; ix < histograms[i].size(); ++ix)
 		{
 			float x = (float)ix / histograms[i].size();

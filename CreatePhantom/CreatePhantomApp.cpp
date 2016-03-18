@@ -605,6 +605,28 @@ void CreatePhantomApp::contrastEditorApplyThresholds()
 	histogramsNeedUpdate = true;
 }
 
+void CreatePhantomApp::contrastEditorResetThresholds()
+{
+
+	globalThreshold.min = 0;
+
+	// range depends on the type of first stack
+	globalThreshold.max = 255;
+	if (!stacks.empty() && stacks[0]->getBytesPerVoxel() == 2)
+		globalThreshold.max = std::numeric_limits<unsigned short>::max();
+
+
+	std::cout << "[Contrast] Resetting global threshold to [" << globalThreshold.min << " -> " << globalThreshold.max << "]\n";
+
+
+
+	minCursor = 0.f;
+	maxCursor = 1.f;
+	histogramsNeedUpdate = true;
+
+}
+
+
 void CreatePhantomApp::changeContrast(const glm::ivec2& cursor)
 {
 	Viewport* vp = layout->getActiveViewport();
@@ -700,7 +722,7 @@ void CreatePhantomApp::autoThreshold()
 	using namespace std;
 
 	globalThreshold.max = 0;
-	globalThreshold.min = numeric_limits<unsigned short>::max();
+	globalThreshold.min = numeric_limits<double>::max();
 	globalThreshold.mean = 0;
 	globalThreshold.stdDeviation = 0;
 
@@ -718,8 +740,10 @@ void CreatePhantomApp::autoThreshold()
 
 	globalThreshold.mean /= stacks.size();
 
-	globalThreshold.min = (unsigned short)(globalThreshold.mean - 3 * globalThreshold.stdDeviation);
-	globalThreshold.max = (unsigned short)(globalThreshold.mean + 3 * globalThreshold.stdDeviation);
+	globalThreshold.min = (globalThreshold.mean - 3 * globalThreshold.stdDeviation);
+	globalThreshold.min = std::max(globalThreshold.min, 0.0);
+
+	globalThreshold.max = (globalThreshold.mean + 3 * globalThreshold.stdDeviation);
 
 	cout << "[Contrast] Global contrast: [" << globalThreshold.min << " -> " << globalThreshold.max << "], mean: " << globalThreshold.mean << ", std dev: " << globalThreshold.stdDeviation << std::endl;
 
