@@ -69,7 +69,7 @@ public:
 	void decreaseMinThreshold();
 	void autoThreshold();
 	void contrastEditorApplyThresholds();
-
+	void contrastEditorResetThresholds();
 
 	
 

@@ -652,6 +652,23 @@ void SpimRegistrationApp::contrastEditorApplyThresholds()
 	histogramsNeedUpdate = true;
 }
 
+void SpimRegistrationApp::contrastEditorResetThresholds()
+{
+	
+	globalThreshold.min = 0;
+	
+	// range depends on the type of first stack
+	globalThreshold.max = 255;
+	if (!stacks.empty() && stacks[0]->getBytesPerVoxel() == 2)
+		globalThreshold.max = std::numeric_limits<unsigned short>::max();
+
+
+	std::cout << "[Contrast] Resetting global threshold to [" << globalThreshold.min << " -> " << globalThreshold.max << "]\n";
+
+	histogramsNeedUpdate = true;
+
+}
+
 void SpimRegistrationApp::changeContrast(const glm::ivec2& cursor)
 {
 	Viewport* vp = layout->getActiveViewport();
@@ -765,8 +782,10 @@ void SpimRegistrationApp::autoThreshold()
 
 	globalThreshold.mean /= stacks.size();
 
-	globalThreshold.min = (unsigned short)(globalThreshold.mean - 3 * globalThreshold.stdDeviation);
-	globalThreshold.max = (unsigned short)(globalThreshold.mean + 3 * globalThreshold.stdDeviation);
+	globalThreshold.min = (globalThreshold.mean - 3 * globalThreshold.stdDeviation);
+	globalThreshold.min = std::max(globalThreshold.min, 0.0);
+
+	globalThreshold.max = (globalThreshold.mean + 3 * globalThreshold.stdDeviation);
 
 	cout << "[Contrast] Global contrast: [" << globalThreshold.min << " -> " << globalThreshold.max << "], mean: " << globalThreshold.mean << ", std dev: " << globalThreshold.stdDeviation << std::endl;
 

@@ -94,8 +94,13 @@ static void keyboard(unsigned char key, int x, int y)
 		regoApp->autoThreshold();
 	
 	if (key == 'c')
-		regoApp->contrastEditorApplyThresholds();
-	
+	{
+		if (glutGetModifiers() == GLUT_ACTIVE_ALT)
+			regoApp->contrastEditorResetThresholds();
+		else
+			regoApp->contrastEditorApplyThresholds();
+
+	}
 
 	if (key == ';')
 		regoApp->decreaseSliceCount();

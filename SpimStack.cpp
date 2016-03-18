@@ -1017,9 +1017,12 @@ vector<size_t> SpimStack::calculateHistogram(const Threshold& t) const
 
 		if (v >= t.min && v <= t.max)
 		{
-			size_t bin = (int)(v - t.min) / binWidth;
-			++histogram[bin];
-			++valid;
+			size_t bin = (int)floor((v - t.min) / binWidth);
+			if (bin < buckets)
+			{
+				++histogram[bin];
+				++valid;
+			}
 		}
 
 
