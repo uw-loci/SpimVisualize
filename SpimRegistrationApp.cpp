@@ -229,6 +229,9 @@ void SpimRegistrationApp::draw()
 				drawBoundingBoxes();
 
 
+			if (drawBboxes && drawPhantoms)
+				drawPhantomBoxes();
+
 			// the query result should be done by now
 			if (runAlignment || calculateScore)
 			{
@@ -1836,3 +1839,134 @@ void SpimRegistrationApp::initializeRayTargets(const Viewport* vp)
 
 }
 
+void SpimRegistrationApp::drawPhantomBoxes() const
+{
+	if (phantoms.empty())
+		return;
+
+
+	glDisable(GL_DEPTH_TEST);
+	glDepthMask(GL_FALSE);
+
+	glActiveTexture(GL_TEXTURE0);
+	glDisable(GL_BLEND);
+
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glDisableClientState(GL_COLOR_ARRAY);
+
+
+	for (size_t i = 0; i < phantoms.size(); ++i)
+	{
+		glPushMatrix();
+		glMultMatrixf(glm::value_ptr(phantoms[i].transform));
+
+
+		if ((int)i == currentVolume)
+			glColor3f(0.8, 0.5, 0);
+		else
+			glColor3f(0.5f, 0.0f, 0.0f);
+		
+		phantoms[i].bbox.draw();
+
+		glPopMatrix();
+		
+	}
+
+	glDisableClientState(GL_VERTEX_ARRAY);
+	glDepthMask(GL_TRUE);
+	glEnable(GL_DEPTH_TEST);
+}
+
+
+static glm::mat4 loadRegistration(const std::string& filename)
+{
+
+	std::ifstream file(filename);
+
+	if (!file.is_open())
+		throw std::runtime_error("Unable to open file \"" + filename + "\"");
+
+	glm::mat4 T(1.f);
+
+
+	float* m = glm::value_ptr(T);
+
+	for (int i = 0; i < 16; ++i)
+		file >> m[i];
+
+	return T;
+}
+
+void SpimRegistrationApp::addPhantom(const std::string& stackFilename, const std::string& referenceTransform)
+{
+	Phantom p;
+	
+	p.stackFile = stackFilename;
+
+	// load the transformation
+	p.transform = loadRegistration(referenceTransform);
+		
+	bool loadedBbox = false;
+	// first see if we loaded the stack already
+	for (size_t i = 0; i < stacks.size(); ++i)
+	{
+		if (stacks[i]->getFilename() == stackFilename)
+		{
+			std::cout << "[Debug] Found stack \"" << stackFilename << "\" in loaded stacks, reusing ...\n";
+			p.bbox = stacks[i]->getBBox();
+
+			loadedBbox = true;
+			break;
+		}
+
+	}
+
+	if (!loadedBbox)
+	{
+		std::auto_ptr<SpimStack> s(SpimStack::load(stackFilename));
+		p.bbox = s->getBBox();
+	}
+	
+	phantoms.push_back(p);
+}
+
+
+void SpimRegistrationApp::alignPhantoms()
+{
+	if (phantoms.size() != stacks.size())
+	{
+		std::cerr << "[Phantom] Different number of stacks and phantoms, aborting.\n";
+		return;
+	}
+
+	std::cout << "[Phantom] Aligning phantoms. Assuming a 1:1 match btw phantoms and stacks!\n";
+
+	// calculate offset matrix here ...
+	glm::mat4 offset(1.f);
+
+	// apply offset matrix
+	for (size_t i = 0; i < phantoms.size(); ++i)
+		phantoms[i].transform *= offset;
+
+
+	TinyStats<double> error;
+	// calculate difference/distance here
+	for (size_t i = 0; i < phantoms.size(); ++i)
+	{
+		std::vector<glm::vec3> verts = phantoms[i].bbox.getVertices();
+		
+		double err = 0;
+		for (int k = 0; k < 8; ++k)
+		{
+			glm::vec4 v(verts[i], 1.f);
+			glm::vec4 r = stacks[i]->getTransform() * v;
+			glm::vec4 s = phantoms[i].transform * v;
+
+			err += glm::distance(r, s);
+		}
+		
+		err /= 8;
+		error.add(err);
+	}
+
+}

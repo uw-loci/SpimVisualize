@@ -34,7 +34,7 @@ public:
 
 
 	void addPointcloud(const std::string& filename);
-
+	void addPhantom(const std::string& stackFilename, const std::string& referenceTransform);
 
 	void reloadShaders();
 	void switchRenderMode();
@@ -131,6 +131,11 @@ public:
 	inline void toggleGrid() { drawGrid = !drawGrid; }
 	inline void toggleBboxes() { drawBboxes = !drawBboxes; }
 	void toggleSlices();
+	inline void togglePhantoms() { drawPhantoms = !drawPhantoms;  }
+
+
+	void alignPhantoms();
+
 
 	inline void setConfigPath(const std::string& p) { configPath = p; }
 
@@ -167,6 +172,7 @@ private:
 	bool					drawBboxes;
 	bool					drawSlices;
 	bool					drawHistory;
+	bool					drawPhantoms;
 
 
 	std::vector<InteractionVolume*>		interactionVolumes;
@@ -200,12 +206,22 @@ private:
 	Framebuffer*			volumeRenderTarget;	
 	Framebuffer*			rayStartTarget;
 
+
+	struct Phantom
+	{
+		std::string		stackFile;
+		AABB			bbox;
+		glm::mat4		transform;
+	};
+	std::vector<Phantom>	phantoms;
+
 	void updateGlobalBbox();
 
 	void drawContrastEditor(const Viewport* vp);
 	void drawScoreHistory(const TinyHistory<double>& hist) const;
 	void drawGroundGrid(const Viewport* vp) const;
 	void drawBoundingBoxes() const;
+	void drawPhantomBoxes() const;
 
 	void drawTexturedQuad(unsigned int texture) const;
 	void drawTonemappedQuad();

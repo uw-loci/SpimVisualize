@@ -78,7 +78,7 @@ struct SuperSimpleStack
 	void load(const string& basefile, int i)
 	{
 		string stackFile = basefile + to_string(i) + ".tiff";
-		string referenceFile = basefile + to_string(i) + ".transform.txt";
+		string referenceFile = stackFile + ".reference.txt";
 		string solutionFile = stackFile + ".registration.txt";
 
 		SpimStack* stack = SpimStack::load(stackFile);
@@ -93,8 +93,8 @@ struct SuperSimpleStack
 
 	void transform(const mat4& m)
 	{
-		reference = m * reference;
-		solution = m * solution;
+		reference = reference * m;
+		solution = solution * m;
 	}
 
 };
@@ -138,14 +138,28 @@ int main(int argc, const char** argv)
 	}
 
 	// offset all transformation in relation to the first
-	const mat4 roi = inverse(solutions[0].reference);
+	const mat4 offset = inverse(solutions[0].reference);
 	for (size_t i = 0; i < solutions.size(); ++i)
 	{
-		solutions[i].transform(roi);
 	
+		cout << "Before offset:\n";
+		cout << "Reference  [" << i << "]: " << solutions[i].reference << endl;
+		cout << "Solution   [" << i << "]: " << solutions[i].solution << endl;
+		mat4 delta = solutions[i].reference - solutions[i].solution;
+		cout << "Delta      [" << i << "]: " << delta << endl;
 
-		cout << "Reference  [" << i << "]:" << solutions[i].reference << endl;
-		cout << "Solution   [" << i << "]:" << solutions[i].solution << endl;
+
+	
+		solutions[i].transform(offset);
+		cout << "After offset:\n";
+		cout << "Reference  [" << i << "]: " << solutions[i].reference << endl;
+		cout << "Solution   [" << i << "]: " << solutions[i].solution << endl;
+
+
+
+		delta = solutions[i].reference - solutions[i].solution;
+		cout << "Delta      [" << i << "]: " << delta << endl;
+		cout << "-------------------------------------------------------------------------\n";
 	}
 	
 
@@ -155,15 +169,13 @@ int main(int argc, const char** argv)
 	for (size_t i = 0; i < solutions.size(); ++i)
 	{
 		double e = solutions[i].calculateError();
-		cout << "Error      [" << i << "]:" << e << endl;
+		cout << "Error      [" << i << "]: " << e << endl;
 
 		error.add(e);
 	}
 
-	cout << "Mean error [" << error.getMean() << "]:" << endl;
-	cout << "Mean RMS   [" << error.getRMS() << "]:" << endl;
-
-
+	cout << "Mean error  " << error.getMean() << endl;
+	
 
 
 
