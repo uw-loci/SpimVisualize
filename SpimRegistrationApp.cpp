@@ -667,6 +667,10 @@ void SpimRegistrationApp::contrastEditorResetThresholds()
 
 	std::cout << "[Contrast] Resetting global threshold to [" << globalThreshold.min << " -> " << globalThreshold.max << "]\n";
 
+
+
+	minCursor = 0.f;
+	maxCursor = 1.f;
 	histogramsNeedUpdate = true;
 
 }
@@ -707,20 +711,22 @@ void SpimRegistrationApp::changeContrast(const glm::ivec2& cursor)
 		if (value != lastValue)
 		{
 			lastValue = value;
-			std::cout << "[Debug] Selected Contrast: " << value << "(" << currentContrastCursor << ")\n";
-
-
-			unsigned int index = (unsigned int)(currentContrastCursor * globalThreshold.getSpread());
+			//std::cout << "[Debug] Selected Contrast: " << value << "(" << currentContrastCursor << ")\n";
+			
 			for (size_t i = 0; i < histograms.size(); ++i)
 			{
-				std::cout << "[Histo] " << i << ": " << histograms[i][index] << std::endl;
+				unsigned int index = currentContrastCursor * histograms[i].size();
+				if (index == histograms.size())
+					index--;
+
+				std::cout << "[Histogram] Stack [" << i << "]: " << histograms[i][index] << std::endl;
+
 			}
-
-
+						
 		}
-
-
+		
 	}
+
 }
 
 void SpimRegistrationApp::increaseMaxThreshold()
@@ -755,6 +761,9 @@ void SpimRegistrationApp::decreaseMaxThreshold()
 void SpimRegistrationApp::decreaseMinThreshold()
 {
 	globalThreshold.min -= 5;
+	if (globalThreshold.min < 0)
+		globalThreshold.min = 0;
+
 	std::cout << "[Threshold] Min: " << (int)globalThreshold.min << std::endl;
 
 	histogramsNeedUpdate = true;
@@ -896,6 +905,10 @@ void SpimRegistrationApp::drawContrastEditor(const Viewport* vp)
 
 	// draw histogram
 	
+	float histoWidth = histograms[0].size();
+	// the single offset between histograms
+	float delta = vp->size.x / (histoWidth * (histograms.size()+1));
+
 	glBegin(GL_LINES);
 	for (size_t i = 0; i < histograms.size(); ++i)
 	{
@@ -909,7 +922,7 @@ void SpimRegistrationApp::drawContrastEditor(const Viewport* vp)
 
 			// offset each value slightly
 			//x += ((float)histograms.size() / (float)vp->size.x);
-			x += 0.1f;
+			x += delta;
 
 			glVertex2f(x, 0.f);
 			glVertex2f(x, histograms[i][ix]);
