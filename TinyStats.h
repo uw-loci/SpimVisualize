@@ -10,14 +10,14 @@ struct TinyStats
 	T				sum;
 	T				squaredSum;
 	T				min, max;
-	unsigned int	counter;
+	unsigned int	count;
 
 
-	TinyStats() : sum(0), squaredSum(0), min(std::numeric_limits<T>::max()), max(std::numeric_limits<T>::lowest()), counter(0)
+	TinyStats() : sum(0), squaredSum(0), min(std::numeric_limits<T>::max()), max(std::numeric_limits<T>::lowest()), count(0)
 	{
 	}
 
-	TinyStats(const TinyStats& cp) : sum(cp.sum), squaredSum(cp.squaredSum), min(cp.min), max(cp.max), counter(cp.counter)
+	TinyStats(const TinyStats& cp) : sum(cp.sum), squaredSum(cp.squaredSum), min(cp.min), max(cp.max), count(cp.count)
 	{
 	}
 
@@ -25,7 +25,7 @@ struct TinyStats
 
 	virtual void reset(const T& min_ = std::numeric_limits<T>::max(), const T& max_ = -(FLT_MAX - 2.f))
 	{
-		counter = 0;
+		count = 0;
 		sum = T(0);
 		squaredSum = T(0);
 		min = min_;
@@ -37,7 +37,7 @@ struct TinyStats
 		sum += val;
 		squaredSum += (val*val);
 
-		if (counter == 0)
+		if (count == 0)
 			min = max = val;
 		else
 		{
@@ -45,16 +45,16 @@ struct TinyStats
 			max = std::max(max, val);
 		}
 
-		++counter;
+		++count;
 	}
 
 	virtual void add(const TinyStats& t)
 	{
 		sum += t.sum;
 		squaredSum += t.squaredSum;
-		counter += t.counter;
+		count += t.count;
 
-		if (counter > 0)
+		if (count > 0)
 		{
 			min = std::min(min, t.min);
 			max = std::max(max, t.max);
@@ -75,15 +75,15 @@ struct TinyStats
 
 	T getMean() const
 	{
-		if (counter == 0)
+		if (count == 0)
 			return T(0);
 		
-		return sum * 1.f / (float)counter;
+		return sum * 1.f / (float)count;
 	}
 
 	T getRMS() const
 	{
-		return std::sqrt( (double)squaredSum / (double)counter);
+		return std::sqrt( (double)squaredSum / (double)count);
 	}
 
 
@@ -112,6 +112,26 @@ struct TinyHistory : public TinyStats < T >
 		return history.size();
 	}
 
+	T calculateVariance() const
+	{
+		T variance = 0;
+		const T mean = getMean();
+
+		for (size_t i = 0; i < count; ++i)
+		{
+			const T& v = history[i];
+			variance = variance + (v - mean)*(v - mean);
+		}
+
+		variance /= count;
+		return variance;
+	}
+
+	inline T calculateStdDev() const
+	{
+		return sqrt(calculateVariance());
+	}
+	
 };
 
 #endif
