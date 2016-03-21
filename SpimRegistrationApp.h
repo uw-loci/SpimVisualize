@@ -212,6 +212,7 @@ private:
 		std::string		stackFile;
 		AABB			bbox;
 		glm::mat4		transform;
+		glm::mat4		originalTransform;
 	};
 	std::vector<Phantom>	phantoms;
 

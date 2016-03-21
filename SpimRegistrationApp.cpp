@@ -1905,7 +1905,8 @@ void SpimRegistrationApp::addPhantom(const std::string& stackFilename, const std
 
 	// load the transformation
 	p.transform = loadRegistration(referenceTransform);
-		
+	p.originalTransform = p.transform;
+
 	bool loadedBbox = false;
 	// first see if we loaded the stack already
 	for (size_t i = 0; i < stacks.size(); ++i)
@@ -1941,36 +1942,47 @@ void SpimRegistrationApp::alignPhantoms()
 
 	std::cout << "[Phantom] Aligning phantoms. Assuming a 1:1 match btw phantoms and stacks!\n";
 
-	// calculate offset matrix here ...
-	glm::mat4 offset(1.f);
-	
-	offset = stacks[0]->getTransform() * glm::inverse(phantoms[0].transform);
 
+	TinyStats<double> allError;
 
-	// apply offset matrix
-	for (size_t i = 0; i < phantoms.size(); ++i)
-		phantoms[i].transform = offset * phantoms[i].transform;
-
-
-	TinyStats<double> error;
-	// calculate difference/distance here
-	for (size_t i = 0; i < phantoms.size(); ++i)
+	// do it for all combinations to average out error, as one transform will always map perfectly
+	for (size_t k = 0; k < stacks.size(); ++k)
 	{
-		std::vector<glm::vec3> verts = phantoms[i].bbox.getVertices();
-		
-		double err = 0;
-		for (int k = 0; k < 8; ++k)
-		{
-			glm::vec4 v(verts[i], 1.f);
-			glm::vec4 r = stacks[i]->getTransform() * v;
-			glm::vec4 s = phantoms[i].transform * v;
 
-			err += glm::distance(r, s);
+		// calculate offset matrix here ...
+		glm::mat4 offset(1.f);
+		offset = stacks[k]->getTransform() * glm::inverse(phantoms[k].originalTransform);
+
+		// apply offset matrix
+		for (size_t i = 0; i < phantoms.size(); ++i)
+			phantoms[i].transform = offset * phantoms[i].originalTransform;
+
+
+		TinyStats<double> error;
+		// calculate difference/distance here
+		for (size_t i = 0; i < phantoms.size(); ++i)
+		{
+			std::vector<glm::vec3> verts = phantoms[i].bbox.getVertices();
+
+			double err = 0;
+			for (int k = 0; k < 8; ++k)
+			{
+				glm::vec4 v(verts[i], 1.f);
+				glm::vec4 r = stacks[i]->getTransform() * v;
+				glm::vec4 s = phantoms[i].transform * v;
+
+				err += glm::distance(r, s);
+			}
+
+			err /= 8;
+			error.add(err);
+
+			allError.add(err);
 		}
-		
-		err /= 8;
-		error.add(err);
+
+		std::cout << "[Phantom] Base [" << k << "] mean phantom distance error: " << error.getMean() << std::endl;
 	}
 
-	std::cout << "[Phantom] Mean phantom distance error: " << error.getMean() << std::endl;
+	std::cout << "[Phantom] Overall mean phantom distance error: " << allError.getMean() << std::endl;
+
 }
