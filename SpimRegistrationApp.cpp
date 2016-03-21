@@ -1943,10 +1943,13 @@ void SpimRegistrationApp::alignPhantoms()
 
 	// calculate offset matrix here ...
 	glm::mat4 offset(1.f);
+	
+	offset = stacks[0]->getTransform() * glm::inverse(phantoms[0].transform);
+
 
 	// apply offset matrix
 	for (size_t i = 0; i < phantoms.size(); ++i)
-		phantoms[i].transform *= offset;
+		phantoms[i].transform = offset * phantoms[i].transform;
 
 
 	TinyStats<double> error;
@@ -1969,4 +1972,5 @@ void SpimRegistrationApp::alignPhantoms()
 		error.add(err);
 	}
 
+	std::cout << "[Phantom] Mean phantom distance error: " << error.getMean() << std::endl;
 }
