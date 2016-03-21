@@ -53,9 +53,13 @@ static mat4 loadRegistration(const string& filename)
 struct SuperSimpleStack
 {
 	AABB			bbox;
-	mat4			reference;
-	mat4			solution;
 
+	// this is  the 'correct' reference transform from the phantom
+	mat4			reference;
+
+	// this is the calculated solution transform from the calibration process
+	mat4			solution;
+	
 	// calculates the mean error for all bbox vertices
 	double calculateError() const
 	{
@@ -137,45 +141,46 @@ int main(int argc, const char** argv)
 		exit(1);
 	}
 
-	// offset all transformation in relation to the first
-	const mat4 offset = inverse(solutions[0].reference);
-	for (size_t i = 0; i < solutions.size(); ++i)
+
+	// try for all transformations
+	TinyHistory<double> allError;
+	for (size_t k = 0; k < solutions.size(); ++k)
 	{
-	
-		cout << "Before offset:\n";
-		cout << "Reference  [" << i << "]: " << solutions[i].reference << endl;
-		cout << "Solution   [" << i << "]: " << solutions[i].solution << endl;
-		mat4 delta = solutions[i].reference - solutions[i].solution;
-		cout << "Delta      [" << i << "]: " << delta << endl;
-
-
-	
-		solutions[i].transform(offset);
-		cout << "After offset:\n";
-		cout << "Reference  [" << i << "]: " << solutions[i].reference << endl;
-		cout << "Solution   [" << i << "]: " << solutions[i].solution << endl;
+		const mat4 offset = solutions[k].reference * inverse(solutions[k].solution);
 
 
 
-		delta = solutions[i].reference - solutions[i].solution;
-		cout << "Delta      [" << i << "]: " << delta << endl;
-		cout << "-------------------------------------------------------------------------\n";
+		TinyStats<double> error;
+		for (size_t i = 0; i < solutions.size(); ++i)
+		{
+			mat4 transform = offset * solutions[i].solution;
+
+
+			std::vector<glm::vec3> verts = solutions[i].bbox.getVertices();
+
+			double err = 0;
+			for (int j = 0; j < 8; ++j)
+			{
+				glm::vec4 v(verts[j], 1.f);
+				glm::vec4 r = solutions[i].reference * v;
+				glm::vec4 s = transform * v;
+
+				err += glm::distance(r, s);
+			}
+
+			err /= 8;
+			error.add(err);
+
+			allError.add(err);
+			
+			std::cout << "[Phantom] Base [" << k << "] mean phantom distance error: " << error.getMean() << std::endl;
+
+		}
+
+
 	}
-	
 
-	// records the individual and aggregate error
-	TinyHistory<double> error;
-
-	for (size_t i = 0; i < solutions.size(); ++i)
-	{
-		double e = solutions[i].calculateError();
-		cout << "Error      [" << i << "]: " << e << endl;
-
-		error.add(e);
-	}
-
-	cout << "Mean error  " << error.getMean() << endl;
-	
+	std::cout << "[Phantom] Mean error " << allError.getMean() << " (" << allError.min << " - " << allError.max << ", s=" << allError.calculateStdDev() << ").\n";
 
 
 
