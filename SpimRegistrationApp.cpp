@@ -1965,9 +1965,9 @@ void SpimRegistrationApp::alignPhantoms()
 			std::vector<glm::vec3> verts = phantoms[i].bbox.getVertices();
 
 			double err = 0;
-			for (int k = 0; k < 8; ++k)
+			for (int j = 0; j < 8; ++j)
 			{
-				glm::vec4 v(verts[i], 1.f);
+				glm::vec4 v(verts[j], 1.f);
 				glm::vec4 r = stacks[i]->getTransform() * v;
 				glm::vec4 s = phantoms[i].transform * v;
 
