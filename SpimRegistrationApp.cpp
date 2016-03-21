@@ -7,6 +7,8 @@
 #include "OrbitCamera.h"
 #include "BeadDetection.h"
 #include "SimplePointcloud.h"
+#include "StackTransformationSolver.h"
+#include "TinyStats.h"
 
 #include <algorithm>
 #include <iostream>
@@ -29,12 +31,14 @@ const unsigned int MIN_SLICE_COUNT = 20;
 const unsigned int MAX_SLICE_COUNT = 1500;
 const unsigned int STD_SLICE_COUNT = 100;
 
-SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(nullptr), sliceShader(nullptr), volumeShader(nullptr), 
+
+#define USE_RAYTRACER 
+
+SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(nullptr), sliceShader(nullptr), volumeShader(nullptr),
 	volumeRaycaster(nullptr), drawQuad(nullptr), volumeDifferenceShader(nullptr), tonemapper(nullptr), layout(nullptr),
-	drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), sliceCount(100), 
+	drawGrid(true), drawBboxes(false), drawSlices(false), drawRegistrationPoints(false), sliceCount(100),
 	configPath("./"), cameraMoving(false), runAlignment(false), histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f),
-	subsampleOnCameraMove(false), renderMode(RENDER_VIEWPLANE_SLICES), useOcclusionQuery(false), blendMode(BLEND_ADD), 
-	useImageAutoContrast(false), currentVolume(-1)
+	subsampleOnCameraMove(false), useImageAutoContrast(false), currentVolume(-1), solver(nullptr), drawPosition(nullptr)
 {
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
@@ -47,26 +51,31 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : pointShader(nu
 	resetSliceCount();
 	reloadShaders();
 
-	volumeRenderTarget = new Framebuffer(512, 512, GL_RGBA32F, GL_FLOAT);
+	volumeRenderTarget = new Framebuffer(1024, 1024, GL_RGBA32F, GL_FLOAT);
 
-	glGenQueries(1, &singleOcclusionQuery);
+	rayStartTarget = new Framebuffer(512, 512, GL_RGBA32F, GL_FLOAT);
 
+
+	calculateScore = true;
+	
+	solver = new RYSolver;
+	//solver = new SimulatedAnnealingSolver;
 }
 
 SpimRegistrationApp::~SpimRegistrationApp()
 {
+	delete solver;
 	
 	delete volumeRenderTarget;
-	
+	delete rayStartTarget;
+
 	delete drawQuad;
 	delete pointShader;
 	delete sliceShader;
 	delete volumeShader;
 	delete volumeDifferenceShader;
 	delete volumeRaycaster;
-
-
-	glDeleteQueries(1, &singleOcclusionQuery);
+	delete drawPosition;
 
 
 	for (size_t i = 0; i < stacks.size(); ++i)
@@ -86,10 +95,10 @@ void SpimRegistrationApp::reloadShaders()
 {
 	
 	int numberOfVolumes = std::max(1, (int)stacks.size());
-	std::vector<std::string> defines;
-	defines.push_back("#define VOLUMES " + boost::lexical_cast<std::string>(numberOfVolumes) + "\n");
 
-	bool enableShaderPreProcessing = false;
+	std::vector<std::pair<std::string, std::string> > defines;
+	defines.push_back(std::make_pair("VOLUMES", boost::lexical_cast<std::string>(numberOfVolumes)));
+	
 
 	delete pointShader;
 	pointShader = new Shader("shaders/points2.vert", "shaders/points2.frag");
@@ -98,68 +107,28 @@ void SpimRegistrationApp::reloadShaders()
 	sliceShader = new Shader("shaders/slices.vert", "shaders/slices.frag");
 
 	delete volumeShader;
-	if (enableShaderPreProcessing)
-		volumeShader = new Shader("shaders/volume2.vert", "shaders/volume2.frag", defines);
-	else
-		volumeShader = new Shader("shaders/volume2.vert", "shaders/volume2.frag");
+	volumeShader = new Shader("shaders/volume2.vert", "shaders/volume2.frag", defines);
 
 	delete volumeRaycaster;
-	volumeRaycaster = new Shader("shaders/volumeRaycast.vert", "shaders/volumeRaycast.frag");
+	volumeRaycaster = new Shader("shaders/volumeRaycast.vert", "shaders/volumeRaycast.frag", defines);
 
 	delete drawQuad;
 	drawQuad = new Shader("shaders/drawQuad.vert", "shaders/drawQuad.frag");
 
 	delete volumeDifferenceShader;
-	if (enableShaderPreProcessing )
-		volumeDifferenceShader = new Shader("shaders/volumeDist.vert", "shaders/volumeDist.frag", defines);
-	else
-		volumeDifferenceShader = new Shader("shaders/volumeDist.vert", "shaders/volumeDist.frag");
+	volumeDifferenceShader = new Shader("shaders/volumeDist.vert", "shaders/volumeDist.frag", defines);
 
 	delete tonemapper;
-	if (enableShaderPreProcessing)
-		tonemapper = new Shader("shaders/drawQuad.vert", "shaders/tonemapper.frag", defines);
-	else
-		tonemapper = new Shader("shaders/drawQuad.vert", "shaders/tonemapper.frag");
+	tonemapper = new Shader("shaders/drawQuad.vert", "shaders/tonemapper.frag", defines);
+
+	delete drawPosition;
+	drawPosition = new Shader("shaders/drawPosition.vert", "shaders/drawPosition.frag");
 
 }
-
-void SpimRegistrationApp::switchRenderMode()
-{
-	switch (renderMode)
-	{
-	case RENDER_ALIGN:
-		std::cout << "[Render] Now rendering viewplane slices\n";
-		renderMode = RENDER_VIEWPLANE_SLICES;
-		break;
-	case RENDER_VIEWPLANE_SLICES:
-		std::cout << "[Render] Now rendering alignment volumes.\n";
-		renderMode = RENDER_ALIGN;
-		break;
-
-	default:
-		std::cout << "[Render] Invalid rendermode.\n";
-		renderMode = RENDER_ALIGN;
-	}
-
-}
-
-void SpimRegistrationApp::switchBlendMode()
-{
-	if (blendMode == BLEND_ADD)
-	{
-		blendMode = BLEND_MAX;
-		std::cout << "[Render] Blend mode max\n";
-	}
-	else
-	{
-		blendMode = BLEND_ADD;
-		std::cout << "[Render] Blend mode add\n";
-	}
-}
-
 
 void SpimRegistrationApp::draw()
 {
+	renderTargetReadbackCurrent = false;
 
 	for (size_t i = 0; i < layout->getViewCount(); ++i)
 	{
@@ -175,27 +144,29 @@ void SpimRegistrationApp::draw()
 			if (runAlignment)
 			{
 
-				int query = vp->name;
-				assert(query < 4);
-				
-				const glm::mat4& mat = candidateTransforms.back();
+				try
+				{
+					const glm::mat4& mat = solver->getCurrentSolution().matrix;
 
-				/*
-				saveStackTransform(currentStack);
-				stacks[currentStack]->applyTransform(mat);
-				*/
+					saveVolumeTransform(currentVolume);
+					interactionVolumes[currentVolume]->applyTransform(mat);
 
-				saveVolumeTransform(currentVolume);
-				interactionVolumes[currentVolume]->applyTransform(mat);
-
+				}
+				catch (std::runtime_error& e)
+				{
+					std::cerr << "[Error] " << e.what() << std::endl;
+				}
 			}
 
 
-			if (runAlignment && useOcclusionQuery)
-			{
-				glBeginQuery(GL_SAMPLES_PASSED, singleOcclusionQuery);
-				//glBeginQuery(GL_SAMPLES_PASSED, occlusionQueries[query]);
-			}
+#ifdef USE_RAYTRACER
+
+			initializeRayTargets(vp);
+			raytraceVolumes(vp);
+
+			drawTexturedQuad(volumeRenderTarget->getColorbuffer());
+#else
+
 
 			/// actual drawing block begins
 			/// --------------------------------------------------------
@@ -204,41 +175,27 @@ void SpimRegistrationApp::draw()
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 				
+
 			glEnable(GL_BLEND);
-			if (blendMode == BLEND_ADD)
-				glBlendEquation(GL_FUNC_ADD);
-			else
-				glBlendEquation(GL_MAX);
+			//glBlendEquation(GL_FUNC_ADD);
+			//glBlendEquation(GL_MAX);
+			glBlendEquationSeparate(GL_FUNC_ADD, GL_MAX);
 
 
-			if (renderMode == RENDER_ALIGN)
-			{
-				glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-				glBlendFunc(GL_ONE, GL_ONE);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+			glBlendFunc(GL_ONE, GL_ONE);
 
-				drawViewplaneSlices(vp, volumeDifferenceShader);
-			}
+			// align three-color view
+			drawViewplaneSlices(vp, volumeDifferenceShader);
+		
+			// normal view
+			//drawViewplaneSlices(vp, volumeShader);
+
 			
-
-			if (renderMode == RENDER_VIEWPLANE_SLICES)
-			{				
-				drawViewplaneSlices(vp, volumeShader);
-
-			}
-			
-			//drawViewplaneSlices(vp, volumeDifferenceShader);
-
 			glDisable(GL_BLEND);
 			
 
-
-
-			if (!pointclouds.empty())
-			{
-				drawPointclouds(vp);
-			}
-
-			drawRays(vp);
+			//drawRays(vp);
 
 
 			
@@ -247,21 +204,18 @@ void SpimRegistrationApp::draw()
 
 
 
-			if (runAlignment && useOcclusionQuery)
-			{
-				glEndQuery(GL_SAMPLES_PASSED);
-			
-			}
-
 			glDisable(GL_BLEND);
 			glBlendEquation(GL_FUNC_ADD);
 			
 			volumeRenderTarget->disable();
 			
-			if (renderMode == RENDER_ALIGN)
-				drawTexturedQuad(volumeRenderTarget->getColorbuffer());
-			else if (renderMode == RENDER_VIEWPLANE_SLICES)
-				drawTonemappedQuad(volumeRenderTarget);
+			
+			
+			
+			drawTonemappedQuad();
+			//drawTexturedQuad(volumeRenderTarget->getColorbuffer());
+#endif
+
 
 
 			if (drawGrid)
@@ -271,72 +225,41 @@ void SpimRegistrationApp::draw()
 
 
 			// the query result should be done by now
-			if (runAlignment)
+			if (runAlignment || calculateScore)
 			{
-				undoLastTransform();
+				double score = calculateImageScore();
 
-				if (useOcclusionQuery)
-				{
-					GLint queryStatus = GL_FALSE;
-					while (queryStatus == GL_FALSE)
-						glGetQueryObjectiv(singleOcclusionQuery, GL_QUERY_RESULT_AVAILABLE, &queryStatus);
+				//if (calculateScore)
+				scoreHistory.add(score);
 
-					GLuint64 result = 0;
-					glGetQueryObjectui64v(singleOcclusionQuery, GL_QUERY_RESULT, &result);
-					
-					currentResult.result[vp->name] = result;
-					currentResult.ready = true;
-				}
-				else
+				if (runAlignment)
 				{
-					// image-based metric
-					double score = calculateScore(volumeRenderTarget);
-					currentResult.result[vp->name] = (unsigned long long)score;
-					currentResult.ready = true;
+					solver->recordCurrentScore(score);
+					undoLastTransform();
 
 				}
+				
 			}
+
 		}
 
 		vp->drawBorder();
 
 	}
 
-
+	// draw the solver score here
 
 	/*
-	// gather all occlusion queries here
-	if (runAlignment)
-	{
-		
-		auto start = std::chrono::high_resolution_clock::now();
-
-		for (int i = 0; i < 4; ++i)
-		{
-
-			// read back occlusion result
-			if (occlusionQueryMask[i])
-			{
-				GLint queryStatus = GL_FALSE;
-				while (queryStatus == GL_FALSE)
-					glGetQueryObjectiv(singleOcclusionQuery, GL_QUERY_RESULT_AVAILABLE, &queryStatus);
-
-				GLuint64 result = 0;
-				glGetQueryObjectui64v(singleOcclusionQuery, GL_QUERY_RESULT, &result);
-
-				currentResult.result[i] = result;
-			}
-		}
-		
-		
-		auto end = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<double, std::milli> elapsed = end - start;
-		std::cout << "[Debug] Read back occlusion query in " << elapsed.count() << " ms.\n";
-
-
-
-	}
+	if (runAlignment || !solver->getHistory().history.empty())
+		drawScoreHistory(solver->getHistory());
 	*/
+
+	if (calculateScore || runAlignment)
+		drawScoreHistory(scoreHistory);
+	
+
+
+	
 }
 
 void SpimRegistrationApp::saveStackTransformations() const
@@ -410,9 +333,12 @@ void SpimRegistrationApp::addSpimStack(const std::string& filename)
 	SpimStack* stack = new SpimStackU16;
 	
 	stack->load(filename);
+	stack->subsample();
 
+	/*
 	stack->subsample(false);
 	stack->subsample();
+	*/
 
 	stacks.push_back(stack);
 	addInteractionVolume(stack);
@@ -466,50 +392,37 @@ void SpimRegistrationApp::drawTexturedQuad(unsigned int texture) const
 }
 
 
-void SpimRegistrationApp::drawTonemappedQuad(Framebuffer* fbo) const
+void SpimRegistrationApp::drawTonemappedQuad()
 {
 
+	if (!renderTargetReadbackCurrent)
+		readbackRenderTarget();
+
+
 	// read back render target to determine largest and smallest value
-	bool readback = false;
-	if (readback)
+	bool readback = true;
+	glm::vec4 minVal(std::numeric_limits<float>::max());
+	glm::vec4 maxVal(std::numeric_limits<float>::lowest());
+
+	for (size_t i = 0; i < renderTargetReadback.size(); ++i)
 	{
-		fbo->bind();
-		glReadBuffer(GL_COLOR_ATTACHMENT0);
-
-		std::vector<glm::vec4> pixels(fbo->getWidth()*fbo->getHeight());
-		glReadPixels(0, 0, fbo->getWidth(), fbo->getHeight(), GL_RGBA, GL_FLOAT, glm::value_ptr(pixels[0]));
-		fbo->disable();
-
-		glm::vec4 minVal(std::numeric_limits<float>::max());
-		glm::vec4 maxVal(std::numeric_limits<float>::lowest());
-
-		for (size_t i = 0; i < pixels.size(); ++i)
-		{
-			minVal = glm::min(minVal, pixels[i]);
-			maxVal = glm::max(maxVal, pixels[i]);
-		}
-
-		std::cout << "[Debug] Read back min: " << minVal << ", max: " << maxVal << std::endl;
-
-		glReadBuffer(GL_BACK);
+		minVal = glm::min(minVal, renderTargetReadback[i]);
+		maxVal = glm::max(maxVal, renderTargetReadback[i]);
 	}
+
+
 
 	glDisable(GL_DEPTH_TEST);
 	glDepthMask(GL_FALSE);
 
 	tonemapper->bind();
-	tonemapper->setUniform("maxThreshold", (float)globalThreshold.max);
-	tonemapper->setUniform("minThreshold", (float)globalThreshold.min);
-
-	if (useImageAutoContrast)
-	{
-		tonemapper->setUniform("minThreshold", minImageContrast);
-		tonemapper->setUniform("maxThreshold", maxImageContrast);
-	}
-
-
 	tonemapper->setUniform("sliceCount", (float)sliceCount);
-	tonemapper->setTexture2D("colormap", fbo->getColorbuffer());
+	tonemapper->setTexture2D("colormap", volumeRenderTarget->getColorbuffer());
+	tonemapper->setUniform("minVal", minVal);
+	tonemapper->setUniform("maxVal", maxVal);
+
+	tonemapper->setUniform("minThreshold", (float)globalThreshold.min);
+	tonemapper->setUniform("maxThreshold", (float)globalThreshold.max);
 
 	glBegin(GL_QUADS);
 	glVertex2i(0, 1);
@@ -706,7 +619,7 @@ void SpimRegistrationApp::rotateCurrentStack(float rotY)
 	if (!currentVolumeValid())
 		return;
 
-	interactionVolumes[currentVolume]->rotate(rotY);
+	interactionVolumes[currentVolume]->rotate(glm::radians(rotY));
 	updateGlobalBbox();
 }
 
@@ -1136,35 +1049,43 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 	shader->setUniform("minThreshold", (float)globalThreshold.min);
 	shader->setUniform("maxThreshold", (float)globalThreshold.max);
 	shader->setUniform("sliceCount", (float)sliceCount);
+	shader->setUniform("stdDev", (float)globalThreshold.stdDeviation);
 
-	for (size_t i = 0; i < stacks.size(); ++i)
-	{
+	// reorder stacks so that the current volume is always at index 0
+	std::vector<SpimStack*> reorderedStacks(stacks);
+	
+	if (currentVolume > 0)
+		std::rotate(reorderedStacks.begin(), reorderedStacks.begin() + currentVolume, reorderedStacks.end());
+	
+	for (size_t i = 0; i < reorderedStacks.size(); ++i)
+	{	
+
 		glActiveTexture((GLenum)(GL_TEXTURE0 + i));
-		glBindTexture(GL_TEXTURE_3D, stacks[i]->getTexture());
+		glBindTexture(GL_TEXTURE_3D, reorderedStacks[i]->getTexture());
 
 #ifdef _WIN32
 		char uname[256];
 		sprintf_s(uname, "volume[%d].texture", i);
 		shader->setUniform(uname, (int)i);
 
-		AABB bbox = stacks[i]->getBBox();
+		AABB bbox = reorderedStacks[i]->getBBox();
 		sprintf_s(uname, "volume[%d].bboxMax", i);
 		shader->setUniform(uname, bbox.max);
 		sprintf_s(uname, "volume[%d].bboxMin", i);
 		shader->setUniform(uname, bbox.min);
 
 		sprintf_s(uname, "volume[%d].enabled", i);
-		shader->setUniform(uname, stacks[i]->enabled);
+		shader->setUniform(uname, reorderedStacks[i]->enabled);
 
 		sprintf_s(uname, "volume[%d].inverseMVP", i);
-		shader->setMatrix4(uname, glm::inverse(mvp * stacks[i]->transform));
+		shader->setMatrix4(uname, glm::inverse(mvp * reorderedStacks[i]->transform));
 
 #else
 		char uname[256];
 		sprintf(uname, "volume[%d].texture", i);
 		shader->setUniform(uname, (int)i);
 
-		AABB bbox = stacks[i]->getBBox();
+		AABB bbox = reorderedStacks[i]->getBBox();
 		sprintf(uname, "volume[%d].bboxMax", i);
 		shader->setUniform(uname, bbox.max);
 		sprintf(uname, "volume[%d].bboxMin", i);
@@ -1174,7 +1095,7 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 		shader->setUniform(uname, stacks[i]->enabled);
 
 		sprintf(uname, "volume[%d].inverseMVP", i);
-		shader->setMatrix4(uname, glm::inverse(mvp * stacks[i]->transform));
+		shader->setMatrix4(uname, glm::inverse(mvp * reorderedStacks[i]->transform));
 #endif
 	}
 
@@ -1281,120 +1202,95 @@ void SpimRegistrationApp::drawAxisAlignedSlices(const Viewport* vp, const Shader
 
 
 
-void SpimRegistrationApp::raycastVolumes(const Viewport* vp, const Shader* shader) const
+void SpimRegistrationApp::raytraceVolumes(const Viewport* vp) const
 {
-	glm::mat4 mvp;// = vp.proj * vp.view;
+	glm::mat4 mvp(1.f);
 	vp->camera->getMVP(mvp);
+
+	glm::mat4 imvp = glm::inverse(mvp);
+
+	volumeRenderTarget->bind();
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
-	shader->bind();
-	const glm::vec3 camPos = vp->camera->getPosition();
-	const glm::vec3 viewDir = glm::normalize(vp->camera->target - camPos);
-
-
-	// the smallest and largest projected bounding box vertices -- used to calculate the extend of planes
-	// to draw
-	glm::vec3 minPVal(std::numeric_limits<float>::max()), maxPVal(std::numeric_limits<float>::lowest());
-
-	for (size_t i = 0; i < stacks.size(); ++i)
-	{
-		if (!stacks[i]->enabled)
-			continue;
-
-
-		// draw screen filling quads
-		// find max/min distances of bbox cube from camera
-		std::vector<glm::vec3> boxVerts = stacks[i]->getBBox().getVertices();
-
-		// calculate max/min distance
-		float maxDist = 0.f, minDist = std::numeric_limits<float>::max();
-		for (size_t k = 0; k < boxVerts.size(); ++k)
-		{
-			glm::vec4 p = mvp * stacks[i]->transform * glm::vec4(boxVerts[k], 1.f);
-			p /= p.w;
-
-			minPVal = glm::min(minPVal, glm::vec3(p));
-			maxPVal = glm::max(maxPVal, glm::vec3(p));
-
-		}
-
-	}
-
-	maxPVal = glm::min(maxPVal, glm::vec3(1.f));
-	minPVal = glm::max(minPVal, glm::vec3(-1.f));
-
-
+	volumeRaycaster->bind();
+	
+	// bind all the volumes
 	for (size_t i = 0; i < stacks.size(); ++i)
 	{
 		glActiveTexture((GLenum)(GL_TEXTURE0 + i));
 		glBindTexture(GL_TEXTURE_3D, stacks[i]->getTexture());
-
+		
 #ifdef _WIN32
 
 		char uname[256];
 		sprintf_s(uname, "volume[%d].texture", i);
-		shader->setUniform(uname, (int)i);
+		volumeRaycaster->setUniform(uname, (int)i);
+
+		sprintf_s(uname, "volume[%d].transform", i);
+		volumeRaycaster->setMatrix4(uname, stacks[i]->transform);
+
+		sprintf_s(uname, "volume[%d].inverseTransform", i);
+		volumeRaycaster->setMatrix4(uname, glm::inverse(stacks[i]->transform));
 
 		AABB bbox = stacks[i]->getBBox();
 		sprintf_s(uname, "volume[%d].bboxMax", i);
-		shader->setUniform(uname, bbox.max);
+		volumeRaycaster->setUniform(uname, bbox.max);
 		sprintf_s(uname, "volume[%d].bboxMin", i);
-		shader->setUniform(uname, bbox.min);
+		volumeRaycaster->setUniform(uname, bbox.min);
 
-		sprintf_s(uname, "volume[%d].enabled", i);
-		shader->setUniform(uname, stacks[i]->enabled);
-
-		sprintf_s(uname, "volume[%d].inverseMVP", i);
-		shader->setMatrix4(uname, glm::inverse(mvp * stacks[i]->transform));
-
-		sprintf_s(uname, "volume[%d].transform", i);
-		shader->setMatrix4(uname, stacks[i]->transform);
-
-		sprintf_s(uname, "volume[%d].inverseTransform", i);
-		shader->setMatrix4(uname, glm::inverse(stacks[i]->transform));
 
 #else
 		char uname[256];
 		sprintf(uname, "volume[%d].texture", i);
-		shader->setUniform(uname, (int)i);
+		volumeRaycaster->setUniform(uname, (int)i);
 
 		AABB bbox = stacks[i]->getBBox();
 		sprintf(uname, "volume[%d].bboxMax", i);
-		shader->setUniform(uname, bbox.max);
+		volumeRaycaster->setUniform(uname, bbox.max);
 		sprintf(uname, "volume[%d].bboxMin", i);
-		shader->setUniform(uname, bbox.min);
+		volumeRaycaster->setUniform(uname, bbox.min);
 
 		sprintf(uname, "volume[%d].enabled", i);
-		shader->setUniform(uname, stacks[i]->enabled);
+		volumeRaycaster->setUniform(uname, stacks[i]->enabled);
 
 		sprintf(uname, "volume[%d].inverseMVP", i);
-		shader->setMatrix4(uname, glm::inverse(mvp * stacks[i]->transform));
-	
+		volumeRaycaster->setMatrix4(uname, glm::inverse(mvp * stacks[i]->transform));
+
 		sprintf(uname, "volume[%d].transform", i);
-		shader->setMatrix4(uname, stacks[i]->transform);
-	
+		volumeRaycaster->setMatrix4(uname, stacks[i]->transform);
+
 		sprintf(uname, "volume[%d].inverseTransform", i);
-		shader->setMatrix4(uname, glm::inverse(stacks[i]->transform));
+		volumeRaycaster->setMatrix4(uname, glm::inverse(stacks[i]->transform));
 #endif
 	}
 
-	shader->setUniform("minRayDist", minPVal.z);
-	shader->setUniform("maxRayDist", maxPVal.z);
-	shader->setUniform("inverseMVP", glm::inverse(mvp));
-	shader->setUniform("cameraPos", camPos);
+	// set the global contrast
+	volumeRaycaster->setUniform("minThreshold", (float)globalThreshold.min);
+	volumeRaycaster->setUniform("maxThreshold", (float)globalThreshold.max);
 
-	// draw only the frontmost slice
-	glBegin(GL_QUADS);
-	float z = minPVal.z;// glm::mix(minPVal.z, maxPVal.z, 0.5f);
-	glVertex3f(minPVal.x, maxPVal.y, z);
-	glVertex3f(minPVal.x, minPVal.y, z);
-	glVertex3f(maxPVal.x, minPVal.y, z);
-	glVertex3f(maxPVal.x, maxPVal.y, z);
-	glEnd();
-		
-	glActiveTexture(GL_TEXTURE0);
 
-	shader->disable();
+	// bind the ray start/end textures
+	int offset = stacks.size();
+	volumeRaycaster->setTexture2D("rayStart", rayStartTarget->getColorbuffer(), offset);
 	
+	volumeRaycaster->setMatrix4("inverseMVP", imvp);
+
+	glDisable(GL_DEPTH_TEST);
+	glDepthMask(GL_FALSE);
+
+	// draw a screen-filling quad, tex coords will be calculated in shader
+	glBegin(GL_QUADS);
+	glVertex2i(0, 0);
+	glVertex2i(1, 0);
+	glVertex2i(1, 1);
+	glVertex2i(0, 1);
+	glEnd();
+	
+	glEnable(GL_DEPTH_TEST);
+	glDepthMask(GL_TRUE);
+
+	volumeRaycaster->disable();
+	volumeRenderTarget->disable();
 }
 
 
@@ -1411,16 +1307,8 @@ void SpimRegistrationApp::beginAutoAlign()
 	
 
 	runAlignment = true;      
-	if (candidateTransforms.empty())
-		createCandidateTransforms();
-	
+	solver->initialize(interactionVolumes[currentVolume]);
 
-	lastSamplesPass = 0;
-	//lastPassMatrix = stacks[currentStack]->transform;
-	lastPassMatrix = interactionVolumes[currentVolume]->transform;
-
-
-	//saveStackTransform(currentStack);
 	saveVolumeTransform(currentVolume);
 
 }
@@ -1428,16 +1316,17 @@ void SpimRegistrationApp::beginAutoAlign()
 void SpimRegistrationApp::endAutoAlign()
 {
 	runAlignment = false;
-	lastSamplesPass = 0;
 
-	currentResult.ready = false;
+	std::cout << "[Debug] Ending auto align.\n";
 
+	// apply best transformation
+	const IStackTransformationSolver::Solution bestResult = solver->getBestSolution();
 
-	// clear all pending stuff
-	//candidateTransforms.clear();
-	occlusionQueryResults.clear();
-	
-	
+	std::cout << "[Debug] Applying best result (id:" << bestResult.id << ", score: " << bestResult.score << ")... \n";
+	saveVolumeTransform(currentVolume);
+	interactionVolumes[currentVolume]->applyTransform(bestResult.matrix);
+	updateGlobalBbox();
+
 }
 
 void SpimRegistrationApp::undoLastTransform()
@@ -1465,6 +1354,10 @@ void SpimRegistrationApp::startStackMove()
 void SpimRegistrationApp::endStackMove()
 {
 	updateGlobalBbox();
+
+
+
+
 }
 
 void SpimRegistrationApp::saveVolumeTransform(unsigned int n)
@@ -1497,38 +1390,14 @@ void SpimRegistrationApp::update(float dt)
 
 	if (runAlignment)
 	{
-		std::cout << "[Align] Testing transform " << candidateTransforms.size() << " ... \n";
-
-		// remove the last frame's transform
-		candidateTransforms.pop_back();
-
-		if (candidateTransforms.empty())
-		{		
-			std::cout << "[Debug] Selecting best transform ... \n";
-			selectAndApplyBestTransform();
-			endAutoAlign();
-		}
-
-
-		if (currentResult.ready)
+		if (solver->nextSolution())
 		{
-			occlusionQueryResults.push_back(currentResult);
-
-			// reset the current result
-			currentResult.result[0] = 0;
-			currentResult.result[1] = 0;
-			currentResult.result[2] = 0;
-			currentResult.result[3] = 0;
-			currentResult.ready = false;
-			currentResult.matrix = candidateTransforms.back();
+			std::cout << "[Align] Testing transform " << solver->getCurrentSolution().id << " ... \n";
 		}
-		
-		/*
-		// first process all existing transforms
-		if (occlusionQueryResults.size() >= 10)
-			selectAndApplyBestTransform();
-		*/
-		
+		else
+		{
+			std::cout << "[Aling] No more transformations to test!\n";
+		}
 	}
 
 
@@ -1569,175 +1438,10 @@ void SpimRegistrationApp::maximizeViews()
 	
 }
 
-
-void SpimRegistrationApp::createCandidateTransforms()
-{
-	assert(currentVolumeValid());
-
-	using namespace glm;
-
-	candidateTransforms.clear();
-
-	
-	// single axis alignment: dx,dy,dz, ry
-	int transform = rand() % 4;
-	
-
-	
-	// right now just check dx+dz
-	if (transform == 1)
-		transform = 0;
-	if (transform == 3)
-		transform = 2;
-	
-	std::cout << "[Debug] Creating transformations for: " << std::endl;
-
-	if (transform == 3)
-	{
-
-		//vec3 d = stacks[currentStack]->getBBox().getCentroid();
-		vec3 d = interactionVolumes[currentVolume]->getBBox().getCentroid();
-		mat4 T = glm::translate(vec3(d.x, 0.f, d.z));
-
-		// rotation
-		for (int a = -100; a <= 100; ++a)
-		{
-
-			mat4 R = glm::rotate((float)a/10.f, vec3(0, 1, 0));
-			candidateTransforms.push_back(R);
-		}
-	}
-	else
-	{
-		for (int x = -100; x <= 100; ++x)
-		{
-			float dx = (float)x / 5.f;
-			vec3 v(0.f);
-			v[transform] = dx;
-
-			mat4 T = translate(v);
-
-			candidateTransforms.push_back(T);
-		}
-	}
-	std::cout << "[Debug] Created " << candidateTransforms.size() << " new candidate transforms.\n";
-
-	// reset the current result
-	currentResult.result[0] = 0;
-	currentResult.result[1] = 0;
-	currentResult.result[2] = 0;
-	currentResult.result[3] = 0;
-	currentResult.ready = false;
-	currentResult.matrix = candidateTransforms.back();
-
-
-	/*
-	// create new vector of queries ... 
-	if (occlusionQueryIdsLazyEvaluation[0].size() != candidateTransforms.size())
-	{
-		if (!occlusionQueryIdsLazyEvaluation[0].empty())
-			for (int i = 0; i < 4; ++i)
-				glDeleteQueries(occlusionQueryIdsLazyEvaluation[i].size(), &occlusionQueryIdsLazyEvaluation[i][0]);
-
-		for (int i = 0; i < 4; ++i)
-		{
-			occlusionQueryIdsLazyEvaluation[i].resize(candidateTransforms.size());
-			glGenQueries(occlusionQueryIdsLazyEvaluation[i].size(), &occlusionQueryIdsLazyEvaluation[i][0]);
-		}
-	}
-
-	occlusionQueryCurrentLazyEvaluation = 0;
-	*/
-}
-
-
-void SpimRegistrationApp::selectAndApplyBestTransform()
-{
-	if (occlusionQueryResults.empty())
-		return;
-
-
-
-	static unsigned int counter = 0;
-	char filename[256];
-#ifdef _WIN32
-	sprintf_s(filename, "e:/temp/result_%d.csv", counter++);
-#else
-	sprintf(filename, "e:/temp/result_%d.csv", counter++);
-#endif
-	// write out to csv file 
-	std::ofstream file(filename);
-	file << "#Tx, Ty, Tz, Ry, score\n";
-
-	for (size_t i = 0; i < occlusionQueryResults.size(); ++i)
-	{
-		const OcclusionQueryResult& result = occlusionQueryResults[i];
-		glm::vec3 t(result.matrix[3]);
-
-		// quaternion to axis-angle
-		glm::quat quat(glm::mat3(result.matrix));
-		float a = 2.f * acos(quat.w);
-		
-		file << t.x << ", " << t.y << ", " << t.z << ", " << a << ", " << result.getScore() << std::endl;;
- 
-	}
-
-
-
-
-
-
-
-	sort(occlusionQueryResults.begin(), occlusionQueryResults.end());
-	const OcclusionQueryResult& bestResult = occlusionQueryResults.back();
-	
-
-	if (bestResult.getScore() > lastSamplesPass)
-	{
-		// apply transform
-		//stacks[currentStack]->applyTransform(bestResult.matrix);
-
-		interactionVolumes[currentVolume]->applyTransform(bestResult.matrix);
-
-
-		std::cout << "[Debug] Selected transform with a score of " << bestResult.getScore() << std::endl;
-		
-		lastSamplesPass = bestResult.getScore();
-	}
-	else
-		std::cout << "[Debug] No transform with better samples passed than before!\n";
-	
-	occlusionQueryResults.clear();
-}
-
-
 void SpimRegistrationApp::toggleSlices()
 {
 	drawSlices = !drawSlices;
 	std::cout << "[Render] Drawing " << (drawSlices ? "slices" : "volumes") << std::endl;
-}
-
-double SpimRegistrationApp::calculateScore(Framebuffer* fbo) const
-{
-	fbo->bind();
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-
-	std::vector<glm::vec4> pixels(fbo->getWidth()*fbo->getHeight());
-	glReadPixels(0, 0, fbo->getWidth(), fbo->getHeight(), GL_RGBA, GL_FLOAT, glm::value_ptr(pixels[0]));
-	fbo->disable();
-
-	double value = 0;
-
-	for (size_t i = 0; i < pixels.size(); ++i)
-	{
-		glm::vec3 color(pixels[i]);
-		value += glm::dot(color, color);
-	}
-
-	std::cout << "[Debug] Read back score: " << value << std::endl;
-	glReadBuffer(GL_BACK);
-
-	return value;
 }
 
 void SpimRegistrationApp::inspectOutputImage(const glm::ivec2& cursor)
@@ -1752,14 +1456,8 @@ void SpimRegistrationApp::inspectOutputImage(const glm::ivec2& cursor)
 		return;
 
 
-	// read back last render target
-	// TODO: change me to the _correct_ render target
-	volumeRenderTarget->bind();
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-
-	std::vector<vec4> pixels(volumeRenderTarget->getWidth()*volumeRenderTarget->getHeight());
-	glReadPixels(0, 0, volumeRenderTarget->getWidth(), volumeRenderTarget->getHeight(), GL_RGBA, GL_FLOAT, glm::value_ptr(pixels[0]));
-	volumeRenderTarget->disable();
+	if (!renderTargetReadbackCurrent)
+		readbackRenderTarget();
 
 	// calculate relative coordinates
 	Viewport* vp = layout->getActiveViewport();
@@ -1777,11 +1475,11 @@ void SpimRegistrationApp::inspectOutputImage(const glm::ivec2& cursor)
 		size_t index = imgCoords.x + imgCoords.y * volumeRenderTarget->getWidth();
 
 		//std::cout << "[Debug] " << cursor << " -> " << relCoords << " -> " << imgCoords << std::endl;
-		std::cout << "[Image] " << pixels[index] << std::endl;
+		std::cout << "[Image] " << renderTargetReadback[index] << std::endl;
 
 
 		
-
+		/*
 		// shoot rays!
 		relCoords *= 2.f;
 		relCoords -= vec2(1.f);
@@ -1795,18 +1493,11 @@ void SpimRegistrationApp::inspectOutputImage(const glm::ivec2& cursor)
 		ray.createFromFrustum(mvp, relCoords);
 		rays.push_back(ray);
 		
-		/*
-		ray.createFromFrustum(mvp, vec2(-1, -1)); rays.push_back(ray);
-		ray.createFromFrustum(mvp, vec2( 1, -1)); rays.push_back(ray);
-		ray.createFromFrustum(mvp, vec2( 1,  1)); rays.push_back(ray);
-		ray.createFromFrustum(mvp, vec2(-1,  1)); rays.push_back(ray);
-		*/
-
+		
 		if (pointclouds.size() > 0)
 			inspectPointclouds(ray);
 
-
-
+		*/
 	}
 
 	/*
@@ -1939,4 +1630,171 @@ void SpimRegistrationApp::inspectPointclouds(const Ray& r)
 
 
 	}
+}
+
+void SpimRegistrationApp::drawScoreHistory(const TinyHistory<double>& hist) const
+{
+	
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0, 500, hist.min, hist.max, 0, 1);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	size_t offset = 0;
+	if (hist.history.size() > 500)
+		offset = hist.history.size() - 500;
+
+
+	glColor3f(1, 1, 0);
+	glBegin(GL_LINE_STRIP);
+	for (size_t i = offset; i < hist.history.size(); ++i)
+	{
+		double d = hist.history[i];
+
+		glVertex2d(i-offset, d);
+	}
+	glEnd();
+
+
+}
+
+void SpimRegistrationApp::selectSolver(const std::string& name)
+{
+	// do not change solvers mid-run
+	if (runAlignment)
+		return;
+
+
+	using namespace std;
+	IStackTransformationSolver* newSolver = nullptr;
+
+	if (name == "Uniform DX")
+	{
+		cout << "[Solver] Creating new Uniform DX Solver\n";
+		newSolver = new DXSolver;
+	}
+
+	if (name == "Uniform DY")
+	{
+		cout << "[Solver] Creating new Uniform DY Solver\n";
+		newSolver = new DYSolver;
+	}
+
+	if (name == "Uniform DZ")
+	{
+		cout << "[Solver] Creating new Uniform DZ Solver\n";
+		newSolver = new DZSolver;
+	}
+
+	if (name == "Uniform RY")
+	{
+		cout << "[Solver] Creating new Uniform RY Solver\n";
+		newSolver = new RYSolver;
+	}
+
+	if (name == "Simulated Annealing")
+	{
+		cout << "[Solver] Creating new Simulated Annealing Solver\n";
+		newSolver = new SimulatedAnnealingSolver;
+	}
+
+	if (name == "Hillclimb")
+	{
+		cout << "[Solver] Creating new Multidimensional hillclimb solver\n";
+		newSolver = new MultiDimensionalHillClimb;
+	}
+
+	// only switch solvers if we have created a valid one
+	if (newSolver)
+	{
+		delete solver;
+		solver = newSolver;
+
+		cout << "[Debug] Switched solvers.\n";
+	
+	}
+}
+
+void SpimRegistrationApp::clearHistory()
+{
+	if (solver)
+		solver->clearHistory();
+
+	scoreHistory.history.clear();
+	scoreHistory.reset();
+}
+
+double SpimRegistrationApp::calculateImageScore()
+{
+	if (!renderTargetReadbackCurrent)
+		readbackRenderTarget();
+
+	double value = 0;
+
+	double validCount = 0;
+
+	for (size_t i = 0; i < renderTargetReadback.size(); ++i)
+	{
+		glm::vec3 color(renderTargetReadback[i]);
+		value += abs(color.r);
+
+		if (renderTargetReadback[i].a > 0)
+			++validCount;
+	}
+
+	value /= validCount;
+
+	//std::cout << "[Image] Read back render target score: " << value << std::endl;
+	return value;
+}
+
+
+void SpimRegistrationApp::readbackRenderTarget()
+{
+	volumeRenderTarget->bind();
+	glReadBuffer(GL_COLOR_ATTACHMENT0);
+
+	const unsigned int res = volumeRenderTarget->getWidth()*volumeRenderTarget->getHeight();
+	if (renderTargetReadback.size() != res)
+		renderTargetReadback.resize(res);
+
+	glReadPixels(0, 0, volumeRenderTarget->getWidth(), volumeRenderTarget->getHeight(), GL_RGBA, GL_FLOAT, glm::value_ptr(renderTargetReadback[0]));
+	volumeRenderTarget->disable();
+
+	renderTargetReadbackCurrent = true;
+	glReadBuffer(GL_BACK);
+}
+
+void SpimRegistrationApp::initializeRayTargets(const Viewport* vp)
+{
+	
+
+
+	vp->camera->setup();
+	glm::mat4 mvp;
+	vp->camera->getMVP(mvp);
+
+	drawPosition->bind();
+	drawPosition->setMatrix4("mvp", mvp);
+
+	glEnableClientState(GL_VERTEX_ARRAY);
+
+	glEnable(GL_CULL_FACE);
+	glFrontFace(GL_CCW);
+
+	// draw back faces
+	rayStartTarget->bind();
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glCullFace(GL_FRONT);
+	
+	globalBBox.drawSolid();
+
+	rayStartTarget->disable();
+	
+	glCullFace(GL_BACK);
+	glDisableClientState(GL_VERTEX_ARRAY);
+
+	drawPosition->disable();
+
 }

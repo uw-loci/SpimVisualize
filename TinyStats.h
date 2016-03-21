@@ -2,6 +2,7 @@
 #define TINYSTATS_INCLUDED
 
 #include <algorithm>
+#include <vector>
 
 template<typename T>
 struct TinyStats
@@ -16,7 +17,13 @@ struct TinyStats
 	{
 	}
 
-	void reset(const T& min_ = std::numeric_limits<T>::max(), const T& max_ = -(FLT_MAX-2.f))
+	TinyStats(const TinyStats& cp) : sum(cp.sum), squaredSum(cp.squaredSum), min(cp.min), max(cp.max), counter(cp.counter)
+	{
+	}
+
+	virtual ~TinyStats() {}
+
+	virtual void reset(const T& min_ = std::numeric_limits<T>::max(), const T& max_ = -(FLT_MAX - 2.f))
 	{
 		counter = 0;
 		sum = T(0);
@@ -25,7 +32,7 @@ struct TinyStats
 		max = max_;
 	}
 	
-	void add(const T& val)
+	virtual void add(const T& val)
 	{
 		sum += val;
 		squaredSum += (val*val);
@@ -41,7 +48,7 @@ struct TinyStats
 		++counter;
 	}
 
-	void add(const TinyStats& t)
+	virtual void add(const TinyStats& t)
 	{
 		sum += t.sum;
 		squaredSum += t.squaredSum;
@@ -82,5 +89,29 @@ struct TinyStats
 
 };
 
+
+template<typename T>
+struct TinyHistory : public TinyStats < T >
+{
+	std::vector<T>		history;
+
+	virtual void reset()
+	{
+		TinyStats<T>::reset();
+		history.clear();
+	}
+
+	virtual void add(const T& val)
+	{
+		TinyStats<T>::add(val);
+		history.push_back(val);
+	}
+	
+	inline size_t size() const
+	{
+		return history.size();
+	}
+
+};
 
 #endif

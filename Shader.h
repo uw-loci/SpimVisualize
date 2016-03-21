@@ -49,8 +49,8 @@ public:
 	Shader(const std::string& vpFile, const std::string& fpFile);
 	Shader(const std::string& vpFile, const std::string& gpFile, const std::string& fpFile);
 	
-	Shader(const std::string& vpFile, const std::string& fpFile, const std::vector<std::string>& defines);
-	Shader(const std::string& vpFile, const std::string& gpFile, const std::string& fpFile, const std::vector<std::string>& defines);
+	Shader(const std::string& vpFile, const std::string& fpFile, const std::vector<std::pair<std::string, std::string> >& defines);
+	Shader(const std::string& vpFile, const std::string& gpFile, const std::string& fpFile, const std::vector<std::pair<std::string, std::string> >& defines);
 
 	/// DTor
 	~Shader();
@@ -113,6 +113,14 @@ public:
 	*/
 	void setTexture2D(const std::string& textureName, unsigned int textureId, unsigned int textureUnit=0) const;
 
+	/** Sets a 3D texture.
+	@param textureName sampler name in the shader
+	@param textureId OpenGL texture id
+	@param textureUnit on which unit (usually 0-4) should the texture be bound?
+	*/
+	void setTexture3D(const std::string& textureName, unsigned int textureId, unsigned int textureUnit = 0) const;
+
+
 	/** Sets a cubemap texture. Note that you have to disable texturing manually
 		after you're done.
 
@@ -130,7 +138,7 @@ private:
 	unsigned int	mProgram;
 
 	std::string		mVertexSource, mGeometrySource, mFragmentSource;
-	std::vector<std::string> mDefines;
+	std::map<std::string, std::string>	mDefines;
 
 
 	typedef std::map<std::string, int> IntMap;

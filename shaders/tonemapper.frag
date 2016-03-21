@@ -3,9 +3,12 @@
 
 varying vec2 texcoord;
 
-uniform float maxThreshold;
-uniform float minThreshold;
+uniform vec4 maxVal;
+uniform vec4 minVal;
 uniform float sliceCount;
+
+uniform float minThreshold;
+uniform float maxThreshold;
 
 uniform sampler2D colormap;
 
@@ -18,36 +21,24 @@ uniform bool enableDiscard = true;
 void main()
 {
 	vec3 color = texture2D(colormap, texcoord).rgb;
-	float weight = texture2D(colormap, texcoord).a;
+	float val = texture2D(colormap, texcoord).a;
 
-
-	if (weight == 0.0)
+	if (val < minThreshold)
 		discard;
-
-
-	// normalize along ray length
-	float intensity = color.r / weight;
-
-	intensity -= minThreshold;
-
-	if (intensity < 0.0 && enableDiscard)
-		discard;
-
-	intensity /= (maxThreshold - minThreshold);
-
 
 
 	vec3 blu = vec3(0.0, 0.0, 0.8);
 	vec3 red = vec3(0.8, 0.0, 0.0);
 
+	float delta = (val - minThreshold) / (maxThreshold - minThreshold);
+	color = mix(blu, red, delta);
 
 
-	color = mix(blu, red, intensity);
-
-
-	if (intensity < 0.01)
-		color = vec3(0.0, 1.0, 0.0);
-
+	/*
+	// max difference
+	float diff = color.r / 20.0; // / 4000.0;
+	color = vec3(diff);
+	*/
 
 	gl_FragColor = vec4(color, 1.0);
 

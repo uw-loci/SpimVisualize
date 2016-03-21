@@ -143,7 +143,12 @@ void SimplePointcloud::loadTxt(const std::string& filename)
 		file >> normal.x >> normal.y >> normal.z;
 		*/
 		int r, g, b;
+
+#ifdef _WIN32
 		sscanf_s(tmp.c_str(), "%f %f %f %d %d %d %f %f %f", &pos.x, &pos.y, &pos.z, &r, &g, &b, &normal.x, &normal.y, &normal.z);
+#else
+		sscanf(tmp.c_str(), "%f %f %f %d %d %d %f %f %f", &pos.x, &pos.y, &pos.z, &r, &g, &b, &normal.x, &normal.y, &normal.z);
+#endif
 		color.r = r;
 		color.g = g;
 		color.b = b;

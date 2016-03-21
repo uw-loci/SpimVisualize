@@ -10,15 +10,16 @@ struct Volume
 	bool			enabled;
 };
 
-#define VOLUMES 3
+#define VOLUMES 2
+
 uniform Volume volume[VOLUMES];
 
-uniform bool enableDiscard = true;
 int value[VOLUMES];
-vec3 colors[VOLUMES];
 
 uniform float minThreshold;
 uniform float maxThreshold;
+
+uniform float stdDev;
 
 uniform float sliceCount;
 
@@ -28,26 +29,14 @@ out vec4 fragColor;
 void main()
 {	
 
-	// init colors here
-	colors[0] = vec3(1.0, 0.0, 0.0);
-	colors[1] = vec3(0.0, 1.0, 0.0);
-	colors[2] = vec3(0.0, 0.0, 1.0);
-
-	/*
-	if (VOLUMES > 1)
-		colors[2] = vec3(0.0, 0.0, 1.0);
-	if (VOLUMES > 2)
-		colors[3] = vec3(1.0, 1.0, 0.0);
-	if (VOLUMES > 3)
-		colors[4] = vec3(0.0, 1.0, 1.0);
-	*/
-
-
 	// count of the number volumes this pixel is contained int
 	int count = 0;
 
 	// total intensity of all volumes
 	float sum = 0.0;
+
+
+	float maxVal = 0.0;
 
 	for (int i = 0; i < VOLUMES; ++i)
 	{
@@ -66,11 +55,15 @@ void main()
 
 		value[i] = 0;
 
+
 		// check if the value is inside
 		if (worldPosition.x > volume[i].bboxMin.x && worldPosition.x < volume[i].bboxMax.x &&
 			worldPosition.y > volume[i].bboxMin.y && worldPosition.y < volume[i].bboxMax.y &&
 			worldPosition.z > volume[i].bboxMin.z && worldPosition.z < volume[i].bboxMax.z) 
 		{			
+
+			maxVal = max(maxVal, t);
+
 
 			if (float(t) >= minThreshold)
 			{
@@ -88,13 +81,6 @@ void main()
 		discard;
 
 	
-	vec3 color = vec3(0.0);
-	for (int i = 0; i < VOLUMES; ++i)
-	{
-		if (value[i] > minThreshold)
-			color += colors[i];
-	}
-
 
 	/*
 	bool anyGreater = false;
@@ -103,11 +89,11 @@ void main()
 
 		if (value[i] > minThreshold)
 		{			
-			color += colors[i];
+			diffValue += (value[i] - value[0]);
 			anyGreater = true;
 		}
 
-		if (enableDiscard && value[i] < minThreshold)
+		if (value[i] < minThreshold)
 			discard;
 	}
 
@@ -115,17 +101,39 @@ void main()
 		discard;
 	*/
 
-	// average value
-	sum /= float(count);
 
+float mean = 0.0;
+float maxCount = 0;
+#if (VOLUMES == 2)
+	mean = value[1];
+	maxCount = 2;
+#endif
 
-	// scale value by contrast settings
-	sum -= minThreshold;
-	sum /= (maxThreshold - minThreshold);
+#if (VOLUMES == 3)
+	mean = float(value[1] + value[2]) / 2.0;
+	maxCount = 3;
+#endif
 
-	color *= sum;
-	float alpha = 1.0 / (sliceCount);
+#if (VOLUMES == 4)
+	mean = float(value[1] + value[2] + value[3]) / 3.0;
+#endif
 
-	fragColor = vec4(color, alpha);
+#if (VOLUMES == 5)
+	float(value[1] + value[2] + value[3] + value[4]) / 4.0;
+#endif
+	
+	float diffValue = mean - value[0];
 
+	if (abs(diffValue) > 5.0*stdDev)
+	{
+		diffValue = 1.0;
+	}
+	else
+		diffValue = 0.0;
+
+	if (count < maxCount)
+		diffValue = 0.0;
+
+	vec3 color = vec3(diffValue, sum, count);
+	fragColor = vec4(color, maxVal);
 }

@@ -18,7 +18,8 @@ struct AABB
 
 	ClipResult isVisible(const glm::mat4& mvp) const;
 	void draw() const;
-
+	void drawSolid() const;
+	
 	void reset();
 	void reset(const glm::vec3& v);
 

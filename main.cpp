@@ -71,6 +71,9 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == ' ')
 		regoApp->beginAutoAlign();
 
+	if (key == 'H')
+		regoApp->clearHistory();
+	
 	if (key == ',')
 		regoApp->decreaseMinThreshold();
 	if (key == '.')
@@ -86,6 +89,7 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == 't')
 		regoApp->contrastEditorApplyThresholds();
 
+
 	if (key == ';')
 		regoApp->decreaseSliceCount();
 	if (key == '\'')
@@ -94,15 +98,14 @@ static void keyboard(unsigned char key, int x, int y)
 	
 	if (key == '[')
 		regoApp->rotateCurrentStack(-0.5);
+	if (key == '{')
+		regoApp->rotateCurrentStack(-5.f);
 
 	if (key == ']')
 		regoApp->rotateCurrentStack(0.5);
-	
-	if (key == 'r')
-		regoApp->switchRenderMode();
-	if (key == 'R')
-		regoApp->switchBlendMode();
-
+	if (key == '}')
+		regoApp->rotateCurrentStack(5.f);
+		
 	if (key == 's')
 		regoApp->reloadShaders();
 
@@ -167,10 +170,8 @@ static void keyboard(unsigned char key, int x, int y)
 
 static void keyboardUp(unsigned char key, int x, int y)
 {
-	/*
 	if (key == ' ')
 		regoApp->endAutoAlign();
-	*/
 }
 
 
@@ -242,6 +243,19 @@ static void special(int key, int x, int y)
 	if (key == GLUT_KEY_F4)
 		regoApp->setContrastEditorLayout(winRes, mouse.coordinates);
 	
+
+	if (key == GLUT_KEY_F5)
+		regoApp->selectSolver("Uniform DX");
+	if (key == GLUT_KEY_F6)
+		regoApp->selectSolver("Uniform DY");
+	if (key == GLUT_KEY_F7)
+		regoApp->selectSolver("Uniform DZ");	
+	if (key == GLUT_KEY_F8)
+		regoApp->selectSolver("Uniform RY");
+	if (key == GLUT_KEY_F9)
+		regoApp->selectSolver("Simulated Annealing");
+	if (key == GLUT_KEY_F10)
+		regoApp->selectSolver("Hillclimb");
 
 	if (key == GLUT_KEY_DOWN)
 	{
@@ -351,25 +365,7 @@ int main(int argc, const char** argv)
 			regoApp->addSpimStack(argv[i]);
 
 		}
-
-
-
-		for (int i = 0; i < 3; ++i)
-		{
-			char filename[256];
-			//sprintf(filename, "e:/spim/test/spim_TL00_Angle%d.tif", i);
-			//sprintf(filename, "E:/spim/091015 SPIM various size beads/091015 20micron beads/spim_TL01_Angle%d.ome.tiff", i);
-			//sprintf(filename, "e:/spim/zebra/spim_TL01_Angle%d.ome.tiff", i);
-			//sprintf(filename, "e:/spim/zebra_beads/spim_TL01_Angle%d.ome.tiff", i);
-			sprintf(filename, "e:/spim/121514 Fish2 no beads-selected/spim_TL01_Angle%d.ome.tiff", i);
-			
-			
-			regoApp->addSpimStack(filename);
-		}
-
-		//regoApp->addSpimStack("e:/regoApp/result_31x31x360.bin");
 		*/
-
 
 		/*
 		SimplePointcloud::resaveAsBin("e:/urs/ES_20151111.txt");
@@ -380,23 +376,16 @@ int main(int argc, const char** argv)
 		*/
 
 	
-		//regoApp->addSpimStack("e:/spim/zebra_beads/spim_TL01_Angle0.ome.tiff");
-		//regoApp->addSpimStack("e:/spim/zebra/spim_TL01_Angle0.ome.8bit.tif");
-		//regoApp->addSpimStack("e:/spim/drosophila_example_tiff/spim_TL18_Angle0.tif");
-		regoApp->addSpimStack("e:/spim/OpenSPIM_tutorial/spim_TL00_Angle1.ome.tiff");
-		regoApp->addSpimStack("e:/spim/OpenSPIM_tutorial/spim_TL00_Angle2.ome.tiff");
-		regoApp->addSpimStack("e:/spim/OpenSPIM_tutorial/spim_TL00_Angle3.ome.tiff");
+		regoApp->addSpimStack("e:/spim/zebra/spim_TL01_Angle0.ome.tiff");
+		regoApp->addSpimStack("e:/spim/zebra/spim_TL01_Angle1.ome.tiff");
+		regoApp->addSpimStack("e:/spim/zebra/spim_TL01_Angle2.ome.tiff");
 
 		regoApp->centerCamera();
 		regoApp->loadStackTransformations();
-		regoApp->loadContrastSettings();
+		//regoApp->loadContrastSettings();
 		
 		regoApp->reloadShaders();
 
-		/*
-		regoApp->addSpimStack("e:/spim/test_beads/spim_TL01_Angle0.ome.tiff");
-		regoApp->centerCamera(); 
-		*/
 	}
 	catch (const std::runtime_error& e)
 	{

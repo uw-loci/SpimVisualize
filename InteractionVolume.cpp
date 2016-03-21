@@ -76,7 +76,7 @@ void InteractionVolume::applyTransform(const glm::mat4& t)
 void InteractionVolume::setRotation(float angle)
 {
 	transform = glm::translate(glm::mat4(1.f), getBBox().getCentroid());
-	transform = glm::rotate(transform, angle, glm::vec3(0, 1, 0));
+	transform = glm::rotate(transform, glm::radians(angle), glm::vec3(0, 1, 0));
 	transform = translate(transform, getBBox().getCentroid() * -1.f);
 
 }
@@ -86,7 +86,14 @@ void InteractionVolume::move(const glm::vec3& delta)
 	transform = glm::translate(delta) * transform;//  glm::translate(transform, delta);
 }
 
-void InteractionVolume::rotate(float d)
+void InteractionVolume::rotate(float angle)
 {
-	transform = glm::rotate(transform, d, glm::vec3(0, 1, 0));
+	transform = glm::translate(transform, getBBox().getCentroid());
+	transform = glm::rotate(transform, angle, glm::vec3(0, 1, 0));
+	transform = translate(transform, getBBox().getCentroid() * -1.f);
+
+
 }
+
+
+

@@ -9,6 +9,7 @@
 #include "AABB.h"
 #include "Ray.h"
 #include "StackRegistration.h"
+#include "TinyStats.h"
 
 class Framebuffer;
 class Shader;
@@ -19,6 +20,7 @@ class ReferencePoints;
 struct Hourglass;
 class InteractionVolume;
 class SimplePointcloud;
+class IStackTransformationSolver;
 
 class SpimRegistrationApp : boost::noncopyable
 {
@@ -47,13 +49,16 @@ public:
 	void toggleSelectStack(int n);
 	void toggleStack(int n);
 	inline void toggleCurrentStack() { toggleStack(currentVolume); }
-	
+	void toggleAllStacks();
+
 	void startStackMove();
 	void endStackMove();
 
-
+	/// Undos the last transform applied. This also includes movements of a stack
+	void undoLastTransform();
 	void moveStack(const glm::vec2& delta);
 	void rotateCurrentStack(float rotY);
+
 	void inspectOutputImage(const glm::ivec2& cursor);
 
 	void changeContrast(const glm::ivec2& cursor);
@@ -66,24 +71,42 @@ public:
 	void contrastEditorApplyThresholds();
 
 
-	void toggleAllStacks();
-
+	
 
 	inline void clearRays() { rays.clear(); }
 	
+	/// \name Alignment
+	/// \{
+	/// Begins the auto alignment process with the currently selected solver
+	/**	Each frame the solver will try a different solution and record the score.
+		The alignment process can be stopped by calling @endAutoAlign. At that point 
+		the best solution is selected and applied. 
+	*/
 	void beginAutoAlign();
-	void endAutoAlign();
-	void undoLastTransform();
+	void endAutoAlign();	
+	/// Selects the currently active solver
+	void selectSolver(const std::string& solver);
+	
+
+	void clearHistory();
+
+	/// \}
 
 	void updateMouseMotion(const glm::ivec2& cursor);
 	
 
+	/// \name Views/Layout
+	/// \{
 	void setPerspectiveLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
 	void setTopviewLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
 	void setThreeViewLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
 	void setContrastEditorLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
 	
+	/// \}
 
+
+	/// \name Rendering options
+	/// \{
 	void increaseSliceCount();
 	void decreaseSliceCount();
 	void resetSliceCount();
@@ -93,7 +116,8 @@ public:
 	void panCamera(const glm::vec2& delta);
 	void centerCamera();
 	void maximizeViews();
-
+	
+	/// \}
 
 	inline void setCameraMoving(bool m) { cameraMoving = m; }
 
@@ -160,22 +184,10 @@ private:
 	Shader*					volumeRaycaster;
 	Shader*					drawQuad;
 		
+	Shader*					drawPosition;
+
 	// for contrast mapping
 	Shader*					tonemapper;
-
-	enum RenderMode
-	{
-		RENDER_VIEWPLANE_SLICES,
-		RENDER_ALIGN
-
-	}						renderMode;
-
-	enum BlendMode
-	{
-		BLEND_ADD,
-		BLEND_MAX
-
-	}						blendMode;
 
 	// stores undo transformations for all stacks
 	struct VolumeTransform
@@ -187,69 +199,57 @@ private:
 	std::vector<VolumeTransform> transformUndoChain;
 		
 	Framebuffer*			volumeRenderTarget;	
+	Framebuffer*			rayStartTarget;
 
 	void updateGlobalBbox();
 
 	void drawContrastEditor(const Viewport* vp);
-	
+	void drawScoreHistory(const TinyHistory<double>& hist) const;
 	void drawGroundGrid(const Viewport* vp) const;
 	void drawBoundingBoxes() const;
 
 	void drawTexturedQuad(unsigned int texture) const;
-	void drawTonemappedQuad(Framebuffer* fbo) const;
+	void drawTonemappedQuad();
 
 	void drawAxisAlignedSlices(const glm::mat4& mvp, const glm::vec3& axis, const Shader* shader) const;
 	void drawAxisAlignedSlices(const Viewport* vp, const Shader* shader) const;
 	void drawViewplaneSlices(const Viewport* vp, const Shader* shader) const;
-	void raycastVolumes(const Viewport* vp, const Shader* shader) const;
+	
+	
+	// ray tracing section
+	void raytraceVolumes(const Viewport* vp) const;
+	void initializeRayTargets(const Viewport* vp);
 
 	void drawPointclouds(const Viewport* vp);
 	
 	void drawRays(const Viewport* vp);
+
+
 
 	bool useImageAutoContrast;
 	float minImageContrast;
 	float maxImageContrast;
 
 	void calculateImageContrast(const std::vector<glm::vec4>& rgbaImage);
-
+	double calculateImageScore();
 
 	// auto-stack alignment
-	unsigned long long		lastSamplesPass;
-	glm::mat4				lastPassMatrix;
-		
-	bool					runAlignment;
+	bool				runAlignment;
 
-	struct OcclusionQueryResult
-	{
-		glm::mat4			matrix;
-		unsigned long long	result[4];
-		bool				ready;
+	// this is the read-back image. used for inspection etc
+	std::vector<glm::vec4>	renderTargetReadback;
+	bool					renderTargetReadbackCurrent = false;
 
-		inline unsigned long long getScore() const
-		{
-			return result[0] + result[1] + result[2] + result[3];
-		}
-
-		inline bool operator < (const OcclusionQueryResult& rhs) const
-		{
-			return getScore() < rhs.getScore();
-		}
-	};
-
-	std::vector<glm::mat4>				candidateTransforms;
-	std::vector<OcclusionQueryResult>	occlusionQueryResults;
-	OcclusionQueryResult				currentResult;
-
-	bool				useOcclusionQuery;
-	unsigned int		singleOcclusionQuery;
-
-	void createCandidateTransforms();
-	void selectAndApplyBestTransform();
-
-	double calculateScore( Framebuffer* fbo) const;
+	void readbackRenderTarget();
 
 
+	// this one will override runAlignment and always calculate the score 
+	bool				calculateScore;
+	TinyHistory<double>	scoreHistory;
+
+
+	IStackTransformationSolver*		solver;
+	
 	static glm::vec3 getRandomColor(unsigned int n);
 
 	inline bool currentVolumeValid() const { return currentVolume > -1 && currentVolume < interactionVolumes.size(); }
