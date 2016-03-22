@@ -121,7 +121,7 @@ static void keyboard(unsigned char key, int x, int y)
 
 
 	if (key == 'e')
-		app->createEmptyRandomStack(glm::ivec3(256, 256, 48));
+		app->createEmptyRandomStack(glm::ivec3(256, 256, 64));
 	if (key == 'S')
 		app->endSampleStack();
 
@@ -136,6 +136,16 @@ static void keyboard(unsigned char key, int x, int y)
 		app->startSampleStack(3);
 	if (key == '%')
 		app->startSampleStack(4);
+	if (key == '^')
+		app->startSampleStack(5);
+	if (key == '&')
+		app->startSampleStack(6);
+	if (key == '8')
+		app->startSampleStack(7);
+	if (key == '(')
+		app->startSampleStack(8);
+	if (key == ')')
+		app->startSampleStack(9);
 
 	
 	if (key == '1')
@@ -161,7 +171,10 @@ static void keyboard(unsigned char key, int x, int y)
 
 	if (key == '8')
 		app->toggleSelectStack(7);
-
+	if (key == '9')
+		app->toggleSelectStack(8);
+	if (key == '0')
+		app->toggleSelectStack(9);
 	
 
 

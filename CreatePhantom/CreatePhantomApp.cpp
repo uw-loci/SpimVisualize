@@ -1603,7 +1603,7 @@ void CreatePhantomApp::initializeRayTargets(const Viewport* vp)
 
 }
 
-void CreatePhantomApp::createEmptyRandomStack(const glm::ivec3& resolution)
+void CreatePhantomApp::createEmptyRandomStack(const glm::ivec3& resolution, const glm::vec3& voxelDimensions)
 {
 	assert(!stacks.empty());
 	using namespace glm;
@@ -1614,6 +1614,7 @@ void CreatePhantomApp::createEmptyRandomStack(const glm::ivec3& resolution)
 	//const glm::ivec3 resolution(1300, 1000, 100);
 
 	SpimStackU16* stack = new SpimStackU16;
+	stack->setVoxelDimensions(voxelDimensions);
 	stack->setContent(resolution, 0);
 
 	stacks.push_back(stack);

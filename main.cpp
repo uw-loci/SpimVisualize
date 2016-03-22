@@ -415,11 +415,15 @@ int main(int argc, const char** argv)
 		regoApp->addSpimStack("e:/spim/phantom/phantom_2.tiff");
 		regoApp->addSpimStack("e:/spim/phantom/phantom_3.tiff");
 		regoApp->addSpimStack("e:/spim/phantom/phantom_4.tiff");
+		regoApp->addSpimStack("e:/spim/phantom/phantom_5.tiff");
+		regoApp->addSpimStack("e:/spim/phantom/phantom_6.tiff");
 
 		regoApp->addPhantom("e:/spim/phantom/phantom_1.tiff", "e:/spim/phantom/phantom_1.tiff.reference.txt");
 		regoApp->addPhantom("e:/spim/phantom/phantom_2.tiff", "e:/spim/phantom/phantom_2.tiff.reference.txt");
 		regoApp->addPhantom("e:/spim/phantom/phantom_3.tiff", "e:/spim/phantom/phantom_3.tiff.reference.txt");
 		regoApp->addPhantom("e:/spim/phantom/phantom_4.tiff", "e:/spim/phantom/phantom_4.tiff.reference.txt");
+		regoApp->addPhantom("e:/spim/phantom/phantom_5.tiff", "e:/spim/phantom/phantom_5.tiff.reference.txt");
+		regoApp->addPhantom("e:/spim/phantom/phantom_6.tiff", "e:/spim/phantom/phantom_6.tiff.reference.txt");
 
 
 

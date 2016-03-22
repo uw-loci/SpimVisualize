@@ -48,7 +48,7 @@ public:
 	/// \name Resampling
 	/// \{
 
-	void createEmptyRandomStack(const glm::ivec3& resolution);
+	void createEmptyRandomStack(const glm::ivec3& resolution, const glm::vec3& voxelDimensions=glm::vec3(1.f));
 
 	void startSampleStack(int stack);
 	void clearSampleStack();
