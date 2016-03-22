@@ -286,15 +286,16 @@ void CreatePhantomApp::loadContrastSettings()
 
 
 
-void CreatePhantomApp::addSpimStack(const std::string& filename)
+void CreatePhantomApp::addSpimStack(const std::string& filename, const glm::vec3& voxelDimensions)
 {
 	SpimStack* stack = SpimStack::load(filename);
+	stack->setVoxelDimensions(glm::vec3(voxelDimensions));
+	this->addSpimStack(stack);
+}
 
-	/*
-	stack->subsample(false);
-	stack->subsample();
-	*/
-
+void CreatePhantomApp::addSpimStack(const std::string& filename)
+{
+	SpimStack* stack = SpimStack::load(filename);	
 	this->addSpimStack(stack);
 }
 
@@ -666,11 +667,13 @@ void CreatePhantomApp::changeContrast(const glm::ivec2& cursor)
 			std::cout << "[Debug] Selected Contrast: " << value << "(" << currentContrastCursor << ")\n";
 
 
+			/*
 			unsigned int index = (unsigned int)(currentContrastCursor * globalThreshold.getSpread());
 			for (size_t i = 0; i < histograms.size(); ++i)
 			{
 				std::cout << "[Histo] " << i << ": " << histograms[i][index] << std::endl;
 			}
+			*/
 
 
 		}
@@ -1227,6 +1230,7 @@ void CreatePhantomApp::raytraceVolumes(const Viewport* vp) const
 	volumeRaycaster->setUniform("minThreshold", (float)globalThreshold.min);
 	volumeRaycaster->setUniform("maxThreshold", (float)globalThreshold.max);
 
+	volumeRaycaster->setUniform("activeVolume", currentVolume);
 
 	// bind the ray start/end textures
 	volumeRaycaster->setTexture2D("rayStart", rayStartTarget->getColorbuffer(), (int)stacks.size());

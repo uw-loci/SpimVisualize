@@ -22,9 +22,9 @@ uniform float		maxThreshold;
 
 uniform mat4		inverseMVP;
 
-uniform float		stepLength = 0.5;
+uniform float		stepLength = 1.0;
 
-uniform int  		activeVolume;
+uniform int  		activeVolume = -1;
 
 in vec2 texcoord;
 out vec4 fragColor;
@@ -88,7 +88,7 @@ void main()
 		
 					value[v] = val;
 
-					if (activeVolume > -1 && v == activeVolume && val > minThreshold && val < maxThreshold)
+					if (v == activeVolume && val > minThreshold && val < maxThreshold)
 						hitActiveVolume = true;
 				}
 				else
@@ -125,9 +125,6 @@ void main()
 
 		finalValue = vec4(val * baseColor, 1.0);
 
-		
-	
-		//finalValue = vec4(1.0);
 
 	}
 

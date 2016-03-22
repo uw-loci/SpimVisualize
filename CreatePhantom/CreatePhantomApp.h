@@ -30,6 +30,7 @@ public:
 	
 
 	void addSpimStack(const std::string& filename);
+	void addSpimStack(const std::string& filename, const glm::vec3& voxelDimensions);
 	void addSpimStack(SpimStack* stack);
 	void subsampleAllStacks();
 

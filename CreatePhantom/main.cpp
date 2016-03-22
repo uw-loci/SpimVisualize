@@ -6,6 +6,9 @@
 #include <GL/glew.h>
 #include <GL/freeglut.h>
 
+#include <glm/glm.hpp>
+#include <glm/gtx/transform2.hpp>
+
 #include <iostream>
 #include <vector>
 #include <algorithm>
@@ -76,13 +79,13 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == ',')
 		app->decreaseMinThreshold();
 	if (key == '.')
-		app->increaseMaxThreshold();
-	/*
+		app->increaseMinThreshold();
+	
 	if (key == '<')
-		app->decreaseMinThreshold();
+		app->decreaseMaxThreshold();
 	if (key == '>')
 		app->decreaseMaxThreshold();
-	*/
+	
 	if (key == 'C')
 		app->autoThreshold();
 	if (key == 'c')
@@ -375,8 +378,11 @@ int main(int argc, const char** argv)
 		app = new CreatePhantomApp(glm::ivec2(1024, 768));
 		app->setConfigPath("e:/app/");
 
-		//app->addSpimStack(("e:/spim/phantom/cadaver/cadaver_512x512x106.16bit.raw"));
-		app->addSpimStack(("e:/spim/phantom/frog/frog_256x256x44.8bit.raw"));
+		//app->addSpimStack(("e:/spim/phantom/cadaver/cadaver_512x512x106.16bit.raw"), glm::vec3(1,1,5));
+
+
+		app->addSpimStack(("E:/spim/phantom/t1-head/t1-head.tiff"), glm::vec3(1));
+
 
 
 		app->centerCamera();
