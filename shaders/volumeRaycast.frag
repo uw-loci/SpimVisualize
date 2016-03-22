@@ -59,6 +59,8 @@ void main()
 		float distanceTravelled = 0.0;
 
 		bool hitActiveVolume = false;
+		bool hitAnyVolume = false;
+
 
 		vec3 worldPosition = rayOrigin;
 		for (int i = 0; i < STEPS; ++i)
@@ -90,6 +92,8 @@ void main()
 
 					if (v == activeVolume && val > minThreshold && val < maxThreshold)
 						hitActiveVolume = true;
+
+					hitAnyVolume = true;
 				}
 				else
 					value[v] = 0.0;
@@ -119,12 +123,16 @@ void main()
 		//val = (meanValue - minThreshold) / (maxThreshold - minThreshold);
 				
 		vec3 baseColor = vec3(1.0);
+
 		if (hitActiveVolume)
 			baseColor = vec3(1.0, 1.0, 0.0);
 
 
 		finalValue = vec4(val * baseColor, 1.0);
 
+
+		if (!hitAnyVolume)
+			finalValue = vec4(0.0); //1.0, 0.0, 1.0, 0.0);
 
 	}
 

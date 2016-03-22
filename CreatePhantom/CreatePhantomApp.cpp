@@ -57,9 +57,9 @@ volumeRaycaster(nullptr), drawQuad(nullptr), volumeDifferenceShader(nullptr), gp
 	resetSliceCount();
 	reloadShaders();
 
-	volumeRenderTarget = new Framebuffer(1024, 1024, GL_RGBA32F, GL_FLOAT);
+	volumeRenderTarget = new Framebuffer(1024, 1024, GL_RGBA32F, GL_FLOAT, 1, GL_NEAREST);
 
-	rayStartTarget = new Framebuffer(512, 512, GL_RGBA32F, GL_FLOAT);
+	rayStartTarget = new Framebuffer(1024, 1024, GL_RGBA32F, GL_FLOAT);
 
 	
 
