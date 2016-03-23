@@ -226,10 +226,10 @@ void RYSolver::createCandidateSolutions(const InteractionVolume* v)
 		s.id = r;
 		s.score = 0;
 
-		s.matrix = translate(mat4(1.f), v->getBBox().getCentroid());
+		s.matrix = translate(v->getTransform(), v->getBBox().getCentroid());
 		s.matrix = rotate(s.matrix, a, glm::vec3(0, 1, 0));
 		s.matrix = translate(s.matrix, v->getBBox().getCentroid() * -1.f);
-
+		
 		//s.matrix = rotate(a, vec3(0, 1, 0));
 		solutions.push_back(s);
 

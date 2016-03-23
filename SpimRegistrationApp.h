@@ -84,6 +84,12 @@ public:
 	*/
 	void beginAutoAlign();
 	void endAutoAlign();	
+	
+	// Begins the auto alignment process through all stacks, selected randomly
+	void beginMultiAutoAlign();
+	
+	
+	
 	/// Selects the currently active solver
 	void selectSolver(const std::string& solver);
 	
@@ -251,6 +257,9 @@ private:
 
 	// auto-stack alignment
 	bool				runAlignment;
+	bool				multiAlign;
+
+	void selectAndApplyBestSolution();
 
 	// this is the read-back image. used for inspection etc
 	std::vector<glm::vec4>	renderTargetReadback;

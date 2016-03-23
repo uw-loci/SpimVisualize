@@ -41,7 +41,7 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : configPath("./
 	volumeRaycaster(nullptr), drawQuad(nullptr), volumeDifferenceShader(nullptr), drawPosition(nullptr), tonemapper(nullptr), 
 	volumeRenderTarget(nullptr), rayStartTarget(nullptr),
 	useImageAutoContrast(false), runAlignment(false), renderTargetReadbackCurrent(false), calculateScore(false), drawHistory(false),
-	solver(nullptr)
+	solver(nullptr), drawPhantoms(false)
 {
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
@@ -63,7 +63,7 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : configPath("./
 
 	calculateScore = true;
 	
-	solver = new RYSolver;
+	solver = new DXSolver;
 	//solver = new SimulatedAnnealingSolver;
 }
 
@@ -1342,13 +1342,21 @@ void SpimRegistrationApp::beginAutoAlign()
 
 	saveVolumeTransform(currentVolume);
 
+	multiAlign = false;
 }
 
 void SpimRegistrationApp::endAutoAlign()
 {
 	runAlignment = false;
-
 	std::cout << "[Debug] Ending auto align.\n";
+
+	selectAndApplyBestSolution();
+}
+
+void SpimRegistrationApp::selectAndApplyBestSolution()
+{ 
+	if (!currentVolumeValid())
+		return;
 
 	// apply best transformation
 	const IStackTransformationSolver::Solution bestResult = solver->getBestSolution();
@@ -1359,6 +1367,26 @@ void SpimRegistrationApp::endAutoAlign()
 	updateGlobalBbox();
 
 }
+
+void SpimRegistrationApp::beginMultiAutoAlign()
+{
+	if (interactionVolumes.size() < 2 || currentVolume == -1)
+		return;
+
+	if (runAlignment)
+		return;
+
+
+	std::cout << "[Debug] Aligning volume" << currentVolume << " to volume 0 ... " << std::endl;
+	
+	runAlignment = true;
+	solver->initialize(interactionVolumes[currentVolume]);
+
+	saveVolumeTransform(currentVolume);
+
+	multiAlign = true;
+}
+
 
 void SpimRegistrationApp::undoLastTransform()
 {
@@ -1428,6 +1456,21 @@ void SpimRegistrationApp::update(float dt)
 		else
 		{
 			std::cout << "[Aling] No more transformations to test!\n";
+		
+		
+			if (multiAlign)
+			{
+				selectAndApplyBestSolution();
+
+				currentVolume = rand() % interactionVolumes.size();
+
+				// select better solver
+
+
+				solver->initialize(interactionVolumes[currentVolume]);
+
+			}
+		
 		}
 	}
 

@@ -121,7 +121,7 @@ static void keyboard(unsigned char key, int x, int y)
 
 
 	if (key == 'e')
-		app->createEmptyRandomStack(glm::ivec3(256, 256, 64));
+		app->createEmptyRandomStack(glm::ivec3(512, 512, 64), glm::vec3(1,1,5));
 	if (key == 'S')
 		app->endSampleStack();
 
@@ -391,10 +391,10 @@ int main(int argc, const char** argv)
 		app = new CreatePhantomApp(glm::ivec2(1024, 768));
 		app->setConfigPath("e:/app/");
 
-		//app->addSpimStack(("e:/spim/phantom/cadaver/cadaver_512x512x106.16bit.raw"), glm::vec3(1,1,5));
+		app->addSpimStack(("e:/spim/phantom/cadaver/cadaver_512x512x106.16bit.raw"), glm::vec3(1,1,5));
 
 
-		app->addSpimStack(("E:/spim/phantom/t1-head/t1-head.tiff"), glm::vec3(1));
+		//app->addSpimStack(("E:/spim/phantom/t1-head/t1-head.tiff"), glm::vec3(1));
 
 
 

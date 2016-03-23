@@ -1778,7 +1778,7 @@ void CreatePhantomApp::endSampleStack()
 
 	std::string filename = savePath + "phantom_" + std::to_string(sampleStack);;
 	stacks[sampleStack]->save(filename + ".tiff");
-	stacks[sampleStack]->saveTransform(filename + ".transform.txt");
+	stacks[sampleStack]->saveTransform(filename + ".tiff.reference.txt");
 	
 
 	sampleStack = -1;

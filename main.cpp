@@ -75,6 +75,9 @@ static void keyboard(unsigned char key, int x, int y)
 
 	if (key == ' ')
 		regoApp->beginAutoAlign();
+	
+	if (key == '\t')
+		regoApp->beginMultiAutoAlign();
 
 	if (key == 'h')
 		regoApp->toggleHistory();
@@ -118,12 +121,12 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == '[')
 		regoApp->rotateCurrentStack(-0.5);
 	if (key == '{')
-		regoApp->rotateCurrentStack(-5.f);
+		regoApp->rotateCurrentStack(-2.5f);
 
 	if (key == ']')
 		regoApp->rotateCurrentStack(0.5);
 	if (key == '}')
-		regoApp->rotateCurrentStack(5.f);
+		regoApp->rotateCurrentStack(2.5f);
 		
 	if (key == 's')
 		regoApp->reloadShaders();
@@ -198,6 +201,10 @@ static void keyboardUp(unsigned char key, int x, int y)
 {
 	if (key == ' ')
 		regoApp->endAutoAlign();
+
+
+	if (key == '\t')
+		regoApp->endAutoAlign(); 
 }
 
 
@@ -267,20 +274,20 @@ static void special(int key, int x, int y)
 
 	if (key == GLUT_KEY_F2)
 		regoApp->setTopviewLayout(winRes, mouse.coordinates);
-	
+
 	if (key == GLUT_KEY_F3)
 		regoApp->setThreeViewLayout(winRes, mouse.coordinates);
-	
+
 	if (key == GLUT_KEY_F4)
 		regoApp->setContrastEditorLayout(winRes, mouse.coordinates);
-	
+
 
 	if (key == GLUT_KEY_F5)
 		regoApp->selectSolver("Uniform DX");
 	if (key == GLUT_KEY_F6)
 		regoApp->selectSolver("Uniform DY");
 	if (key == GLUT_KEY_F7)
-		regoApp->selectSolver("Uniform DZ");	
+		regoApp->selectSolver("Uniform DZ");
 	if (key == GLUT_KEY_F8)
 		regoApp->selectSolver("Uniform RY");
 	if (key == GLUT_KEY_F9)
@@ -288,20 +295,56 @@ static void special(int key, int x, int y)
 	if (key == GLUT_KEY_F10)
 		regoApp->selectSolver("Hillclimb");
 
+	if (key == GLUT_KEY_UP)
+	{
+		float d = 1.f;
+
+		if (glutGetModifiers() == GLUT_ACTIVE_SHIFT)
+			d = 10.f;
+		else if (glutGetModifiers() == GLUT_ACTIVE_ALT)
+			d = 0.1f;
+
+		regoApp->moveStack(glm::vec2(0, d));
+	}
+
 	if (key == GLUT_KEY_DOWN)
 	{
 
+		float d = 1.f;
+
+		if (glutGetModifiers() == GLUT_ACTIVE_SHIFT)
+			d = 10.f;
+		else if (glutGetModifiers() == GLUT_ACTIVE_ALT)
+			d = 0.1f;
+
+		regoApp->moveStack(glm::vec2(0, -d));
 	}
 
 	if (key == GLUT_KEY_LEFT)
 	{
 
+		float d = 1.f;
+
+		if (glutGetModifiers() == GLUT_ACTIVE_SHIFT)
+			d = 10.f;
+		else if (glutGetModifiers() == GLUT_ACTIVE_ALT)
+			d = 0.1f;
+
+		regoApp->moveStack(glm::vec2(-d, 0));
 
 	}
 
 
 	if (key == GLUT_KEY_RIGHT)
 	{
+		float d = 1.f;
+
+		if (glutGetModifiers() == GLUT_ACTIVE_SHIFT)
+			d = 10.f;
+		else if (glutGetModifiers() == GLUT_ACTIVE_ALT)
+			d = 0.1f;
+
+		regoApp->moveStack(glm::vec2(d, 0));
 
 	}
 	
@@ -394,13 +437,13 @@ int main(int argc, const char** argv)
 
 	try
 	{
-		
+
 		for (int i = 1; i < argc; ++i)
 		{
 			regoApp->addSpimStack(argv[i]);
 
 		}
-		
+
 
 		/*
 		SimplePointcloud::resaveAsBin("e:/urs/ES_20151111.txt");
@@ -409,21 +452,29 @@ int main(int argc, const char** argv)
 		regoApp->addPointcloud("e:/urs/ES_20151111.bin");
 		regoApp->addPointcloud("e:/urs/ES_20151122.bin");
 		*/
-	
+
+
+		for (int i = 1; i < 6; ++i)
+		{
+			char filename[256];
+			sprintf(filename, "e:/spim/phantom/phantom_%d.tiff", i);
+
+			SpimStack* stack = SpimStack::load(filename);
+			stack->setVoxelDimensions(glm::vec3(1.f, 1.f, 5.f));
+
+			regoApp->addSpimStack(stack);
+
+		}
+
 		
-		regoApp->addSpimStack("e:/spim/phantom/phantom_1.tiff");
-		regoApp->addSpimStack("e:/spim/phantom/phantom_2.tiff");
-		regoApp->addSpimStack("e:/spim/phantom/phantom_3.tiff");
-		regoApp->addSpimStack("e:/spim/phantom/phantom_4.tiff");
-		regoApp->addSpimStack("e:/spim/phantom/phantom_5.tiff");
-		regoApp->addSpimStack("e:/spim/phantom/phantom_6.tiff");
+
 
 		regoApp->addPhantom("e:/spim/phantom/phantom_1.tiff", "e:/spim/phantom/phantom_1.tiff.reference.txt");
 		regoApp->addPhantom("e:/spim/phantom/phantom_2.tiff", "e:/spim/phantom/phantom_2.tiff.reference.txt");
 		regoApp->addPhantom("e:/spim/phantom/phantom_3.tiff", "e:/spim/phantom/phantom_3.tiff.reference.txt");
 		regoApp->addPhantom("e:/spim/phantom/phantom_4.tiff", "e:/spim/phantom/phantom_4.tiff.reference.txt");
 		regoApp->addPhantom("e:/spim/phantom/phantom_5.tiff", "e:/spim/phantom/phantom_5.tiff.reference.txt");
-		regoApp->addPhantom("e:/spim/phantom/phantom_6.tiff", "e:/spim/phantom/phantom_6.tiff.reference.txt");
+		//regoApp->addPhantom("e:/spim/phantom/phantom_6.tiff", "e:/spim/phantom/phantom_6.tiff.reference.txt");
 
 
 
