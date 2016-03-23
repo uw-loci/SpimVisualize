@@ -158,3 +158,14 @@ private:
 	void modifyCurrentSolution();
 
 };
+
+class ParameterSpaceMapping : public UniformSamplingSolver
+{
+public:
+	virtual void createCandidateSolutions(const InteractionVolume* v);
+
+	virtual const Solution& getBestSolution();
+
+	std::vector<glm::vec4> getSolutions() const;
+};
+

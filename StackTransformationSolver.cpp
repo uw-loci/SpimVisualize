@@ -5,6 +5,7 @@
 #include <random>
 #include <iostream>
 #include <chrono>
+#include <fstream>
 
 #include <GL/glew.h>
 
@@ -466,4 +467,71 @@ void SimulatedAnnealingSolver::modifyCurrentSolution()
 
 	currentSolution.id = iteration;
 	currentSolution.score = 0;
+}
+
+
+
+void ParameterSpaceMapping::createCandidateSolutions(const InteractionVolume* v)
+{
+	using namespace glm;
+	
+	solutions.clear();
+
+	for (int z = -128; z <= 128; z += 2)
+	{
+
+		for (int x = -128; x <= 128; x += 2)
+		{
+
+			float dx = (float)x; // 2.f;
+			float dz = (float)z; // / 2.f;
+			Solution s;
+			s.score = 0;
+			s.id = (z + 128) * 257 + x + 128;
+			s.matrix = translate(vec3(dx, 0.f, dz));
+
+			solutions.push_back(s);
+		}
+
+	}
+	std::cout << "[Parameterspace Solver] Created " << solutions.size() << " candidate solutions.\n";
+}
+const IStackTransformationSolver::Solution& ParameterSpaceMapping::getBestSolution() 
+{
+	std::ofstream file("e:/temp/output.csv");
+	assert(file.is_open());
+
+	file << "# x, z, score\n";
+	for (size_t i = 0; i < solutions.size(); ++i)
+		file << solutions[i].matrix[3][0] << ", " << solutions[i].matrix[3][2] << ", " << solutions[i].score << std::endl;
+
+
+
+	return UniformSamplingSolver::getBestSolution();
+}
+
+std::vector<glm::vec4> ParameterSpaceMapping::getSolutions() const
+{
+	std::vector<glm::vec4> result;
+
+	double maxScore = 0; 
+	double minScore = std::numeric_limits<double>::max();
+	for (size_t i = 0; i < solutions.size(); ++i)
+	{
+		maxScore = std::max(maxScore, solutions[i].score);
+		minScore = std::min(minScore, solutions[i].score);
+	}
+	
+	for (size_t i = 0; i < solutions.size(); ++i)
+	{
+		glm::vec4 s = solutions[i].matrix[i];
+		s.a = solutions[i].score;
+
+		s.a -= minScore;
+		s.a /= (maxScore - minScore);
+
+		result.push_back(s);
+	}
+
+	return std::move(result);
 }

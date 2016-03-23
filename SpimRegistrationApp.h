@@ -88,6 +88,8 @@ public:
 	// Begins the auto alignment process through all stacks, selected randomly
 	void beginMultiAutoAlign();
 	
+	// runs one iteration of the alignment
+	void runAlignmentOnce();
 	
 	
 	/// Selects the currently active solver
@@ -139,6 +141,8 @@ public:
 	void toggleSlices();
 	inline void togglePhantoms() { drawPhantoms = !drawPhantoms;  }
 
+	inline void toggleSolutionParameterSpace() { drawSolutionSpace = !drawSolutionSpace; }
+	inline void clearSolutionParameterSpace() { solutionParameterSpace.clear(); }
 
 	void alignPhantoms();
 
@@ -245,7 +249,7 @@ private:
 	void drawPointclouds(const Viewport* vp);
 	
 	void drawRays(const Viewport* vp);
-
+	void drawSolutionParameterSpace(const Viewport* vp) const;
 
 
 	bool useImageAutoContrast;
@@ -257,6 +261,7 @@ private:
 
 	// auto-stack alignment
 	bool				runAlignment;
+	bool				runAlignmentOnlyOncePlease;
 	bool				multiAlign;
 
 	void selectAndApplyBestSolution();
@@ -275,6 +280,10 @@ private:
 
 	IStackTransformationSolver*		solver;
 	
+	// just for debugging
+	std::vector<glm::vec4>			solutionParameterSpace;
+	bool							drawSolutionSpace;
+
 	static glm::vec3 getRandomColor(unsigned int n);
 
 	inline bool currentVolumeValid() const { return currentVolume > -1 && currentVolume < (int)interactionVolumes.size(); }

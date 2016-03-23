@@ -41,7 +41,7 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : configPath("./
 	volumeRaycaster(nullptr), drawQuad(nullptr), volumeDifferenceShader(nullptr), drawPosition(nullptr), tonemapper(nullptr), 
 	volumeRenderTarget(nullptr), rayStartTarget(nullptr),
 	useImageAutoContrast(false), runAlignment(false), renderTargetReadbackCurrent(false), calculateScore(false), drawHistory(false),
-	solver(nullptr), drawPhantoms(false)
+	solver(nullptr), drawPhantoms(false), drawSolutionSpace(false), runAlignmentOnlyOncePlease(false)
 {
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
@@ -156,6 +156,8 @@ void SpimRegistrationApp::draw()
 					saveVolumeTransform(currentVolume);
 					interactionVolumes[currentVolume]->applyTransform(mat);
 
+					updateGlobalBbox();
+
 				}
 				catch (std::runtime_error& e)
 				{
@@ -231,6 +233,9 @@ void SpimRegistrationApp::draw()
 
 			if (drawBboxes && drawPhantoms)
 				drawPhantomBoxes();
+
+			if (drawSolutionSpace)
+				drawSolutionParameterSpace(vp);
 
 			// the query result should be done by now
 			if (runAlignment || calculateScore)
@@ -1343,11 +1348,13 @@ void SpimRegistrationApp::beginAutoAlign()
 	saveVolumeTransform(currentVolume);
 
 	multiAlign = false;
+	runAlignmentOnlyOncePlease = false;
 }
 
 void SpimRegistrationApp::endAutoAlign()
 {
 	runAlignment = false;
+	runAlignmentOnlyOncePlease = false;
 	std::cout << "[Debug] Ending auto align.\n";
 
 	selectAndApplyBestSolution();
@@ -1368,6 +1375,28 @@ void SpimRegistrationApp::selectAndApplyBestSolution()
 
 }
 
+void SpimRegistrationApp::runAlignmentOnce()
+{
+	if (interactionVolumes.size() < 2 || currentVolume == -1)
+		return;
+
+	if (runAlignment)
+		return;
+
+
+	std::cout << "[Debug] Aligning volume" << currentVolume << " to volume 0 ... " << std::endl;
+
+
+	runAlignment = true;
+	solver->initialize(interactionVolumes[currentVolume]);
+
+	saveVolumeTransform(currentVolume);
+
+	multiAlign = false;
+	runAlignmentOnlyOncePlease = true;
+}
+
+
 void SpimRegistrationApp::beginMultiAutoAlign()
 {
 	if (interactionVolumes.size() < 2 || currentVolume == -1)
@@ -1385,6 +1414,7 @@ void SpimRegistrationApp::beginMultiAutoAlign()
 	saveVolumeTransform(currentVolume);
 
 	multiAlign = true;
+	runAlignmentOnlyOncePlease = false;
 }
 
 
@@ -1471,6 +1501,9 @@ void SpimRegistrationApp::update(float dt)
 
 			}
 		
+			if (runAlignmentOnlyOncePlease)
+				endAutoAlign();
+
 		}
 	}
 
@@ -1671,6 +1704,29 @@ void SpimRegistrationApp::drawPointclouds(const Viewport* vp)
 	}
 }
 
+void SpimRegistrationApp::drawSolutionParameterSpace(const Viewport* vp) const
+{
+	using namespace glm;
+
+	if (solutionParameterSpace.empty())
+		return;
+	
+
+
+	const vec3 red(0.8, 0, 0);
+	const vec3 grn(0, 0.7, 0);
+
+	glBegin(GL_POINTS);
+	for (size_t i = 0; i < solutionParameterSpace.size(); ++i)
+	{
+		glm::vec3 color = mix(red, grn, solutionParameterSpace[i].a);
+		glVertex3fv(value_ptr(solutionParameterSpace[i]));
+	}
+
+	glEnd();
+
+}
+
 void SpimRegistrationApp::drawRays(const Viewport* vp)
 {
 	glColor3f(1, 0, 0);
@@ -1781,6 +1837,13 @@ void SpimRegistrationApp::selectSolver(const std::string& name)
 		cout << "[Solver] Creating new Multidimensional hillclimb solver\n";
 		newSolver = new MultiDimensionalHillClimb;
 	}
+
+	if (name == "Solution Parameterspace")
+	{
+		cout << "[Solver] Creating new solution parameter space explorer.\n";
+		newSolver = new ParameterSpaceMapping;
+	}
+
 
 	// only switch solvers if we have created a valid one
 	if (newSolver)

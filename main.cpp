@@ -79,6 +79,10 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == '\t')
 		regoApp->beginMultiAutoAlign();
 
+	if (key == 'a')
+		regoApp->runAlignmentOnce();
+
+
 	if (key == 'h')
 		regoApp->toggleHistory();
 
@@ -130,6 +134,12 @@ static void keyboard(unsigned char key, int x, int y)
 		
 	if (key == 's')
 		regoApp->reloadShaders();
+
+	if (key == 'q')
+		regoApp->toggleSolutionParameterSpace();
+	if (key == 'Q')
+		regoApp->clearSolutionParameterSpace();
+
 
 	if (key == 'u')
 		regoApp->subsampleAllStacks();
@@ -294,6 +304,8 @@ static void special(int key, int x, int y)
 		regoApp->selectSolver("Simulated Annealing");
 	if (key == GLUT_KEY_F10)
 		regoApp->selectSolver("Hillclimb");
+	if (key == GLUT_KEY_F11)
+		regoApp->selectSolver("Solution Parameterspace");
 
 	if (key == GLUT_KEY_UP)
 	{
@@ -454,6 +466,23 @@ int main(int argc, const char** argv)
 		*/
 
 
+
+
+
+
+
+
+		// just to evaluate transformations
+		SpimStack* reference = SpimStack::load("e:/spim/phantom/t1-head/t1-head.tiff");
+		reference->setVoxelDimensions(glm::vec3(1, 1, 1));
+		regoApp->addSpimStack(reference);
+
+		SpimStack* test = SpimStack::load("e:/spim/phantom/t1-head/phantom_3.tiff");
+		test->setVoxelDimensions(glm::vec3(1, 1, 1));
+		regoApp->addSpimStack(test);
+
+
+		/*
 		for (int i = 1; i < 6; ++i)
 		{
 			char filename[256];
@@ -475,7 +504,7 @@ int main(int argc, const char** argv)
 		regoApp->addPhantom("e:/spim/phantom/phantom_4.tiff", "e:/spim/phantom/phantom_4.tiff.reference.txt");
 		regoApp->addPhantom("e:/spim/phantom/phantom_5.tiff", "e:/spim/phantom/phantom_5.tiff.reference.txt");
 		//regoApp->addPhantom("e:/spim/phantom/phantom_6.tiff", "e:/spim/phantom/phantom_6.tiff.reference.txt");
-
+		*/
 
 
 		regoApp->centerCamera();
