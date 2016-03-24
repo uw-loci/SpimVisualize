@@ -482,6 +482,8 @@ int main(int argc, const char** argv)
 		regoApp->addSpimStack(test);
 
 
+		regoApp->loadPrevSolutionSpace("e:/temp/output.csv");
+
 		/*
 		for (int i = 1; i < 6; ++i)
 		{

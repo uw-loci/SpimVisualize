@@ -2092,3 +2092,53 @@ void SpimRegistrationApp::alignPhantoms()
 	std::cout << "[Phantom] Overall mean phantom distance error: " << allError.getMean() << std::endl;
 
 }
+
+void SpimRegistrationApp::loadPrevSolutionSpace(const std::string& filename)
+{
+	std::ifstream file(filename);
+	assert(file.is_open());
+
+	solutionParameterSpace.clear();
+
+
+	std::cout << "[Debug] Reading lines from \"" << filename << "\" ... ";
+
+	// ignore first line
+	std::string temp;
+	std::getline(file, temp);
+
+	while (!file.eof())
+	{
+
+		std::getline(file, temp);
+		
+		glm::vec4 s(0);
+		sscanf_s(temp.c_str(), "%f,%f,%f", &s.x, &s.z, &s.a);
+
+		solutionParameterSpace.push_back(s);
+	}
+
+	std::cout << "done.\n";
+
+	// normalize
+	float maxVal = std::numeric_limits<float>::lowest();
+	float minVal = std::numeric_limits<float>::max();
+
+
+	for (size_t i = 0; i < solutionParameterSpace.size(); ++i)
+	{
+		maxVal = std::max(maxVal, solutionParameterSpace[i].a);
+		minVal = std::min(minVal, solutionParameterSpace[i].a);
+	}
+
+	for (size_t i = 0; i < solutionParameterSpace.size(); ++i)
+	{
+		solutionParameterSpace[i].a -= minVal;
+		solutionParameterSpace[i].a /= (maxVal - minVal);
+
+	}
+
+	std::cout << "[Debug] Loaded solution parameterspace of " << solutionParameterSpace.size() << " values.\n";
+
+
+}

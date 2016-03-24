@@ -36,6 +36,8 @@ public:
 	void addPointcloud(const std::string& filename);
 	void addPhantom(const std::string& stackFilename, const std::string& referenceTransform);
 
+	void loadPrevSolutionSpace(const std::string& filename);
+
 	void reloadShaders();
 	void switchRenderMode();
 	void switchBlendMode();
