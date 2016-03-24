@@ -2,17 +2,17 @@ cmake_minimum_required (VERSION 3.0)
 project (CreateFijiInfo)
 
 # disable boost auto-linking
-add_definitions( -DBOOST_ALL_NO_LIB )
+#add_definitions( -DBOOST_ALL_NO_LIB )
 
 # disable graphics
-# add_definitions( -DNO_GRAPHICS)
+add_definitions( -DNO_GRAPHICS)
 
 set(Boost_USE_STATIC_LIBS OFF) 
 set(Boost_USE_MULTITHREADED ON)  
 set(Boost_USE_STATIC_RUNTIME OFF) 
 
-SET(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} "C:/dev/boost_1_59_0")
-SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} "C:/dev/boost_1_59_0/lib64-msvc-12.0")
+SET(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} "C:/boost")
+SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} "C:/boost/lib64")
 
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
@@ -26,7 +26,8 @@ else()
 endif()
 
 
-find_package (Boost 1.57.0 REQUIRED COMPONENTS)
+find_package (GLM REQUIRED)
+find_package (Boost REQUIRED COMPONENTS)
 find_package (FreeImage REQUIRED)
 
 include_directories("${PROJECT_BINARY_DIR}")
@@ -45,3 +46,7 @@ if (FREEIMAGE_FOUND)
 	include_directories(${FREEIMAGE_INCLUDE_PATH})
 	target_link_libraries(CreateFijiInfo ${FREEIMAGE_LIBRARIES})
 endif (FREEIMAGE_FOUND)
+
+if (GLM_FOUND)
+	include_directories(${GLM_INCLUDE_DIRS})
+endif (GLM_FOUND)
