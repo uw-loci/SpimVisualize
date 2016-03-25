@@ -139,7 +139,7 @@ SpimStack* SpimStack::load(const std::string& file)
 	SpimStack* stack = nullptr;
 
 
-	if (ext == "tiff")
+	if (ext == "tiff" || ext == "tif")
 	{
 		// find bit depth from image header
 		FIMULTIBITMAP* fmb = FreeImage_OpenMultiBitmap(FIF_TIFF, file.c_str(), FALSE, TRUE, 0L, FIF_LOAD_NOPIXELS);
@@ -386,7 +386,6 @@ void SpimStack::drawZSlices() const
 void SpimStack::loadRegistration(const string& filename)
 {
 	ifstream file(filename);
-	assert(file.is_open());
 
 	if (!file.is_open())
 		throw std::runtime_error("Unable to open file \"" + filename + "\"");
@@ -417,8 +416,39 @@ void SpimStack::loadRegistration(const string& filename)
 
 	*/
 
-	std::cout << "[SpimPlane] Read transform: " << getTransform() << std::endl;
+	std::cout << "[SpimStack] Read transform: " << getTransform() << std::endl;
 }
+
+void SpimStack::loadFijiRegistration(const std::string& filename)
+{
+	ifstream file(filename);
+
+	if (!file.is_open())
+		throw std::runtime_error("Unable to open file \"" + filename + "\"");
+	
+	mat4 T(1.f);
+	float* m = value_ptr(T);
+
+	for (int i = 0; i < 16; ++i)
+	{
+		string buffer;
+		getline(file, buffer);
+
+		int result = sscanf_s(buffer.c_str(), "m%*2s: %f", &m[i]);
+		assert(result == 1);
+	}
+
+
+
+
+
+
+	setTransform(transpose(T));
+	
+	std::cout << "[SpimStack] Read transform: " << getTransform() << std::endl;
+
+}
+
 
 #ifndef NO_GRAPHICS
 void SpimStack::drawZPlanes(const glm::vec3& view) const

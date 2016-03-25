@@ -1983,7 +1983,6 @@ void SpimRegistrationApp::drawPhantomBoxes() const
 	glEnable(GL_DEPTH_TEST);
 }
 
-
 static glm::mat4 loadRegistration(const std::string& filename)
 {
 
@@ -2003,14 +2002,44 @@ static glm::mat4 loadRegistration(const std::string& filename)
 	return T;
 }
 
-void SpimRegistrationApp::addPhantom(const std::string& stackFilename, const std::string& referenceTransform)
+
+static glm::mat4 loadFijiRegistration(const std::string& filename)
+{
+	using namespace std;
+	
+	ifstream file(filename);
+
+	if (!file.is_open())
+		throw std::runtime_error("Unable to open file \"" + filename + "\"");
+
+	glm::mat4 T(1.f);
+	float* m = glm::value_ptr(T);
+
+	for (int i = 0; i < 16; ++i)
+	{
+		string buffer;
+		getline(file, buffer);
+
+		int result = sscanf_s(buffer.c_str(), "m%*2s: %f", &m[i]);
+		assert(result == 1);
+	}
+
+
+	return glm::transpose(T);
+}
+
+void SpimRegistrationApp::addPhantom(const std::string& stackFilename, const std::string& referenceTransform, bool fijiTransform)
 {
 	Phantom p;
 	
 	p.stackFile = stackFilename;
 
 	// load the transformation
-	p.transform = loadRegistration(referenceTransform);
+	if (fijiTransform)
+		p.transform = loadFijiRegistration(referenceTransform);
+	else
+		p.transform = loadRegistration(referenceTransform);
+
 	p.originalTransform = p.transform;
 
 	bool loadedBbox = false;
@@ -2276,7 +2305,6 @@ void SpimRegistrationApp::createFakeBeads(unsigned int beadCount)
 		for (int i = 0; i < 4; ++i)
 			for (int k = 0; k < 4; ++k)
 			{
-				float m = 0.f;
 				regoFileOut << "m" << i << k << ": " << m[i][k] << endl;
 			}
 
@@ -2302,13 +2330,15 @@ void SpimRegistrationApp::createFakeBeads(unsigned int beadCount)
 		regoFileOut << "Sum of correspondences candidates pairs : 0\n";
 		regoFileOut << endl;
 
-		for (auto g = files.begin(); g != files.end(); ++g)
+
+
+		for (size_t k = 0; k < stacks.size(); ++k)
 		{
-			if (f != g)
+			if (i != k)
 			{
-				regoFileOut << *g << " - Average Error: 0\n";
-				regoFileOut << *g << " - Bead Correspondences: 0\n";
-				regoFileOut << *g << " - Ransac Correspondences: 0\n";
+				regoFileOut << stacks[k]->getFilename() << " - Average Error: 0\n";
+				regoFileOut << stacks[k]->getFilename() << " - Bead Correspondences: 0\n";
+				regoFileOut << stacks[k]->getFilename() << " - Ransac Correspondences: 0\n";
 				regoFileOut << endl;
 			}
 		}

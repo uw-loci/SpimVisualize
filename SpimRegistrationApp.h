@@ -34,7 +34,7 @@ public:
 
 
 	void addPointcloud(const std::string& filename);
-	void addPhantom(const std::string& stackFilename, const std::string& referenceTransform);
+	void addPhantom(const std::string& stackFilename, const std::string& referenceTransform, bool fijiTransform=false);
 
 	void loadPrevSolutionSpace(const std::string& filename);
 

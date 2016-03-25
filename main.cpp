@@ -470,11 +470,11 @@ int main(int argc, const char** argv)
 
 
 
-		regoApp->addSpimStack("e:/spim/phantom/test5/phantom_1.tiff");
-		regoApp->addSpimStack("e:/spim/phantom/test5/phantom_2.tiff");
-		regoApp->addSpimStack("e:/spim/phantom/test5/phantom_3.tiff");
-		regoApp->addSpimStack("e:/spim/phantom/test5/phantom_4.tiff");
+		regoApp->addSpimStack("e:/spim/drosophila_example_tiff/spim_TL18_Angle0.tif");
 
+
+		regoApp->addPhantom("e:/spim/drosophila_example_tiff/spim_TL18_Angle0.tif", "e:/spim/drosophila_example_tiff/registration/spim_TL18_Angle0.tif.registration", true);
+		regoApp->addPhantom("e:/spim/drosophila_example_tiff/spim_TL18_Angle45.tif", "e:/spim/drosophila_example_tiff/registration/spim_TL18_Angle45.tif.registration", true);
 
 		/*
 		for (int i = 1; i < 6; ++i)

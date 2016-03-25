@@ -29,7 +29,9 @@ public:
 	virtual void drawZSlices() const;
 
 	void loadRegistration(const std::string& filename);
+	void loadFijiRegistration(const std::string& path);
 
+	
 	// halfs the internal resolution of the dataset
 	virtual void subsample(bool updateTexture=true) = 0;
 
