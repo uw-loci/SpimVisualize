@@ -4,11 +4,15 @@
 #include <cassert>
 #include <fstream>
 
+#include <glm/glm.hpp>
+
 #include <FreeImage.h>
 
+#include "SpimStack.h"
 
 
 using namespace std;
+using namespace glm;
 
 
 static inline string getBaseFilename(const string& filename)
@@ -19,6 +23,7 @@ static inline string getBaseFilename(const string& filename)
 
 int main(int argc, const char** argv)
 {
+	/*
 	if (argc < 2)
 	{
 		cerr << "Usage " << argv[0] << "<stack0> [<stack1> <stackN> ...]\n";
@@ -49,8 +54,17 @@ int main(int argc, const char** argv)
 
 		
 	}
+	*/
+
+	// assume we are operating on '.'
+	vector<string> files;
 	
-	path += "/registration/";
+	files.push_back("e:/spim/phantom/test5/fiji/phantom_1.tif");
+	files.push_back("e:/spim/phantom/test5/fiji/phantom_2.tif");
+	files.push_back("e:/spim/phantom/test5/fiji/phantom_3.tif");
+	files.push_back("e:/spim/phantom/test5/fiji/phantom_4.tif");
+
+	string path = "e:/spim/phantom/test5/fiji/registration/";
 
 
 
@@ -98,10 +112,11 @@ int main(int argc, const char** argv)
 			dimFile << "image depth: " << zSlices << endl;
 
 
+			/*
 			ofstream beadsFile(fn + ".beads.txt");
 			assert(beadsFile.is_open());
 			beadsFile << "ID	ViewID	Lx \tLy \tLz \tWx \tWy \tWz \tWeight \tDescCorr \tRansacCorr\n";
-
+			*/
 
 			ifstream regoFileIn(*f + ".registration.txt");
 			ofstream regoFileOut(fn + ".registration");
@@ -129,7 +144,7 @@ int main(int argc, const char** argv)
 			regoFileOut << "z - scaling : " << zscaling << endl;
 			
 			
-			regoFileOut << "Angle Specific Average Error : -1.0\n";
+			regoFileOut << "Angle Specific Average Error : 0.0\n";
 			regoFileOut << "Overlapping Views : " << files.size() << endl;;
 
 			regoFileOut << "Num beads having true correspondences : 0\n";
@@ -142,8 +157,8 @@ int main(int argc, const char** argv)
 			{
 				if (f != g)
 				{
-					regoFileOut << *g << " - Average Error: -1\n";
-					regoFileOut << *g << " - Bead Correspondences: 3\n";
+					regoFileOut << *g << " - Average Error: 0\n";
+					regoFileOut << *g << " - Bead Correspondences: 0\n";
 					regoFileOut << *g << " - Ransac Correspondences: 0\n";
 					regoFileOut << endl;
 				}

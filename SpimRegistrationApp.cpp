@@ -2142,3 +2142,183 @@ void SpimRegistrationApp::loadPrevSolutionSpace(const std::string& filename)
 
 
 }
+
+
+
+void SpimRegistrationApp::createFakeBeads(unsigned int beadCount)
+{
+	using namespace std;
+	using namespace glm;
+
+	struct BeadInfo
+	{
+		vec3		L;
+		vec3		W;
+		float		weight;
+
+		int			descriptorCorrelation;
+		int			ransacCorrelation;
+	};
+
+
+	map<unsigned int, vector<BeadInfo>> beadInfo;
+
+	for (size_t i = 0; i < stacks.size(); ++i)
+	{
+		vector<BeadInfo> beads;
+		beads.reserve(beadCount / 2);
+		beadInfo[i] = move(beads);
+	}
+
+
+	mt19937 rng(time(0));
+
+	vector<bool> visible(stacks.size(), false);
+	solutionParameterSpace.clear();
+
+
+	int descriptorCorrelationCounter = 0;
+
+	cout << "[Beads] Creating " << beadCount << " fake beads ... ";
+
+	for (unsigned int n = 0; n < beadCount; ++n)
+	{
+
+
+		// create random sample
+		vec3 pos = globalBBox.min + globalBBox.getSpan() * vec3((float)rng() / rng.max(), (float)rng() / rng.max(), (float)rng()/rng.max());
+		
+		int visibleCount = 0;
+		for (size_t i = 0; i < stacks.size(); ++i)
+		{
+			visible[i] = stacks[i]->isInsideVolume(pos);
+			if (visible[i])
+				++visibleCount;
+		}
+
+
+		// update debug drawing
+		vec4 sol(pos, (float)visibleCount / stacks.size());
+		solutionParameterSpace.push_back(sol);
+		
+		
+
+		for (size_t i = 0; i < stacks.size(); ++i)
+		{
+			BeadInfo info;
+
+			// ???
+			info.weight = 1.0f;
+
+			info.descriptorCorrelation = n;
+
+			// ?????
+			info.ransacCorrelation = 0;
+
+
+			if (visible[i])
+			{
+				vec4 stackCoords = stacks[i]->getInverseTransform() * vec4(pos, 1.f);
+				
+				info.L = vec3(stackCoords);
+				info.W = info.L;
+
+				beadInfo[i].push_back(info);
+			}
+
+		}
+	}
+
+	cout << "done.\n";
+
+
+	for (size_t i = 0; i< stacks.size(); ++i)
+	{
+		string path = stacks[i]->getFilename().substr(0, stacks[i]->getFilename().find_last_of("/"));
+		string file = stacks[i]->getFilename().substr(stacks[i]->getFilename().find_last_of("/") + 1);
+
+		path += "/registration/";
+
+		string filename = path + file;
+
+		cout << "[Beads] Saving file \"" << filename << "\"\n";
+
+		ofstream beadsFile(filename + ".beads.txt");
+		if (!beadsFile.is_open())
+			throw(runtime_error("Unable to open file \"" + filename + "\" for writing.\n"));
+
+		beadsFile << "ID\tViewID\t\tLx\tLy\tLz\tWx\tWy\tWz\tWeight\tDescCorr\tRansacCorr\n";
+		
+		for (int k = 0; k < beadInfo[i].size(); ++k)
+		{
+			const BeadInfo& b = beadInfo[i][k];
+			beadsFile << k << "\t" << i << "\t" << b.L.x << "\t" << b.L.y << "\t" << b.L.z << "\t" << b.W.x << "\t" << b.W.y << "\t" << b.W.z << "\t" << b.weight << "\t" << b.descriptorCorrelation << ":" << i << "\t" << b.ransacCorrelation << endl;
+		}
+
+
+
+
+		ofstream dimFile(filename + ".dim");
+		if (dimFile.is_open())
+			throw(runtime_error("Unable to open file \"" + filename + "\" for writing."));
+		dimFile << "image width: " << stacks[i]->getWidth() << endl;
+		dimFile << "image height: " << stacks[i]->getHeight() << endl;
+		dimFile << "image depth: " << stacks[i]->getDepth() << endl;
+
+
+
+
+		ofstream regoFileOut(filename + ".registration");
+		if (regoFileOut.is_open())
+			throw(runtime_error("Unable to open file \"" + filename + "\" for writing."));
+		
+		const mat4& m = stacks[i]->getTransform();
+		for (int i = 0; i < 4; ++i)
+			for (int k = 0; k < 4; ++k)
+			{
+				float m = 0.f;
+				regoFileOut << "m" << i << k << ": " << m[i][k] << endl;
+			}
+
+		regoFileOut << "AffineModel3D\n";
+		regoFileOut << endl;
+
+		// note this should all be saved from prev runs!
+		regoFileOut << "minError: 0\n";
+		regoFileOut << "avgError: 0\n";
+		regoFileOut << "maxError: 0\n";
+		regoFileOut << endl;
+
+		float zscaling = 1.f;
+		regoFileOut << "z - scaling : " << zscaling << endl;
+
+
+		regoFileOut << "Angle Specific Average Error : 0.0\n";
+		regoFileOut << "Overlapping Views : " << stacks.size() << endl;;
+
+		regoFileOut << "Num beads having true correspondences : 0\n";
+		regoFileOut << "Sum of true correspondences pairs : 0\n";
+		regoFileOut << "Num beads having correspondences candidates : 0\n";
+		regoFileOut << "Sum of correspondences candidates pairs : 0\n";
+		regoFileOut << endl;
+
+		for (auto g = files.begin(); g != files.end(); ++g)
+		{
+			if (f != g)
+			{
+				regoFileOut << *g << " - Average Error: 0\n";
+				regoFileOut << *g << " - Bead Correspondences: 0\n";
+				regoFileOut << *g << " - Ransac Correspondences: 0\n";
+				regoFileOut << endl;
+			}
+		}
+
+
+
+
+	}
+
+
+	cout << "done.\n";
+
+}

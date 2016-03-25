@@ -46,8 +46,6 @@ public:
 	// set all samples of a single z plane
 	void setPlaneSamples(const std::vector<double>& values, size_t zplane);
 
-
-
 	// updates the internal stats and the texture
 	virtual void update();
 			

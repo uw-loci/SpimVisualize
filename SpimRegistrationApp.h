@@ -75,6 +75,8 @@ public:
 
 	
 
+	void createFakeBeads(unsigned int beadCount) ;
+
 	inline void clearRays() { rays.clear(); }
 	
 	/// \name Alignment

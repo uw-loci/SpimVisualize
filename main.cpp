@@ -64,6 +64,9 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == 'b')
 		regoApp->toggleBboxes();
 	
+	if (key == 'B')
+		regoApp->createFakeBeads(2000);
+
 	if (key == 'p')
 		regoApp->togglePhantoms();
 	if (key == 'P')
@@ -467,22 +470,11 @@ int main(int argc, const char** argv)
 
 
 
+		regoApp->addSpimStack("e:/spim/phantom/test5/phantom_1.tiff");
+		regoApp->addSpimStack("e:/spim/phantom/test5/phantom_2.tiff");
+		regoApp->addSpimStack("e:/spim/phantom/test5/phantom_3.tiff");
+		regoApp->addSpimStack("e:/spim/phantom/test5/phantom_4.tiff");
 
-
-
-
-
-		// just to evaluate transformations
-		SpimStack* reference = SpimStack::load("e:/spim/phantom/t1-head/t1-head.tiff");
-		reference->setVoxelDimensions(glm::vec3(1, 1, 1));
-		regoApp->addSpimStack(reference);
-
-		SpimStack* test = SpimStack::load("e:/spim/phantom/t1-head/phantom_3.tiff");
-		test->setVoxelDimensions(glm::vec3(1, 1, 1));
-		regoApp->addSpimStack(test);
-
-
-		regoApp->loadPrevSolutionSpace("e:/temp/output.csv");
 
 		/*
 		for (int i = 1; i < 6; ++i)
