@@ -95,8 +95,10 @@ public:
 	/// \name Filtering methods
 	/// \{
 
-	virtual void addNoise(float amount, double valueRange);
-
+	
+	virtual void addSaltPepperNoise(double satl, double pepper, double amount);
+	virtual void applyGaussianBlur(double sigma, int radius);
+	virtual void applyMedianFilter(const glm::ivec3& window);
 
 
 	/// \}
@@ -132,6 +134,9 @@ protected:
 
 	virtual double getValue(size_t index) const = 0;
 	virtual double getRelativeValue(size_t index) const = 0;
+	
+	virtual void getValues(double* data) const;
+	virtual void setValues(const double* data);
 
 	virtual void loadImage(const std::string& filename) = 0;
 	virtual void loadBinary(const std::string& filename, const glm::ivec3& resolution) = 0;
@@ -151,6 +156,8 @@ protected:
 	void drawYPlanes(const glm::vec3& view) const;
 
 	std::vector<glm::vec3> calculateVolumeNormals() const;
+
+
 
 };
 

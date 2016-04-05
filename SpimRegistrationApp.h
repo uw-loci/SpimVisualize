@@ -73,6 +73,8 @@ public:
 	void contrastEditorApplyThresholds();
 	void contrastEditorResetThresholds();
 
+
+	void applyGaussFilterToCurrentStack();
 	
 
 	void createFakeBeads(unsigned int beadCount) ;

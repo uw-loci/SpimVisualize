@@ -2352,3 +2352,11 @@ void SpimRegistrationApp::createFakeBeads(unsigned int beadCount)
 	cout << "done.\n";
 
 }
+
+void SpimRegistrationApp::applyGaussFilterToCurrentStack()
+{
+	if (!currentVolumeValid())
+		return;
+
+	stacks[currentVolume]->applyGaussianBlur(1.2, 2);
+}

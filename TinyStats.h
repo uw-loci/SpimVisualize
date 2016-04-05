@@ -131,6 +131,14 @@ struct TinyHistory : public TinyStats < T >
 	{
 		return sqrt(calculateVariance());
 	}
+
+	inline T calculateMedian() const
+	{
+		std::vector<T> temp(history);
+		std::sort(temp.begin(), temp.end());
+
+		return temp[temp.size() / 2];
+	}
 	
 };
 

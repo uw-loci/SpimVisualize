@@ -61,6 +61,9 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == 'g')
 		regoApp->toggleGrid();
 
+	if (key == 'G')
+		regoApp->applyGaussFilterToCurrentStack();
+
 	if (key == 'b')
 		regoApp->toggleBboxes();
 	
@@ -287,6 +290,8 @@ static void special(int key, int x, int y)
 
 	if (key == GLUT_KEY_F2)
 		regoApp->setTopviewLayout(winRes, mouse.coordinates);
+
+
 
 	if (key == GLUT_KEY_F3)
 		regoApp->setThreeViewLayout(winRes, mouse.coordinates);

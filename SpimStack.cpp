@@ -3,6 +3,7 @@
 #include "Shader.h"
 #include "StackRegistration.h"
 #include "BeadDetection.h"
+#include "TinyStats.h"
 
 #include <iostream>
 #include <cstring>
@@ -12,6 +13,8 @@
 
 #include <random>
 #include <chrono>
+
+#include <omp.h>
 
 //#define ENABLE_PCL
 
@@ -293,7 +296,7 @@ glm::ivec3 SpimStack::getStackCoords(size_t index) const
 	coords.y = index % (height + 1);
 	index /= (height + 1);
 
-	coords.z = index;
+	coords.z = (int)index;
 
 	return coords;
 }
@@ -1031,7 +1034,7 @@ std::vector<glm::vec3> SpimStack::calculateVolumeNormals() const
 vector<size_t> SpimStack::calculateHistogram(const Threshold& t) const
 {
 	
-	size_t buckets = (size_t)std::ceilf(t.getSpread()) + 1;
+	size_t buckets = (size_t)std::ceil(t.getSpread()) + 1;
 	
 	const int MAX_BUCKETS = 512;
 	buckets = clamp((int)buckets, 1, MAX_BUCKETS);
@@ -1239,9 +1242,9 @@ double SpimStack::getSample(const glm::ivec3& stackCoords) const
 	double result = 0.f;
 
 	// clamp stack coords
-	if (stackCoords.x >= 0 && stackCoords.x < width &&
-		stackCoords.y >= 0 && stackCoords.y < height &&
-		stackCoords.z >= 0 && stackCoords.z < depth)
+	if (stackCoords.x >= 0 && stackCoords.x < (int)width &&
+		stackCoords.y >= 0 && stackCoords.y < (int)height &&
+		stackCoords.z >= 0 && stackCoords.z < (int)depth)
 	{
 		size_t index = getIndex(stackCoords);
 		result = getValue(index);
@@ -1266,6 +1269,202 @@ void SpimStack::setPlaneSamples(const std::vector<double>& values, size_t zplane
 	for (size_t i = 0; i < planeSize; ++i)
 		this->setSample(offset + i, values[i]);
 	
+}
+
+
+void SpimStack::getValues(double* data) const
+{
+	for (size_t i = 0; i < getVoxelCount(); ++i)
+		data[i] = getValue(i);
+}
+
+void SpimStack::setValues(const double* data)
+{	
+	for (size_t i = 0; i < getVoxelCount(); ++i)
+		this->setSample(i, data[i]);
+
+	this->update();
+}
+
+
+void SpimStack::addSaltPepperNoise(double salt, double pepper, double amount)
+{
+	assert(amount > 0);
+	assert(amount < 1);
+
+	size_t count = (size_t)(getVoxelCount() * amount);
+
+	cout << "[Stack] Creating salt&pepper noise in " << count << " voxels (" << amount << ")\n";
+
+	// add all indices
+	std::vector<size_t> indices(getVoxelCount());
+	for (size_t i = 0; i < getVoxelCount(); ++i)
+		indices[i] = i;
+
+	// shuffle them
+	std::random_shuffle(indices.begin(), indices.end());
+
+	// select only the first few
+	indices.resize(count);
+
+
+	// alternately set one value to low, one to high
+	for (size_t i = 0; i < indices.size(); ++i)
+		if (i % 2)
+			this->setSample(indices[i], salt);
+		else
+			this->setSample(indices[i], pepper);
+
+}
+
+static inline double gauss3D(double  sigma, const glm::vec3& coord)
+{
+	// 3D gaussian function. see http://math.stackexchange.com/questions/434629/3-d-generalization-of-the-gaussian-point-spread-function
+	const double N = 1.0 / sqrt(8.0 * pow(sigma, 6)*pow(std::_Pi, 3));
+	const double e = pow(sigma, 3)* pow(std::_Pi * 2, 1.5);
+
+	return N * exp(-dot(coord, coord) / e);
+}
+
+
+void SpimStack::applyGaussianBlur(double sigma, int radius)
+{
+	std::cout << "[Stack] Allocating temp array for filtering ... \n";
+	double* temp = new double[getVoxelCount()];
+
+
+
+	std::cout << "[Stack] Creating filter mask ... ";
+	vector<double> mask((size_t)pow(radius*2+1,3));
+
+	double minVal = gauss3D(sigma, vec3((float)-radius));
+	double maskSum = 0;
+
+	for (int x = -radius; x <= radius; ++x)
+		for (int y = -radius; y <= radius; ++y)
+			for (int z = -radius; z <= radius; ++z)
+				maskSum += gauss3D(sigma, vec3(x, y, z)) / minVal;
+
+	std::cout << "done; sum: " << maskSum << endl;
+	
+	
+
+	std::cout << "[Stack] Running filter, be patient ( O(n^6) ) ... \n";
+
+	const ivec3 winSize(radius);
+
+	int dot = width / 10;
+	for (unsigned x = 0; x < width; ++x)
+	{
+		for (unsigned int y = 0; y < height; ++y)
+		{
+			for (unsigned int z = 0; z < depth; ++z)
+			{
+				ivec3 center(x, y, z);
+				
+
+				double sum = 0;
+
+				// multiply the mask with the surrounding voxel neighbourhood
+#pragma omp parallel for shared (sum)
+				for (int i = -winSize.x; i <= winSize.x; ++i)
+				{
+					for (int j = -winSize.y; j <= winSize.y; ++j)
+					{
+						for (int k = -winSize.z; k <= winSize.z; ++k)
+						{
+							ivec3 c = center + ivec3(i, j, k);
+							c = clamp(c, ivec3(0), ivec3(width, height, depth) - ivec3(1));
+
+							double val = getSample(c);
+							double g = gauss3D(sigma, vec3(x, y, z)) / minVal;
+
+							val *= g;
+
+#pragma omp atomic
+							sum += val;
+
+						}
+					}
+				}
+
+				// normalize and set
+				temp[getIndex(center)] = sum / maskSum;
+
+
+
+			}
+		}
+		
+
+		cout << "[Debug] " << x << "/" << width << endl;
+	}
+
+	
+
+	setValues(temp);
+	delete[] temp;
+}
+
+void SpimStack::applyMedianFilter(const glm::ivec3& winSize)
+{
+	std::cout << "[Stack] Allocating temp array for filtering ... \n";
+	double* temp = new double[getVoxelCount()];
+
+	std::cout << "[Stack] Running filter, be patient ( O(n^6) ) ";
+
+
+	int dot = width / 20;
+
+	//chrono::steady_clock::time_point start = chrono::steady_clock::now();
+
+	for (unsigned int x = 0; x < width; ++x)
+	{
+		for (unsigned int y = 0; y < height; ++y)
+		{
+			for (unsigned int z = 0; z < depth; ++z)
+			{
+
+
+				ivec3 center(x, y, z);
+				TinyHistory<double> window;
+
+
+				// ouch ... O(n^6) I am weeping inside but also too lazy to optimize
+				for (int i = -winSize.x; i <= winSize.x; ++i)
+				{
+					for (int j = -winSize.y; j <= winSize.y; ++j)
+					{
+						for (int k = -winSize.z; k <= winSize.z; ++k)
+						{
+							ivec3 c = center + ivec3(i, j, k);
+							c = clamp(c, ivec3(0), ivec3(width, height, depth) - ivec3(1));
+
+							window.add(getSample(c));
+						}
+					}
+				}
+
+
+				temp[getIndex(center)] = window.calculateMedian();
+			}
+		}
+
+		if (x / dot == 0)
+			std::cout << ".";
+
+	}
+
+	std::cout << "done.\n";
+
+	//chrono::steady_clock::time_point end = chrono::steady_clock::now();
+	//std::cout << "[Stack] Process took " << chrono::duration_cast<chrono::milliseconds>(end - start) << " ms.\n";
+
+	std::cout << "[Stack] Setting filtered values.\n";
+	setValues(temp);
+
+	delete[] temp;
+
 }
 
 
@@ -1609,35 +1808,6 @@ void SpimStackU8::updateTexture()
 	cout << "done.\n";
 #endif
 }
-
-void SpimStack::addNoise(float amount, double valueRange)
-{
-#if 0
-
-	if (amount == 0.f)
-		return;
-
-	if (amount > 1.f)
-		amount = 1.f;
-
-	auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-	std::mt19937 rng(seed);
-	auto randVal = std::uniform_real_distribution<double>(-valueRange, valueRange);
-	
-	auto randIdx = std::uniform_real_distribution<unsigned int>(0, getVoxelCount());
-
-	for (unsigned int i = 0; i < (unsigned int)floor(getVoxelCount()*amount); ++i)
-	{
-		unsigned int idx = randIdx(rng);
-		
-
-		//TODO: implement rest ...
-	}
-
-#endif
-	
-}
-
 
 void SpimStackU8::setContent(const glm::ivec3& resolution, const void* data)
 {
