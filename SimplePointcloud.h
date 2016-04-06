@@ -18,8 +18,12 @@ public:
 	inline size_t getPointcount() const { return pointCount; }
 	inline const std::vector<glm::vec3> getPoints() const { return vertices; }
 
+	inline const std::string& getFilename() const { return filename;  }
+
 private:	
 	size_t						pointCount;
+
+	std::string					filename;
 
 	// position and color opengl buffer
 	unsigned int				vertexBuffers[3];

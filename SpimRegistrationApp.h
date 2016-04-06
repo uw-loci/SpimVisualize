@@ -61,6 +61,9 @@ public:
 	void moveStack(const glm::vec2& delta);
 	void rotateCurrentStack(float rotY);
 
+	void scaleStack(float s);
+
+
 	void inspectOutputImage(const glm::ivec2& cursor);
 
 	void changeContrast(const glm::ivec2& cursor);

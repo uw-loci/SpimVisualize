@@ -28,6 +28,8 @@ public:
 	virtual void move(const glm::vec3& delta);
 	/// rotate around its center in d degrees
 	virtual void rotate(float d);
+	virtual void scaleUniform(float s);
+
 
 
 	inline const glm::mat4& getTransform() const { return transform; }

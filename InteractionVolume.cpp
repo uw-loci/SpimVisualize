@@ -105,3 +105,7 @@ void InteractionVolume::rotate(float angle)
 	setTransform(transform);
 }
 
+void InteractionVolume::scaleUniform(float s)
+{
+	setTransform(glm::scale(glm::vec3(s)) * transform);
+}

@@ -33,6 +33,7 @@ const unsigned int STD_SLICE_COUNT = 100;
 
 
 #define USE_RAYTRACER 
+#define USE_POINTCLOUDS
 
 SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : configPath("./"), layout(nullptr), 
 	histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f),
@@ -165,13 +166,25 @@ void SpimRegistrationApp::draw()
 				}
 			}
 
+#ifdef USE_POINTCLOUDS
+			volumeRenderTarget->bind();
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			drawPointclouds(vp);
+			volumeRenderTarget->disable();
+
+			drawTexturedQuad(volumeRenderTarget->getColorbuffer());
+#endif
+
 
 #ifdef USE_RAYTRACER
 
-			initializeRayTargets(vp);
-			raytraceVolumes(vp);
+			if (!stacks.empty())
+			{
+				initializeRayTargets(vp);
+				raytraceVolumes(vp);
 
-			drawTexturedQuad(volumeRenderTarget->getColorbuffer());
+				drawTexturedQuad(volumeRenderTarget->getColorbuffer());
+			}
 #else
 
 
@@ -277,10 +290,17 @@ void SpimRegistrationApp::draw()
 
 void SpimRegistrationApp::saveStackTransformations() const
 {
-	std::for_each(stacks.begin(), stacks.end(), [](const SpimStack* s) 
-	{ 
+	std::for_each(stacks.begin(), stacks.end(), [](const SpimStack* s)
+	{
 		std::string filename = s->getFilename() + ".registration.txt";
-		s->saveTransform(filename); 
+		s->saveTransform(filename);
+	});
+
+
+	std::for_each(pointclouds.begin(), pointclouds.end(), [](const SimplePointcloud* p)
+	{
+		std::string filename = p->getFilename() + ".registration.txt";
+		p->saveTransform(filename);
 	});
 }
 
@@ -295,6 +315,13 @@ void SpimRegistrationApp::loadStackTransformations()
 		std::string filename = s->getFilename() + ".registration.txt";
 		s->loadTransform(filename);
 	};
+
+	for (unsigned int i = 0; i < pointclouds.size(); ++i)
+	{
+		pointclouds[i]->loadTransform(pointclouds[i]->getFilename() + ".registration.txt");
+	}
+
+	
 
 	updateGlobalBbox();
 }
@@ -357,6 +384,7 @@ void SpimRegistrationApp::addPointcloud(const std::string& filename)
 	const glm::mat4 scaleMatrix = glm::scale(glm::vec3(100.f));
 
 
+	std::cout << "[File] Loading point cloud \"" << filename << "\" ... \n";
 	SimplePointcloud* pc = new SimplePointcloud(filename, scaleMatrix);
 
 	pointclouds.push_back(pc);
@@ -645,6 +673,20 @@ void SpimRegistrationApp::moveStack(const glm::vec2& delta)
 		//stacks[currentStack]->move(vp->camera->calculatePlanarMovement(delta));
 		interactionVolumes[currentVolume]->move(vp->camera->calculatePlanarMovement(delta));
 	}
+
+	updateGlobalBbox();
+}
+
+void SpimRegistrationApp::scaleStack(float s)
+{
+	if (!currentVolumeValid())
+		return;
+
+	if (runAlignment)
+		return;
+
+	interactionVolumes[currentVolume]->scaleUniform(s);
+
 
 	updateGlobalBbox();
 }

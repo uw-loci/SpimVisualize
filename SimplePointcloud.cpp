@@ -12,7 +12,7 @@
 #include <string>
 #include <cstdio>
 
-SimplePointcloud::SimplePointcloud(const std::string& filename, const glm::mat4& t)
+SimplePointcloud::SimplePointcloud(const std::string& f, const glm::mat4& t) : filename(f)
 {
 	this->setTransform(t);
 

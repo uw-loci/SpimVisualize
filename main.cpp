@@ -138,6 +138,11 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == '}')
 		regoApp->rotateCurrentStack(2.5f);
 		
+	if (key == 'j')
+		regoApp->scaleStack(0.7f);
+	if (key == 'k')
+		regoApp->scaleStack(1.4f);
+
 	if (key == 's')
 		regoApp->reloadShaders();
 
@@ -458,52 +463,15 @@ int main(int argc, const char** argv)
 	try
 	{
 
-		for (int i = 1; i < argc; ++i)
-		{
-			regoApp->addSpimStack(argv[i]);
-
-		}
-
-
 		/*
-		SimplePointcloud::resaveAsBin("e:/urs/ES_20151111.txt");
-		SimplePointcloud::resaveAsBin("e:/urs/ES_20151122.txt");
-
-		regoApp->addPointcloud("e:/urs/ES_20151111.bin");
-		regoApp->addPointcloud("e:/urs/ES_20151122.bin");
+		regoApp->addPointcloud("S:/datasets/time_varying/Chia Pets/Test/Clouds/1.txt");
+		regoApp->addPointcloud("S:/datasets/time_varying/Chia Pets/Test/Clouds/2.txt");
+		regoApp->addPointcloud("S:/datasets/time_varying/Chia Pets/Test/Clouds/3.txt");
 		*/
 
-
-
-		regoApp->addSpimStack("e:/spim/drosophila_example_tiff/spim_TL18_Angle0.tif");
-
-
-		regoApp->addPhantom("e:/spim/drosophila_example_tiff/spim_TL18_Angle0.tif", "e:/spim/drosophila_example_tiff/registration/spim_TL18_Angle0.tif.registration", true);
-		regoApp->addPhantom("e:/spim/drosophila_example_tiff/spim_TL18_Angle45.tif", "e:/spim/drosophila_example_tiff/registration/spim_TL18_Angle45.tif.registration", true);
-
-		/*
-		for (int i = 1; i < 6; ++i)
-		{
-			char filename[256];
-			sprintf(filename, "e:/spim/phantom/phantom_%d.tiff", i);
-
-			SpimStack* stack = SpimStack::load(filename);
-			stack->setVoxelDimensions(glm::vec3(1.f, 1.f, 5.f));
-
-			regoApp->addSpimStack(stack);
-
-		}
-
-		
-
-
-		regoApp->addPhantom("e:/spim/phantom/phantom_1.tiff", "e:/spim/phantom/phantom_1.tiff.reference.txt");
-		regoApp->addPhantom("e:/spim/phantom/phantom_2.tiff", "e:/spim/phantom/phantom_2.tiff.reference.txt");
-		regoApp->addPhantom("e:/spim/phantom/phantom_3.tiff", "e:/spim/phantom/phantom_3.tiff.reference.txt");
-		regoApp->addPhantom("e:/spim/phantom/phantom_4.tiff", "e:/spim/phantom/phantom_4.tiff.reference.txt");
-		regoApp->addPhantom("e:/spim/phantom/phantom_5.tiff", "e:/spim/phantom/phantom_5.tiff.reference.txt");
-		//regoApp->addPhantom("e:/spim/phantom/phantom_6.tiff", "e:/spim/phantom/phantom_6.tiff.reference.txt");
-		*/
+		regoApp->addPointcloud("S:/datasets/time_varying/Yi Xian's Pumpkin/Pump_20151111.txt");
+		regoApp->addPointcloud("S:/datasets/time_varying/Yi Xian's Pumpkin/Pump_20151112.txt");
+		regoApp->addPointcloud("S:/datasets/time_varying/Yi Xian's Pumpkin/Pump_20151113.txt");
 
 
 		regoApp->centerCamera();
