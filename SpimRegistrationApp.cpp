@@ -9,6 +9,7 @@
 #include "SimplePointcloud.h"
 #include "StackTransformationSolver.h"
 #include "TinyStats.h"
+#include "Widget.h"
 
 #include <algorithm>
 #include <iostream>
@@ -42,7 +43,8 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : configPath("./
 	volumeRaycaster(nullptr), drawQuad(nullptr), volumeDifferenceShader(nullptr), drawPosition(nullptr), tonemapper(nullptr), 
 	volumeRenderTarget(nullptr), rayStartTarget(nullptr),
 	useImageAutoContrast(false), runAlignment(false), renderTargetReadbackCurrent(false), calculateScore(false), drawHistory(false),
-	solver(nullptr), drawPhantoms(false), drawSolutionSpace(false), runAlignmentOnlyOncePlease(false)
+	solver(nullptr), drawPhantoms(false), drawSolutionSpace(false), runAlignmentOnlyOncePlease(false),
+	controlWidget(nullptr)
 {
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
@@ -83,6 +85,7 @@ SpimRegistrationApp::~SpimRegistrationApp()
 	delete volumeRaycaster;
 	delete drawPosition;
 
+	delete controlWidget;
 
 	for (size_t i = 0; i < stacks.size(); ++i)
 		delete stacks[i];
@@ -638,6 +641,13 @@ void SpimRegistrationApp::toggleSelectStack(int n)
 		currentVolume = -1;
 	else
 		currentVolume = n;
+
+	if (controlWidget)
+		if (currentVolumeValid())
+			controlWidget->setInteractionVolume(interactionVolumes[currentVolume]);
+		else
+			controlWidget->setInteractionVolume(nullptr);
+
 }
 
 void SpimRegistrationApp::toggleStack(int n)
@@ -2401,4 +2411,50 @@ void SpimRegistrationApp::applyGaussFilterToCurrentStack()
 		return;
 
 	stacks[currentVolume]->applyGaussianBlur(1.2, 2);
+}
+
+void SpimRegistrationApp::setWidgetType(const std::string& t)
+{
+	if (t == "None")
+	{
+		std::cout << "[Control] Disabling current translation widget.\n";
+		delete controlWidget;
+		controlWidget = nullptr;
+
+	}
+	else if (t == "Translate")
+	{		
+		// toggle -- if we already are in translate m
+		if (controlWidget && dynamic_cast<TranslateWidget*>(controlWidget))
+		{
+
+			std::cout << "[Control] Disabling current translation widget.\n";
+			delete controlWidget;
+			controlWidget = nullptr;
+		}
+		else
+		{
+			std::cout << "[Control] Creating new translation widget.\n";
+			delete controlWidget;
+			controlWidget = new TranslateWidget;
+		}
+	}
+	/*
+	else if (t == "Rotate")
+	{
+		delete controlWidget;
+		controlWidget = new RotateWidget;
+	}
+	else if (t == "Scale")
+	{
+		delete controlWidget;
+		controlWidget = new ScaleWidget;
+	}
+	*/
+
+	if (controlWidget && currentVolumeValid())
+		controlWidget->setInteractionVolume(interactionVolumes[currentVolume]);
+	else
+		controlWidget->setInteractionVolume(nullptr);
+	
 }

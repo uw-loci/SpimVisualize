@@ -21,6 +21,7 @@ struct Hourglass;
 class InteractionVolume;
 class SimplePointcloud;
 class IStackTransformationSolver;
+class IWidget;
 
 class SpimRegistrationApp : boost::noncopyable
 {
@@ -39,9 +40,7 @@ public:
 	void loadPrevSolutionSpace(const std::string& filename);
 
 	void reloadShaders();
-	void switchRenderMode();
-	void switchBlendMode();
-
+	
 	void update(float dt);
 	void draw();
 
@@ -63,6 +62,8 @@ public:
 
 	void scaleStack(float s);
 
+
+	void setWidgetType(const std::string& control);
 
 	void inspectOutputImage(const glm::ivec2& cursor);
 
@@ -225,6 +226,9 @@ private:
 	Framebuffer*			volumeRenderTarget;	
 	Framebuffer*			rayStartTarget;
 
+
+	// to better change the selected volume
+	IWidget*				controlWidget;
 
 	struct Phantom
 	{

@@ -463,15 +463,7 @@ int main(int argc, const char** argv)
 	try
 	{
 
-		/*
-		regoApp->addPointcloud("S:/datasets/time_varying/Chia Pets/Test/Clouds/1.txt");
-		regoApp->addPointcloud("S:/datasets/time_varying/Chia Pets/Test/Clouds/2.txt");
-		regoApp->addPointcloud("S:/datasets/time_varying/Chia Pets/Test/Clouds/3.txt");
-		*/
-
 		regoApp->addPointcloud("S:/datasets/time_varying/Yi Xian's Pumpkin/Pump_20151111.txt");
-		regoApp->addPointcloud("S:/datasets/time_varying/Yi Xian's Pumpkin/Pump_20151112.txt");
-		regoApp->addPointcloud("S:/datasets/time_varying/Yi Xian's Pumpkin/Pump_20151113.txt");
 
 
 		regoApp->centerCamera();

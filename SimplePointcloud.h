@@ -35,6 +35,9 @@ private:
 	void loadTxt(const std::string& filename);
 	void loadBin(const std::string& filename);
 	void saveBin(const std::string& filename);
+
+
+	void updateBuffers();
 };
 
 

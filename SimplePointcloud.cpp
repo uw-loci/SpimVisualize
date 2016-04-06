@@ -94,8 +94,8 @@ void SimplePointcloud::loadBin(const std::string& filename)
 	std::ifstream file(filename, std::ios::binary);
 	assert(file.is_open());
 
-	uint32_t points = 0;
-	file.read(reinterpret_cast<char*>(&points), sizeof(size_t));
+	unsigned int points = 0;
+	file.read(reinterpret_cast<char*>(&points), sizeof(unsigned int));
 
 	std::cout << "[Debug] Reading " << points << " points from \"" << filename << "\".\n";
 
@@ -106,6 +106,8 @@ void SimplePointcloud::loadBin(const std::string& filename)
 	file.read(reinterpret_cast<char*>(glm::value_ptr(vertices[0])), sizeof(glm::vec3)*points);
 	file.read(reinterpret_cast<char*>(glm::value_ptr(normals[0])), sizeof(glm::vec3)*points);
 	file.read(reinterpret_cast<char*>(glm::value_ptr(colors[0])), sizeof(glm::vec3)*points);
+
+	updateBuffers();
 }
 
 
@@ -158,4 +160,22 @@ void SimplePointcloud::loadTxt(const std::string& filename)
 		normals.push_back(glm::normalize(normal));
 	}
 
+	updateBuffers();
+}
+
+void SimplePointcloud::updateBuffers()
+{
+
+
+#ifndef NO_GRAPHICS
+	glGenBuffers(3, vertexBuffers);
+	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[0]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertices.size(), glm::value_ptr(vertices[0]), GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[1]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*colors.size(), glm::value_ptr(colors[0]), GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[2]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*normals.size(), glm::value_ptr(normals[0]), GL_STATIC_DRAW);
+#endif
 }
