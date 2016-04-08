@@ -24,6 +24,7 @@ public:
 	void setInteractionVolume(InteractionVolume* v);
 
 	void setMode(const std::string& mode);
+	std::string getMode() const;
 
 	inline bool isActive() const { return active; }
 

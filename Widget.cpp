@@ -113,6 +113,23 @@ void IWidget::setMode(const std::string& m)
 		
 }
 
+std::string IWidget::getMode() const
+{
+	switch (mode)
+	{
+	case VIEW_RELATIVE:
+		return "View";
+	case AXIS_X:
+		return "X";
+	case AXIS_Y:
+		return "Y";
+	case AXIS_Z:
+		return "Z";
+	default:
+		return "Unknown";
+	}
+
+}
 
 static void drawPyramid()
 {

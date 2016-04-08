@@ -259,7 +259,36 @@ void SpimRegistrationApp::draw()
 					drawSolutionParameterSpace(vp);
 
 				if (controlWidget)
+				{
 					controlWidget->draw(vp);
+
+					glMatrixMode(GL_PROJECTION);
+					glLoadIdentity();
+					glOrtho(0, vp->size.x, 0, vp->size.y, 0, 1);
+
+					glMatrixMode(GL_MODELVIEW);
+					glLoadIdentity();
+					
+					
+					glRasterPos2i(10, 10);
+					glColor4f(1, 1, 1, 1);
+					
+					
+					std::string text;
+					if (dynamic_cast<TranslateWidget*>(controlWidget))
+						text = "Mode: Translation";
+					else if (dynamic_cast<RotateWidget*>(controlWidget))
+						text = "Mode: Rotation";
+					else
+						text = "Mode: Scale";
+
+					text = text + " - " + controlWidget->getMode();
+
+					for (int i = 0; i < text.length(); ++i)
+						glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, text[i]);
+
+				}
+
 
 			}
 
