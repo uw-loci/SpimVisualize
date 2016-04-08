@@ -26,7 +26,7 @@ public:
 	void setMode(const std::string& mode);
 
 	inline bool isActive() const { return active; }
-	
+
 protected:
 	bool				active;
 	InteractionVolume*	volume;
@@ -38,7 +38,6 @@ protected:
 	glm::vec2			currentMouseCoords;
 
 
-	float				moveScale;
 
 
 

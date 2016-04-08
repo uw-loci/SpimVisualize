@@ -689,16 +689,15 @@ void SpimRegistrationApp::rotateCurrentStack(float rotY)
 	if (!currentVolumeValid())
 		return;
 
+	if (runAlignment)
+		return;
+
 	interactionVolumes[currentVolume]->rotate(glm::radians(rotY));
 	updateGlobalBbox();
 }
 
-
-
-void SpimRegistrationApp::moveStack(const glm::vec2& delta)
+void SpimRegistrationApp::moveCurrentStack(const glm::vec2& delta)
 {
-	/*
-	//std::cerr << "[OBSOLETE] REMOVE ME! @" << __FUNCTION__ << "(" << __LINE__ << ")\n";
 
 	if (!currentVolumeValid())
 		return;
@@ -712,21 +711,6 @@ void SpimRegistrationApp::moveStack(const glm::vec2& delta)
 		//stacks[currentStack]->move(vp->camera->calculatePlanarMovement(delta));
 		interactionVolumes[currentVolume]->move(vp->camera->calculatePlanarMovement(delta));
 	}
-
-	updateGlobalBbox();
-	*/
-}
-
-void SpimRegistrationApp::scaleStack(float s)
-{
-	if (!currentVolumeValid())
-		return;
-
-	if (runAlignment)
-		return;
-
-	interactionVolumes[currentVolume]->scaleUniform(s);
-
 
 	updateGlobalBbox();
 }
@@ -1672,6 +1656,8 @@ void SpimRegistrationApp::inspectOutputImage(const glm::ivec2& cursor)
 	if (currentVolumeValid())
 		return;
 
+	if (controlWidget)
+		return;
 
 	if (!renderTargetReadbackCurrent)
 		readbackRenderTarget();
@@ -2522,3 +2508,4 @@ void SpimRegistrationApp::setWidgetMode(const std::string& mode)
 	if (controlWidget)
 		controlWidget->setMode(mode);
 }
+

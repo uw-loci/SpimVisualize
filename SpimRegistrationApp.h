@@ -58,16 +58,12 @@ public:
 	void endStackMove(const glm::ivec2& mouse);
 
 	void setWidgetMode(const std::string& mode);
-
-
+	
 
 	/// Undos the last transform applied. This also includes movements of a stack
 	void undoLastTransform();
-	void moveStack(const glm::vec2& delta);
+	void moveCurrentStack(const glm::vec2& delta);
 	void rotateCurrentStack(float rotY);
-
-	void scaleStack(float s);
-
 
 	void setWidgetType(const std::string& control);
 
@@ -177,7 +173,6 @@ private:
 	std::vector<SpimStack*>	stacks;
 
 	AABB					globalBBox;
-
 	// global contrast settings
 	Threshold				globalThreshold;
 

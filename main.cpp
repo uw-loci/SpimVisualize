@@ -126,23 +126,7 @@ static void keyboard(unsigned char key, int x, int y)
 		regoApp->decreaseSliceCount();
 	if (key == '\'')
 		regoApp->increaseSliceCount();
-
-	
-	if (key == '[')
-		regoApp->rotateCurrentStack(-0.5);
-	if (key == '{')
-		regoApp->rotateCurrentStack(-2.5f);
-
-	if (key == ']')
-		regoApp->rotateCurrentStack(0.5);
-	if (key == '}')
-		regoApp->rotateCurrentStack(2.5f);
 		
-	if (key == 'j')
-		regoApp->scaleStack(0.7f);
-	if (key == 'k')
-		regoApp->scaleStack(1.4f);
-
 	if (key == 'S')
 		regoApp->reloadShaders();
 
@@ -299,17 +283,18 @@ static void motion(int x, int y)
 		// camera movement in a perspective window
 		//regoApp->rotateCamera(glm::vec2(dt, dp));
 		
-		// stack movement in an ortho window
-		regoApp->moveStack(glm::vec2(dx, dy));
+
 		regoApp->updateStackMove(mouse.coordinates);
+
+		
+
 
 		/*
 		// change contrast in the editor
 		regoApp->changeContrast(glm::ivec2(x, h - y));
-
+		*/
 
 		regoApp->inspectOutputImage(glm::ivec2(x, h - y));
-		*/
 	}
 
 	regoApp->updateMouseMotion(glm::ivec2(x, h - y));
@@ -366,7 +351,7 @@ static void special(int key, int x, int y)
 		else if (glutGetModifiers() == GLUT_ACTIVE_ALT)
 			d = 0.1f;
 
-		regoApp->moveStack(glm::vec2(0, d));
+		regoApp->moveCurrentStack(glm::vec2(0, d));
 	}
 
 	if (key == GLUT_KEY_DOWN)
@@ -379,7 +364,7 @@ static void special(int key, int x, int y)
 		else if (glutGetModifiers() == GLUT_ACTIVE_ALT)
 			d = 0.1f;
 
-		regoApp->moveStack(glm::vec2(0, -d));
+		regoApp->moveCurrentStack(glm::vec2(0, -d));
 	}
 
 	if (key == GLUT_KEY_LEFT)
@@ -392,7 +377,7 @@ static void special(int key, int x, int y)
 		else if (glutGetModifiers() == GLUT_ACTIVE_ALT)
 			d = 0.1f;
 
-		regoApp->moveStack(glm::vec2(-d, 0));
+		regoApp->moveCurrentStack(glm::vec2(-d, 0));
 
 	}
 
@@ -406,7 +391,7 @@ static void special(int key, int x, int y)
 		else if (glutGetModifiers() == GLUT_ACTIVE_ALT)
 			d = 0.1f;
 
-		regoApp->moveStack(glm::vec2(d, 0));
+		regoApp->moveCurrentStack(glm::vec2(d, 0));
 
 	}
 	
