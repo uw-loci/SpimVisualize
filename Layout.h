@@ -24,7 +24,8 @@ public:
 	inline glm::vec2 getRelativeCoords(const glm::ivec2& coords) const
 	{
 		using namespace glm;
-		const ivec2 rc = coords - position;
+		ivec2 rc = coords - position;
+		rc.y = size.y - rc.y;
 		return vec2(rc) / vec2(size);
 	}
 

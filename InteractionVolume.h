@@ -32,6 +32,12 @@ public:
 
 
 
+
+	inline const glm::vec3& getForward() const { return glm::vec3(transform[0]); }
+	inline const glm::vec3& getUp() const { return glm::vec3(transform[1]); }
+	inline const glm::vec3& getRight() const { return glm::vec3(transform[2]); }
+
+
 	inline const glm::mat4& getTransform() const { return transform; }
 	inline const glm::mat4& getInverseTransform() const { return inverseTransform; }
 	inline void setTransform(const glm::mat4& t) { transform = t; inverseTransform = glm::inverse(t); }

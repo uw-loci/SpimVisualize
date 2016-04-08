@@ -25,6 +25,10 @@ public:
 	virtual glm::vec3 getPosition() const = 0;
 	virtual glm::vec3 getViewDirection() const = 0;
 
+	inline glm::vec3 getRight() const { return cross(getViewDirection(), up); }
+	inline glm::vec3 getUp() const { return up; }
+
+
 	// calculates the planar movement from the given 2D vector which is assumed to be on the near plane of the camera
 	virtual glm::vec3 calculatePlanarMovement(const glm::vec2& delta) const = 0;
 
@@ -96,6 +100,7 @@ public:
 
 	inline glm::vec3 getPosition() const { return target - viewDirection; } ;
 	inline glm::vec3 getViewDirection() const {	return viewDirection;}
+
 
 	void maximizeView(const AABB& bbox);
 

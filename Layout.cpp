@@ -62,7 +62,6 @@ void Viewport::maximizeView(const AABB& bbox)
 
 }
 
-
 SingleViewLayout::SingleViewLayout(const ivec2& resolution)
 {
 	viewport.position = ivec2(0);

@@ -68,6 +68,8 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : configPath("./
 	
 	solver = new DXSolver;
 	//solver = new SimulatedAnnealingSolver;
+
+	setWidgetType("None");
 }
 
 SpimRegistrationApp::~SpimRegistrationApp()
@@ -250,8 +252,16 @@ void SpimRegistrationApp::draw()
 			if (drawBboxes && drawPhantoms)
 				drawPhantomBoxes();
 
-			if (drawSolutionSpace)
-				drawSolutionParameterSpace(vp);
+			if (vp == layout->getActiveViewport())
+			{
+
+				if (drawSolutionSpace)
+					drawSolutionParameterSpace(vp);
+
+				if (controlWidget)
+					controlWidget->draw(vp);
+
+			}
 
 			// the query result should be done by now
 			if (runAlignment || calculateScore)
@@ -289,6 +299,15 @@ void SpimRegistrationApp::draw()
 
 
 	
+}
+
+void SpimRegistrationApp::clearStackTransformations()
+{
+	std::for_each(interactionVolumes.begin(), interactionVolumes.end(), []( InteractionVolume* v)
+	{
+		v->setTransform(glm::mat4(1.f));
+	});
+
 }
 
 void SpimRegistrationApp::saveStackTransformations() const
@@ -380,6 +399,13 @@ void SpimRegistrationApp::addSpimStack(SpimStack* stack)
 {
 	stacks.push_back(stack);
 	addInteractionVolume(stack);
+}
+
+void SpimRegistrationApp::addSpimStack(const std::string& filename, const glm::vec3& voxelScale)
+{
+	SpimStack* stack = SpimStack::load(filename);
+	stack->setVoxelDimensions(voxelScale);
+	addSpimStack(stack);
 }
 
 void SpimRegistrationApp::addPointcloud(const std::string& filename)
@@ -671,6 +697,9 @@ void SpimRegistrationApp::rotateCurrentStack(float rotY)
 
 void SpimRegistrationApp::moveStack(const glm::vec2& delta)
 {
+	/*
+	//std::cerr << "[OBSOLETE] REMOVE ME! @" << __FUNCTION__ << "(" << __LINE__ << ")\n";
+
 	if (!currentVolumeValid())
 		return;
 
@@ -685,6 +714,7 @@ void SpimRegistrationApp::moveStack(const glm::vec2& delta)
 	}
 
 	updateGlobalBbox();
+	*/
 }
 
 void SpimRegistrationApp::scaleStack(float s)
@@ -1483,20 +1513,48 @@ void SpimRegistrationApp::undoLastTransform()
 	updateGlobalBbox();
 }
 
-void SpimRegistrationApp::startStackMove()
+void SpimRegistrationApp::startStackMove(const glm::ivec2& mouse)
 {
 	if (!currentVolumeValid())
 		return;
 
 	//saveStackTransform(currentStack);
 	saveVolumeTransform(currentVolume);
+
+
+	const Viewport* vp = layout->getActiveViewport();
+	if (vp && controlWidget)
+		controlWidget->beginMouseMove(vp, vp->getRelativeCoords(mouse));
+	
+
+
 }
 
-void SpimRegistrationApp::endStackMove()
+void SpimRegistrationApp::updateStackMove(const glm::ivec2& mouse)
 {
+	if (!currentVolumeValid())
+		return;
+
+	updateGlobalBbox();
+
+	const Viewport* vp = layout->getActiveViewport();
+	if (vp && controlWidget)
+		controlWidget->updateMouseMove(vp, vp->getRelativeCoords(mouse));
+
+}
+
+void SpimRegistrationApp::endStackMove(const glm::ivec2& mouse)
+{
+
+	if (!currentVolumeValid())
+		return;
+
 	updateGlobalBbox();
 
 
+	const Viewport* vp = layout->getActiveViewport();
+	if (vp && controlWidget)
+		controlWidget->endMouseMove(vp, vp->getRelativeCoords(mouse));
 
 
 }
@@ -2439,7 +2497,7 @@ void SpimRegistrationApp::setWidgetType(const std::string& t)
 			controlWidget = new TranslateWidget;
 		}
 	}
-	/*
+	
 	else if (t == "Rotate")
 	{
 		delete controlWidget;
@@ -2450,11 +2508,17 @@ void SpimRegistrationApp::setWidgetType(const std::string& t)
 		delete controlWidget;
 		controlWidget = new ScaleWidget;
 	}
-	*/
 
-	if (controlWidget && currentVolumeValid())
-		controlWidget->setInteractionVolume(interactionVolumes[currentVolume]);
-	else
-		controlWidget->setInteractionVolume(nullptr);
+	if (controlWidget)
+		if (currentVolumeValid())
+			controlWidget->setInteractionVolume(interactionVolumes[currentVolume]);
+		else
+			controlWidget->setInteractionVolume(nullptr);
 	
+}
+
+void SpimRegistrationApp::setWidgetMode(const std::string& mode)
+{
+	if (controlWidget)
+		controlWidget->setMode(mode);
 }

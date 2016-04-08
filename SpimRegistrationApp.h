@@ -31,6 +31,7 @@ public:
 	
 	void addSpimStack(SpimStack* stack);
 	void addSpimStack(const std::string& filename);
+	void addSpimStack(const std::string& filename, const glm::vec3& voxelScale);
 	void subsampleAllStacks();
 
 
@@ -52,8 +53,13 @@ public:
 	inline void toggleCurrentStack() { toggleStack(currentVolume); }
 	void toggleAllStacks();
 
-	void startStackMove();
-	void endStackMove();
+	void startStackMove(const glm::ivec2& mouse);
+	void updateStackMove(const glm::ivec2& mouse);
+	void endStackMove(const glm::ivec2& mouse);
+
+	void setWidgetMode(const std::string& mode);
+
+
 
 	/// Undos the last transform applied. This also includes movements of a stack
 	void undoLastTransform();
@@ -142,7 +148,8 @@ public:
 
 	void saveStackTransformations() const;
 	void loadStackTransformations();
-	
+	void clearStackTransformations();
+
 	void saveContrastSettings() const;
 	void loadContrastSettings();
 

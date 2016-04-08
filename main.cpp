@@ -143,13 +143,38 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == 'k')
 		regoApp->scaleStack(1.4f);
 
-	if (key == 's')
+	if (key == 'S')
 		regoApp->reloadShaders();
 
 	if (key == 'q')
 		regoApp->toggleSolutionParameterSpace();
 	if (key == 'Q')
 		regoApp->clearSolutionParameterSpace();
+
+
+
+
+
+
+
+	if (key == 't')
+		regoApp->setWidgetType("Translate");
+	if (key == 'r')
+		regoApp->setWidgetType("Rotate");
+	if (key == 's')
+		regoApp->setWidgetType("Scale");
+
+	if (key == 'x')
+		regoApp->setWidgetMode("X");
+	if (key == 'y')
+		regoApp->setWidgetMode("Y");
+	if (key == 'z')
+		regoApp->setWidgetMode("Z");
+
+
+
+
+
 
 
 	if (key == 'u')
@@ -181,13 +206,20 @@ static void keyboard(unsigned char key, int x, int y)
 		regoApp->toggleSelectStack(6);
 
 
-	
+	/*
 	if (key == 'T')
 		regoApp->loadStackTransformations();
 
 	if (key == 't')
-		regoApp->saveStackTransformations();
-	
+	{
+
+		if (glutGetModifiers() & GLUT_ACTIVE_CTRL)
+			regoApp->clearStackTransformations();
+		else
+			regoApp->saveStackTransformations();
+	}
+
+	*/
 
 	if (key == 'm')
 		regoApp->maximizeViews();
@@ -226,6 +258,9 @@ static void keyboardUp(unsigned char key, int x, int y)
 
 	if (key == '\t')
 		regoApp->endAutoAlign(); 
+
+	if (key == 'x' || key == 'y' || key == 'z')
+		regoApp->setWidgetMode("View");
 }
 
 
@@ -266,13 +301,15 @@ static void motion(int x, int y)
 		
 		// stack movement in an ortho window
 		regoApp->moveStack(glm::vec2(dx, dy));
+		regoApp->updateStackMove(mouse.coordinates);
 
+		/*
 		// change contrast in the editor
 		regoApp->changeContrast(glm::ivec2(x, h - y));
 
 
 		regoApp->inspectOutputImage(glm::ivec2(x, h - y));
-
+		*/
 	}
 
 	regoApp->updateMouseMotion(glm::ivec2(x, h - y));
@@ -379,7 +416,7 @@ static void button(int button, int state, int x, int y)
 {
 	assert(regoApp);
 
-	std::cout << "Button: " << button << " state: " << state << " x " << x << " y " << y << std::endl;
+	//std::cout << "Button: " << button << " state: " << state << " x " << x << " y " << y << std::endl;
 
 	mouse.coordinates.x = x;
 	mouse.coordinates.y = y;
@@ -389,10 +426,10 @@ static void button(int button, int state, int x, int y)
 	if (button == 2 && state == GLUT_UP)
 		regoApp->setCameraMoving(false);
 
-	if (button == 0 && state == GLUT_DOWN)
-		regoApp->startStackMove();
-	if (button == 0 && state == GLUT_UP)
-		regoApp->endStackMove();
+	if (button == 0 && state == 0)
+		regoApp->startStackMove(glm::ivec2(x,y));
+	if (button == 0 && state == 1)
+		regoApp->endStackMove(glm::ivec2(x, y));
 }
 
 static void reshape(int w, int h)
@@ -463,8 +500,16 @@ int main(int argc, const char** argv)
 	try
 	{
 
-		regoApp->addPointcloud("S:/datasets/time_varying/Yi Xian's Pumpkin/Pump_20151111.txt");
+		//regoApp->addPointcloud("S:/datasets/time_varying/Chia Pets/Trimmed/Clouds/19.bin");
 
+		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_1.tiff", glm::vec3(1.f));
+		/*
+		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_2.tiff", glm::vec3(1.f));
+		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_3.tiff", glm::vec3(1.f));
+		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_4.tiff", glm::vec3(1.f));
+		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_5.tiff", glm::vec3(1.f));
+		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_6.tiff", glm::vec3(1.f));
+		*/
 
 		regoApp->centerCamera();
 		regoApp->loadStackTransformations();
