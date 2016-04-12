@@ -2761,8 +2761,11 @@ void SpimRegistrationApp::endSampleStack()
 
 
 	// save the created stack
-	const std::string savePath = "e:/spim/phantom/";
-
+	
+	// determine the save path from stack[0] -- the stack we create our phantoms from
+	const std::string baseFile = stacks[0]->getFilename();
+	const std::string savePath = baseFile.substr(0, baseFile.find_last_of("/")+1);
+	
 	std::string filename = savePath + "phantom_" + std::to_string(sampleStack);;
 	stacks[sampleStack]->save(filename + ".tiff");
 	stacks[sampleStack]->saveTransform(filename + ".tiff.reference.txt");
