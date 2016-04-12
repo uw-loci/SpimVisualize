@@ -28,7 +28,7 @@ class SpimRegistrationApp : boost::noncopyable
 public:
 	SpimRegistrationApp(const glm::ivec2& resolution);
 	~SpimRegistrationApp();
-	
+
 	void addSpimStack(SpimStack* stack);
 	void addSpimStack(const std::string& filename);
 	void addSpimStack(const std::string& filename, const glm::vec3& voxelScale);
@@ -36,17 +36,17 @@ public:
 
 
 	void addPointcloud(const std::string& filename);
-	void addPhantom(const std::string& stackFilename, const std::string& referenceTransform, bool fijiTransform=false);
+	void addPhantom(const std::string& stackFilename, const std::string& referenceTransform, bool fijiTransform = false);
 
-	void loadPrevSolutionSpace(const std::string& filename);
+	//void loadPrevSolutionSpace(const std::string& filename);
 
 	void reloadShaders();
-	
+
 	void update(float dt);
 	void draw();
 
 	void resize(const glm::ivec2& newSize);
-	
+
 	//inline size_t getStacksCount() const { return stacks.size(); }
 	void toggleSelectStack(int n);
 	void toggleStack(int n);
@@ -58,7 +58,7 @@ public:
 	void endStackMove(const glm::ivec2& mouse);
 
 	void setWidgetMode(const std::string& mode);
-	
+
 
 	/// Undos the last transform applied. This also includes movements of a stack
 	void undoLastTransform();
@@ -81,7 +81,21 @@ public:
 
 
 	void applyGaussFilterToCurrentStack();
-	
+
+
+
+	/// \name Phantom creation
+	/// \{ 
+
+	void createEmptyRandomStack(const glm::ivec3& resolution, const glm::vec3& voxelDimensions = glm::vec3(1.f));
+
+	void startSampleStack(int stack);
+	void clearSampleStack();
+	void endSampleStack();
+
+
+
+	/// \}
 
 	void createFakeBeads(unsigned int beadCount) ;
 
@@ -248,6 +262,7 @@ private:
 	void drawGroundGrid(const Viewport* vp) const;
 	void drawBoundingBoxes() const;
 	void drawPhantomBoxes() const;
+	void drawStackSamples() const;
 
 	void drawTexturedQuad(unsigned int texture) const;
 	void drawTonemappedQuad();
@@ -257,6 +272,8 @@ private:
 	void drawViewplaneSlices(const Viewport* vp, const Shader* shader) const;
 	
 	
+	void reloadVolumeShader();
+
 	// ray tracing section
 	void raytraceVolumes(const Viewport* vp) const;
 	void initializeRayTargets(const Viewport* vp);
@@ -286,6 +303,20 @@ private:
 	bool					renderTargetReadbackCurrent;
 
 	void readbackRenderTarget();
+
+
+	// this is about resampling
+	int sampleStack = -1;
+
+	std::vector<glm::vec4>		stackSamples;
+	
+	size_t						lastStackSample;
+	void addStackSamples();
+
+	// for GPU stack sampling
+	Shader*					gpuStackSampler;
+	Framebuffer*			stackSamplerTarget;
+
 
 
 	// this one will override runAlignment and always calculate the score 

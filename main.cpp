@@ -89,6 +89,16 @@ static void keyboard(unsigned char key, int x, int y)
 		regoApp->runAlignmentOnce();
 
 
+
+
+
+
+	if (key == 'e')
+		regoApp->createEmptyRandomStack(glm::ivec3(256, 256, 64), glm::vec3(1));
+
+
+
+
 	if (key == 'h')
 		regoApp->toggleHistory();
 
@@ -104,12 +114,7 @@ static void keyboard(unsigned char key, int x, int y)
 		regoApp->decreaseMaxThreshold();
 	if (key == '>')
 		regoApp->increaseMaxThreshold();
-	/*
-	if (key == '<')
-		regoApp->decreaseMinThreshold();
-	if (key == '>')
-		regoApp->decreaseMaxThreshold();
-	*/
+	
 	if (key == 'C')
 		regoApp->autoThreshold();
 	
@@ -184,10 +189,38 @@ static void keyboard(unsigned char key, int x, int y)
 
 	if (key == '6')
 		regoApp->toggleSelectStack(5);
-
-
+	
 	if (key == '7')
 		regoApp->toggleSelectStack(6);
+
+	if (key == '8')
+		regoApp->toggleSelectStack(7);
+
+	if (key == '9')
+		regoApp->toggleSelectStack(8);
+
+	if (key == '!')
+		regoApp->clearSampleStack();
+
+	if (key == '@')
+		regoApp->startSampleStack(1);
+	if (key == '#')
+		regoApp->startSampleStack(2);
+	if (key == '$')
+		regoApp->startSampleStack(3);
+	if (key == '%')
+		regoApp->startSampleStack(4);
+	if (key == '^')
+		regoApp->startSampleStack(5);
+	if (key == '&')
+		regoApp->startSampleStack(6);
+	if (key == '8')
+		regoApp->startSampleStack(7);
+	if (key == '(')
+		regoApp->startSampleStack(8);
+	if (key == ')')
+		regoApp->startSampleStack(9);
+
 
 
 	/*
@@ -286,14 +319,9 @@ static void motion(int x, int y)
 
 		regoApp->updateStackMove(mouse.coordinates);
 
-		
-
-
-		/*
+			
 		// change contrast in the editor
 		regoApp->changeContrast(glm::ivec2(x, h - y));
-		*/
-
 		regoApp->inspectOutputImage(glm::ivec2(x, h - y));
 	}
 
@@ -490,15 +518,24 @@ int main(int argc, const char** argv)
 		regoApp->addPointcloud("S:/datasets/time_varying/Yi Xian's Pumpkin/Pump_20151113.bin");
 		regoApp->addPointcloud("S:/datasets/time_varying/Yi Xian's Pumpkin/Pump_20151114.bin");
 		*/
-		
-		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_1.tiff", glm::vec3(1.f));
 		/*
+		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_1.tiff", glm::vec3(1.f));
 		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_2.tiff", glm::vec3(1.f));
 		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_3.tiff", glm::vec3(1.f));
 		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_4.tiff", glm::vec3(1.f));
 		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_5.tiff", glm::vec3(1.f));
 		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_6.tiff", glm::vec3(1.f));
+		
+
+		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_1.tiff", "e:/spim/phantom/t1-head/reference/phantom_1.tiff.reference.txt");
+		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_2.tiff", "e:/spim/phantom/t1-head/reference/phantom_2.tiff.reference.txt");
+		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_3.tiff", "e:/spim/phantom/t1-head/reference/phantom_3.tiff.reference.txt");
+		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_4.tiff", "e:/spim/phantom/t1-head/reference/phantom_4.tiff.reference.txt");
+		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_5.tiff", "e:/spim/phantom/t1-head/reference/phantom_5.tiff.reference.txt");
+		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_6.tiff", "e:/spim/phantom/t1-head/reference/phantom_6.tiff.reference.txt");
 		*/
+
+		regoApp->addSpimStack("e:/spim/phantom/t1-head/t1-head.tiff", glm::vec3(1));
 
 		regoApp->centerCamera();
 		regoApp->loadStackTransformations();

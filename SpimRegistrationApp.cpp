@@ -40,8 +40,8 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : configPath("./
 	histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f),
 	cameraMoving(false), drawGrid(true), drawBboxes(false), drawSlices(false), currentVolume(-1), sliceCount(100), subsampleOnCameraMove(false),
 	pointShader(nullptr), volumeShader(nullptr), sliceShader(nullptr),
-	volumeRaycaster(nullptr), drawQuad(nullptr), volumeDifferenceShader(nullptr), drawPosition(nullptr), tonemapper(nullptr), 
-	volumeRenderTarget(nullptr), rayStartTarget(nullptr),
+	volumeRaycaster(nullptr), drawQuad(nullptr), volumeDifferenceShader(nullptr), drawPosition(nullptr), tonemapper(nullptr), gpuStackSampler(nullptr),
+	volumeRenderTarget(nullptr), rayStartTarget(nullptr), stackSamplerTarget(nullptr),
 	useImageAutoContrast(false), runAlignment(false), renderTargetReadbackCurrent(false), calculateScore(false), drawHistory(false),
 	solver(nullptr), drawPhantoms(false), drawSolutionSpace(false), runAlignmentOnlyOncePlease(false),
 	controlWidget(nullptr)
@@ -86,6 +86,9 @@ SpimRegistrationApp::~SpimRegistrationApp()
 	delete volumeDifferenceShader;
 	delete volumeRaycaster;
 	delete drawPosition;
+	delete stackSamplerTarget;
+
+	delete gpuStackSampler;
 
 	delete controlWidget;
 
@@ -117,25 +120,41 @@ void SpimRegistrationApp::reloadShaders()
 	delete sliceShader;
 	sliceShader = new Shader("shaders/slices.vert", "shaders/slices.frag");
 
-	delete volumeShader;
-	volumeShader = new Shader("shaders/volume2.vert", "shaders/volume2.frag", defines);
-
-	delete volumeRaycaster;
-	volumeRaycaster = new Shader("shaders/volumeRaycast.vert", "shaders/volumeRaycast.frag", defines);
+	reloadVolumeShader();
 
 	delete drawQuad;
 	drawQuad = new Shader("shaders/drawQuad.vert", "shaders/drawQuad.frag");
 
-	delete volumeDifferenceShader;
-	volumeDifferenceShader = new Shader("shaders/volumeDist.vert", "shaders/volumeDist.frag", defines);
-
+	
 	delete tonemapper;
 	tonemapper = new Shader("shaders/drawQuad.vert", "shaders/tonemapper.frag", defines);
 
 	delete drawPosition;
 	drawPosition = new Shader("shaders/drawPosition.vert", "shaders/drawPosition.frag");
 
+	delete gpuStackSampler;
+	gpuStackSampler = new Shader("shaders/samplePlane.vert", "shaders/samplePlane.frag");
+
 }
+
+void SpimRegistrationApp::reloadVolumeShader()
+{
+	int numberOfVolumes = std::max(1, (int)stacks.size());
+
+	std::vector<std::pair<std::string, std::string> > defines;
+	defines.push_back(std::make_pair("VOLUMES", boost::lexical_cast<std::string>(numberOfVolumes)));
+
+	delete volumeShader;
+	volumeShader = new Shader("shaders/volume2.vert", "shaders/volume2.frag", defines);
+
+	delete volumeRaycaster;
+	volumeRaycaster = new Shader("shaders/volumeRaycast.vert", "shaders/volumeRaycast.frag", defines);
+
+	delete volumeDifferenceShader;
+	volumeDifferenceShader = new Shader("shaders/volumeDist.vert", "shaders/volumeDist.frag", defines);
+
+}
+
 
 void SpimRegistrationApp::draw()
 {
@@ -252,6 +271,11 @@ void SpimRegistrationApp::draw()
 			if (drawBboxes && drawPhantoms)
 				drawPhantomBoxes();
 
+
+			if (!stackSamples.empty())
+				drawStackSamples();
+
+
 			if (vp == layout->getActiveViewport())
 			{
 
@@ -308,6 +332,8 @@ void SpimRegistrationApp::draw()
 				}
 				
 			}
+
+
 
 		}
 
@@ -1649,6 +1675,9 @@ void SpimRegistrationApp::update(float dt)
 		calculateImageContrast(pixels);
 	}
 
+	if (sampleStack != -1)
+		addStackSamples();
+
 }
 
 void SpimRegistrationApp::maximizeViews()
@@ -2179,11 +2208,11 @@ void SpimRegistrationApp::addPhantom(const std::string& stackFilename, const std
 			loadedBbox = true;
 			break;
 		}
-
 	}
 
 	if (!loadedBbox)
 	{
+		std::cout << "[Phantom] Loading stack \"" << stackFilename << "\" for dimensions.\n";
 		std::auto_ptr<SpimStack> s(SpimStack::load(stackFilename));
 		p.bbox = s->getBBox();
 	}
@@ -2247,6 +2276,7 @@ void SpimRegistrationApp::alignPhantoms()
 
 }
 
+/*
 void SpimRegistrationApp::loadPrevSolutionSpace(const std::string& filename)
 {
 	std::ifstream file(filename);
@@ -2296,7 +2326,7 @@ void SpimRegistrationApp::loadPrevSolutionSpace(const std::string& filename)
 
 
 }
-
+*/
 
 
 void SpimRegistrationApp::createFakeBeads(unsigned int beadCount)
@@ -2515,13 +2545,35 @@ void SpimRegistrationApp::setWidgetType(const std::string& t)
 	
 	else if (t == "Rotate")
 	{
-		delete controlWidget;
-		controlWidget = new RotateWidget;
+
+		if (controlWidget && dynamic_cast<RotateWidget*>(controlWidget))
+		{
+			std::cout << "[Control] Disabling current rotation widget.\n";
+			delete controlWidget;
+			controlWidget = nullptr;
+		}
+		else
+		{
+			std::cout << "[Control] Creating new rotation widget.\n";
+			delete controlWidget;
+			controlWidget = new RotateWidget;
+		}
 	}
 	else if (t == "Scale")
 	{
-		delete controlWidget;
-		controlWidget = new ScaleWidget;
+		if (controlWidget && dynamic_cast<ScaleWidget*>(controlWidget))
+		{
+			std::cout << "[Control] Disabling current scale widget.\n";
+			delete controlWidget;
+			controlWidget = nullptr;
+		}
+		else
+		{
+			std::cout << "[Control] Creating new scale widget.\n";
+			delete controlWidget;
+			controlWidget = new ScaleWidget;
+		}
+
 	}
 
 	if (controlWidget)
@@ -2538,3 +2590,191 @@ void SpimRegistrationApp::setWidgetMode(const std::string& mode)
 		controlWidget->setMode(mode);
 }
 
+void SpimRegistrationApp::createEmptyRandomStack(const glm::ivec3& resolution, const glm::vec3& voxelDimensions)
+{
+	assert(!stacks.empty());
+	using namespace glm;
+
+	auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+	auto rand = std::bind(std::uniform_real_distribution<float>(-1.f, 1.f), std::mt19937(seed));
+
+	
+	SpimStackU16* stack = new SpimStackU16;
+	stack->setVoxelDimensions(voxelDimensions);
+	stack->setContent(resolution, 0);
+
+	stacks.push_back(stack);
+	addInteractionVolume(stack);
+	saveVolumeTransform(stacks.size() - 1);
+
+	// copy the transform of the base stack
+	stack->setTransform(stacks[0]->getTransform());
+
+	// create random translation
+	vec3 delta(rand(), rand(), rand());
+
+	delta *= vec3(1000, 200, 1000);
+	stack->move(delta);
+
+
+	// create random rotation
+	float a = rand() * 90.f - 45.f;
+	stack->setRotation(a);
+
+	std::cout << "[App] Created random stack with dT " << delta << " and R=" << a << std::endl;
+
+
+	reloadVolumeShader();
+}
+
+
+
+void SpimRegistrationApp::drawStackSamples() const
+{
+	using namespace glm;
+
+	const vec3 red(1.f, 0.f, 0.f);
+	const vec3 grn(0.f, 0.8f, 0.f);
+
+	glColor3f(1, 1, 1);
+	glBegin(GL_POINTS);
+	for (size_t i = 0; i < stackSamples.size(); ++i)
+	{
+		float a = stackSamples[i].a / 120.0f;
+
+		vec3 color = mix(red, grn, a);
+
+		glColor3fv(value_ptr(color));
+		glVertex3fv(value_ptr(stackSamples[i]));
+
+	}
+	glEnd();
+}
+
+void SpimRegistrationApp::addStackSamples()
+{
+	if (sampleStack == -1)
+		return;
+
+
+
+	SpimStack* stack = stacks[sampleStack];
+
+	if (lastStackSample >= stack->getDepth() || lastStackSample < 0)
+		return;
+
+	//std::cout << "[Sampling] Rendering slice " << lastStackSample << " ... \n";
+
+	stackSamplerTarget->bind();
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	gpuStackSampler->bind();
+
+	// set sampling volume
+	gpuStackSampler->setUniform("planeTransform", stack->getTransform());
+	gpuStackSampler->setUniform("zPlane", (float)lastStackSample);
+	gpuStackSampler->setUniform("planeResolution", (float)stack->getWidth(), (float)stack->getHeight());
+	gpuStackSampler->setUniform("planeScale", stack->getVoxelDimensions());
+
+	// set reference volume
+	gpuStackSampler->setUniform("inverseVolumeTransform", stacks[0]->getInverseTransform());
+	gpuStackSampler->setUniform("volumeScale", stacks[0]->getVoxelDimensions());
+	gpuStackSampler->setUniform("volumeResolution", stacks[0]->getWidth(), stacks[0]->getHeight(), stacks[0]->getDepth());
+
+
+
+
+	// draw the correct z-plane
+	glBegin(GL_QUADS);
+	glVertex2i(0, 0);
+	glVertex2i(1, 0);
+	glVertex2i(1, 1);
+	glVertex2i(0, 1);
+	glEnd();
+
+
+	gpuStackSampler->disable();
+	stackSamplerTarget->disable();
+
+
+	// read back
+	stackSamplerTarget->bind();
+	std::vector<glm::vec4> sliceSamples(stack->getWidth()*stack->getHeight());
+	glReadBuffer(GL_COLOR_ATTACHMENT0);
+
+	glReadPixels(0, 0, stackSamplerTarget->getWidth(), stackSamplerTarget->getHeight(), GL_RGBA, GL_FLOAT, glm::value_ptr(sliceSamples[0]));
+
+	stackSamplerTarget->disable();
+	glReadBuffer(GL_BACK);
+
+
+
+	// set the sample
+	std::vector<double> samples(sliceSamples.size());
+	for (size_t i = 0; i < samples.size(); ++i)
+		samples[i] = sliceSamples[i].a;
+
+	stack->setPlaneSamples(samples, lastStackSample);
+
+
+	//fill in the correct slice of points
+	//stackSamples.insert(stackSamples.end(), sliceSamples.begin(), sliceSamples.end());
+
+	stackSamples = sliceSamples;
+
+
+	++lastStackSample;
+	if (lastStackSample == stack->getDepth())
+	{
+		stack->update();
+		endSampleStack();
+
+
+		stackSamples.clear();
+	}
+
+}
+
+
+void SpimRegistrationApp::startSampleStack(int n)
+{
+	if (n == 0 || n >= stacks.size())
+	{
+		std::cout << "[Sample] Invalid target stack: " << n << std::endl;
+		return;
+	}
+
+	clearSampleStack();
+	sampleStack = n;
+	std::cout << "[Sample] Selecting stack " << sampleStack << " for sampling.\n";
+
+	stackSamples.reserve(stacks[n]->getPlanePixelCount());
+
+	delete stackSamplerTarget;
+	stackSamplerTarget = new Framebuffer(stacks[n]->getWidth(), stacks[n]->getHeight(), GL_RGBA32F, GL_FLOAT);
+
+
+}
+
+void SpimRegistrationApp::endSampleStack()
+{
+
+
+	// save the created stack
+	const std::string savePath = "e:/spim/phantom/";
+
+	std::string filename = savePath + "phantom_" + std::to_string(sampleStack);;
+	stacks[sampleStack]->save(filename + ".tiff");
+	stacks[sampleStack]->saveTransform(filename + ".tiff.reference.txt");
+
+
+	sampleStack = -1;
+	lastStackSample = 0;
+	
+}
+
+void SpimRegistrationApp::clearSampleStack()
+{
+	stackSamples.clear();
+	lastStackSample = 0;
+}
