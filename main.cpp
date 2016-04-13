@@ -14,14 +14,119 @@
 #undef near
 #undef far
 
+enum MenuItem
+{
+	MENU_TYPE_NONE= 0,
+	MENU_TYPE_TRANSLATE,
+	MENU_TYPE_ROTATE,
+	MENU_TYPE_SCALE,
+	MENU_MODE_VIEW,
+	MENU_MODE_X,
+	MENU_MODE_Y,
+	MENU_MODE_Z,
+	MENU_SELECT_NONE,
+};
+
+
 struct Mouse
 {
 	glm::ivec2		coordinates;
 	int				button[3];
 }				mouse;
 
+enum SpecialKey
+{
+	Shift = 0,
+	Ctrl,
+	Alt,
+	COUNT
+};
+
+bool specialKey[SpecialKey::COUNT];
+
 
 SpimRegistrationApp*	regoApp = nullptr;
+
+
+static void updateSpecialKeys()
+{
+	int specials = glutGetModifiers();
+	
+	specialKey[Shift] = specials & GLUT_ACTIVE_SHIFT;
+	specialKey[Ctrl] = specials & GLUT_ACTIVE_CTRL;
+	specialKey[Alt] = specials & GLUT_ACTIVE_ALT;
+}
+
+static void menu(int item)
+{
+	std::cout << "[Debug] Menu " << item << std::endl;
+	
+	switch ((MenuItem)item)
+	{
+	case MENU_TYPE_NONE:
+		regoApp->setWidgetType("None");
+		break;
+	case MENU_TYPE_TRANSLATE:
+		regoApp->setWidgetType("Translate");
+		break;
+	case MENU_TYPE_ROTATE:
+		regoApp->setWidgetType("Rotate");
+		break;
+	case MENU_TYPE_SCALE:
+		regoApp->setWidgetType("Scale");
+		break;
+
+	case MENU_MODE_VIEW:
+		regoApp->setWidgetMode("View");
+		break;
+
+	case MENU_MODE_X:
+		regoApp->setWidgetMode("X");
+		break;
+	case MENU_MODE_Y:
+		regoApp->setWidgetMode("Y");
+		break;
+	case MENU_MODE_Z:
+		regoApp->setWidgetMode("Z");
+		break;
+		
+	case MENU_SELECT_NONE:
+		regoApp->deselectAll();
+		break;
+
+
+		
+	default:
+
+		std::cout << "[Debug] " << (MenuItem)item << " is not a valid menu entry.\n";
+
+		break;
+	}
+
+
+}
+
+static void createRightClickMenu()
+{
+	glutCreateMenu(menu);
+
+	glutAddMenuEntry("---[Selection]----", -1);
+	glutAddMenuEntry("Select None   [d]", MENU_SELECT_NONE);
+	glutAddMenuEntry("---[Operation]----", -1);
+	glutAddMenuEntry("None", MENU_TYPE_NONE);
+	glutAddMenuEntry("Translate     [t]", MENU_TYPE_TRANSLATE);
+	glutAddMenuEntry("Rotate        [r]", MENU_TYPE_ROTATE);
+	glutAddMenuEntry("Scale         [s]", MENU_TYPE_SCALE);
+	glutAddMenuEntry("-----[Mode]------", -1);
+	glutAddMenuEntry("View Relative [v]", MENU_MODE_VIEW);
+	glutAddMenuEntry("Lock X        [x]", MENU_MODE_X);
+	glutAddMenuEntry("Lock Y        [y]", MENU_MODE_Y);
+	glutAddMenuEntry("Lock Z        [z]", MENU_MODE_Z);
+
+
+	glutAttachMenu(GLUT_RIGHT_BUTTON);
+
+}
 
 
 static void display()
@@ -52,6 +157,9 @@ static void idle()
 
 static void keyboard(unsigned char key, int x, int y)
 {
+	updateSpecialKeys();
+
+
 	if (key == 27)
 		exit(0);
 
@@ -120,7 +228,7 @@ static void keyboard(unsigned char key, int x, int y)
 	
 	if (key == 'c')
 	{
-		if (glutGetModifiers() == GLUT_ACTIVE_ALT)
+		if (specialKey[Alt])
 			regoApp->contrastEditorResetThresholds();
 		else
 			regoApp->contrastEditorApplyThresholds();
@@ -269,6 +377,8 @@ static void keyboard(unsigned char key, int x, int y)
 
 static void keyboardUp(unsigned char key, int x, int y)
 {
+	updateSpecialKeys();
+
 	if (key == ' ')
 		regoApp->endAutoAlign();
 
@@ -283,6 +393,9 @@ static void keyboardUp(unsigned char key, int x, int y)
 
 static void motion(int x, int y)
 {
+
+	updateSpecialKeys();
+
 	float dt = (mouse.coordinates.y - y) * 0.1f;
 	float dp = (mouse.coordinates.x - x) * 0.1f;
 
@@ -299,30 +412,31 @@ static void motion(int x, int y)
 	
 	if (mouse.button[1])
 		regoApp->panCamera(glm::vec2(dx, dy));
-
-	if (mouse.button[2])
-	{
-		if (glutGetModifiers() & GLUT_ACTIVE_SHIFT)
-			regoApp->panCamera(glm::vec2(dx, dy));
-		else
-			regoApp->rotateCamera(glm::vec2(dt, dp));
-
-
-	}
-
+		
 	if (mouse.button[0])
 	{
-		// let the application decide what to do with it:
-		// camera movement in a perspective window
-		//regoApp->rotateCamera(glm::vec2(dt, dp));
-		
+		// alt -- rotate
+		if (specialKey[Alt])
+			regoApp->rotateCamera(glm::vec2(dt, dp));
 
-		regoApp->updateStackMove(mouse.coordinates);
+		// shift -- pan
+		else if (specialKey[Shift])
+			regoApp->panCamera(glm::vec2(dx, dy));
 
-			
-		// change contrast in the editor
-		regoApp->changeContrast(glm::ivec2(x, h - y));
-		regoApp->inspectOutputImage(glm::ivec2(x, h - y));
+		// interact with data
+		else
+		{
+
+			regoApp->updateStackMove(mouse.coordinates);
+
+
+			// change contrast in the editor
+			regoApp->changeContrast(glm::ivec2(x, h - y));
+			regoApp->inspectOutputImage(glm::ivec2(x, h - y));
+
+		}
+	
+
 	}
 
 	regoApp->updateMouseMotion(glm::ivec2(x, h - y));
@@ -494,6 +608,9 @@ int main(int argc, const char** argv)
 	glutPassiveMotionFunc(passiveMotion);
 	glutSpecialFunc(special);
 	
+
+	createRightClickMenu();
+
 	glEnable(GL_DEPTH_TEST);
 	glPointSize(2.f);
 	glEnable(GL_CULL_FACE);

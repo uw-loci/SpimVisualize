@@ -944,6 +944,11 @@ void SpimRegistrationApp::toggleAllStacks()
 		interactionVolumes[i]->enabled = stat;
 }
 
+void SpimRegistrationApp::deselectAll()
+{
+	currentVolume = -1;
+}
+
 void SpimRegistrationApp::subsampleAllStacks()
 {
 	for (auto it = stacks.begin(); it != stacks.end(); ++it)

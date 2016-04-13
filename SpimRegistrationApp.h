@@ -52,6 +52,7 @@ public:
 	void toggleStack(int n);
 	inline void toggleCurrentStack() { toggleStack(currentVolume); }
 	void toggleAllStacks();
+	void deselectAll();
 
 	void startStackMove(const glm::ivec2& mouse);
 	void updateStackMove(const glm::ivec2& mouse);
