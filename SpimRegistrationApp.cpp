@@ -2624,6 +2624,7 @@ void SpimRegistrationApp::createEmptyRandomStack(const glm::ivec3& resolution, c
 	std::cout << "[App] Created random stack with dT " << delta << " and R=" << a << std::endl;
 
 
+	
 	reloadVolumeShader();
 }
 
@@ -2771,9 +2772,19 @@ void SpimRegistrationApp::endSampleStack()
 	stacks[sampleStack]->saveTransform(filename + ".tiff.reference.txt");
 
 
+	// create a phantom as well
+	Phantom p;
+	p.bbox = stacks[sampleStack]->getBBox();
+	p.originalTransform = stacks[sampleStack]->getTransform();
+	p.transform = p.originalTransform;
+	p.stackFile = stacks[sampleStack]->getFilename();
+	phantoms.push_back(p);
+
+
 	sampleStack = -1;
 	lastStackSample = 0;
 	
+
 }
 
 void SpimRegistrationApp::clearSampleStack()
