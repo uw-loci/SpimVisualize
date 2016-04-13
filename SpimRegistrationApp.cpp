@@ -2797,3 +2797,41 @@ void SpimRegistrationApp::clearSampleStack()
 	stackSamples.clear();
 	lastStackSample = 0;
 }
+
+
+void SpimRegistrationApp::bakeSelectedTransform()
+{
+	if (currentVolume == -1)
+		return;
+
+	if (pointclouds.empty())
+	{
+		std::cout << "[Error] Unable to bake transform, no valid pointclouds\n";
+		return;
+	}
+		
+	if (currentVolume < pointclouds.size())
+		pointclouds[currentVolume]->bakeTransform();
+
+}
+
+void SpimRegistrationApp::saveCurrentPointcloud()
+{
+	if (currentVolume == -1)
+		return;
+
+	if (pointclouds.empty())
+	{
+		std::cout << "[Error] Unable to save, no valid pointclouds\n";
+		return;
+	}
+
+
+	if (currentVolume < pointclouds.size())
+	{
+
+		std::string filename(pointclouds[currentVolume]->getFilename() + "_out.bin");
+		pointclouds[currentVolume]->saveBin(filename);
+	}
+
+}

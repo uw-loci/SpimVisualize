@@ -179,3 +179,24 @@ void SimplePointcloud::updateBuffers()
 	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*normals.size(), glm::value_ptr(normals[0]), GL_STATIC_DRAW);
 #endif
 }
+
+
+
+void SimplePointcloud::bakeTransform()
+{
+	using namespace glm;
+
+	const mat4& T = getTransform();
+
+	// normal matrix
+	const mat3 N(inverse(transpose(T)));
+
+	for (size_t i = 0; i < vertices.size(); ++i)
+		vertices[i] = vec3(T * vec4(vertices[i], 1.f));
+
+	for (size_t i = 0; i < normals.size(); ++i)
+		normals[i] = N * normals[i];
+	
+	updateBuffers();
+	setTransform(glm::mat4(1.f));
+}

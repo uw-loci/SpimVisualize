@@ -20,6 +20,12 @@ public:
 
 	inline const std::string& getFilename() const { return filename;  }
 
+	// transforms all points
+	void bakeTransform() ;
+
+	void saveBin(const std::string& filename);
+
+
 private:	
 	size_t						pointCount;
 
@@ -34,7 +40,7 @@ private:
 
 	void loadTxt(const std::string& filename);
 	void loadBin(const std::string& filename);
-	void saveBin(const std::string& filename);
+	
 
 
 	void updateBuffers();

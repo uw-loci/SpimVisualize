@@ -25,6 +25,31 @@ enum MenuItem
 	MENU_MODE_Y,
 	MENU_MODE_Z,
 	MENU_SELECT_NONE,
+	MENU_VIEW_FOCUS,
+	MENU_VIEW_ALL,
+	MENU_VIEW_AUTOCONTRAST,
+	MENU_VIEW_SINGLE_3D,
+	MENU_VIEW_TOPDOWN,
+	MENU_VIEW_4VIEW,
+	MENU_VIEW_CONTRAST_EDITOR,
+	MENU_VIEW_TOGGLE_GRID,
+	MENU_VIEW_TOGGLE_BBOXES,
+
+	MENU_SOLVER_DX,
+	MENU_SOLVER_DY,
+	MENU_SOLVER_DZ,
+	MENU_SOLVER_RY,
+	MENU_SOLVER_HILLCLIMB,
+	MENU_SOLVER_ANNEALING,
+	MENU_SOLVER_SHOW_SCORE,
+	MENU_SOLVER_CLEAR_HISTORY,
+
+	MENU_POINTCLOUD_BAKE_TRANSFORM,
+	MENU_POINTCLOUD_SAVE_CURRENT,
+
+	MENU_CREATE_PHANTOM,
+	MENU_SAMPLE_PHANTOM
+	
 };
 
 
@@ -59,8 +84,14 @@ static void updateSpecialKeys()
 
 static void menu(int item)
 {
+
 	std::cout << "[Debug] Menu " << item << std::endl;
-	
+
+	int w = glutGet(GLUT_WINDOW_WIDTH);
+	int h = glutGet(GLUT_WINDOW_HEIGHT);
+	const glm::ivec2 winRes(w, h);
+
+
 	switch ((MenuItem)item)
 	{
 	case MENU_TYPE_NONE:
@@ -94,7 +125,67 @@ static void menu(int item)
 		regoApp->deselectAll();
 		break;
 
+	case MENU_VIEW_FOCUS:
+		regoApp->centerCamera();
+		break;
+	case MENU_VIEW_ALL:
+		regoApp->maximizeViews();
+		break;
+	case MENU_VIEW_AUTOCONTRAST:
+		regoApp->autoThreshold();
+		break;
+	case MENU_VIEW_SINGLE_3D:
+		regoApp->setPerspectiveLayout(winRes, mouse.coordinates);
+		break;
+	case MENU_VIEW_TOPDOWN:
+		regoApp->setTopviewLayout(winRes, mouse.coordinates);
+		break;
+	case MENU_VIEW_4VIEW:
+		regoApp->setThreeViewLayout(winRes, mouse.coordinates);
+		break;
+	case MENU_VIEW_CONTRAST_EDITOR:
+		regoApp->setContrastEditorLayout(winRes, mouse.coordinates);
+		break;
+	case MENU_VIEW_TOGGLE_GRID:
+		regoApp->toggleGrid();
+		break;
+	case MENU_VIEW_TOGGLE_BBOXES:
+		regoApp->toggleBboxes();
+		break;
 
+
+	case MENU_SOLVER_DX:
+		regoApp->selectSolver("DX");
+		break;
+	case MENU_SOLVER_DY:
+		regoApp->selectSolver("Uniform DY");
+		break;
+	case MENU_SOLVER_DZ:
+		regoApp->selectSolver("Uniform DZ");
+		break;
+	case MENU_SOLVER_RY:
+		regoApp->selectSolver("Uniform RY");
+		break;
+	case MENU_SOLVER_ANNEALING:
+		regoApp->selectSolver("Simulated Annealing");
+		break;
+	case MENU_SOLVER_HILLCLIMB:
+		regoApp->selectSolver("Hillclimb");
+		break;
+	case MENU_SOLVER_CLEAR_HISTORY:
+		regoApp->clearHistory();
+		break;
+	case MENU_SOLVER_SHOW_SCORE:
+		regoApp->toggleHistory();
+		break;
+
+
+	case MENU_POINTCLOUD_BAKE_TRANSFORM:
+		regoApp->bakeSelectedTransform();
+		break;
+	case MENU_POINTCLOUD_SAVE_CURRENT:
+		regoApp->saveCurrentPointcloud();
+		break;
 		
 	default:
 
@@ -108,11 +199,14 @@ static void menu(int item)
 
 static void createRightClickMenu()
 {
-	glutCreateMenu(menu);
-
-	glutAddMenuEntry("---[Selection]----", -1);
+	
+	int selection = glutCreateMenu(menu);
+	//glutAddMenuEntry("---[Selection]----", -1);
 	glutAddMenuEntry("Select None   [d]", MENU_SELECT_NONE);
-	glutAddMenuEntry("---[Operation]----", -1);
+
+
+	int transformation = glutCreateMenu(menu);
+	glutAddMenuEntry("---[Transform]---", -1);
 	glutAddMenuEntry("None", MENU_TYPE_NONE);
 	glutAddMenuEntry("Translate     [t]", MENU_TYPE_TRANSLATE);
 	glutAddMenuEntry("Rotate        [r]", MENU_TYPE_ROTATE);
@@ -123,6 +217,45 @@ static void createRightClickMenu()
 	glutAddMenuEntry("Lock Y        [y]", MENU_MODE_Y);
 	glutAddMenuEntry("Lock Z        [z]", MENU_MODE_Z);
 
+
+	int layout = glutCreateMenu(menu);
+	//glutAddMenuEntry("----[Layout]-----", -1);
+	glutAddMenuEntry("Perspective [F1]", MENU_VIEW_SINGLE_3D);
+	glutAddMenuEntry("Top down    [F2]", MENU_VIEW_TOPDOWN);
+	glutAddMenuEntry("Four view   [F3]", MENU_VIEW_4VIEW);
+	glutAddMenuEntry("Contrast Ed [F4]", MENU_VIEW_CONTRAST_EDITOR);
+	
+	int view = glutCreateMenu(menu);
+	glutAddMenuEntry("Auto Contrast [Shift][c]", MENU_VIEW_AUTOCONTRAST);
+	glutAddMenuEntry("Focus on selected    [f]", MENU_VIEW_FOCUS);
+	glutAddMenuEntry("Zoom on selected     [m]", MENU_VIEW_ALL);
+	glutAddMenuEntry("Toggle bounding boxes[b]", MENU_VIEW_TOGGLE_BBOXES);
+	glutAddMenuEntry("Toggle grid          [g]", MENU_VIEW_TOGGLE_GRID);
+
+
+	int solver = glutCreateMenu(menu);
+	glutAddMenuEntry("Uniform DX         [F5]", MENU_SOLVER_DX);
+	glutAddMenuEntry("Uniform DY         [F6]", MENU_SOLVER_DY);
+	glutAddMenuEntry("Uniform DZ         [F7]", MENU_VIEW_TOGGLE_GRID);
+	glutAddMenuEntry("Uniform RY         [F8]", MENU_VIEW_TOGGLE_GRID);
+	glutAddMenuEntry("Sim Annealing      [F9]", MENU_VIEW_TOGGLE_GRID);
+	glutAddMenuEntry("Multidim Hillclimb [F10]", MENU_VIEW_TOGGLE_GRID);
+
+	glutAddMenuEntry("Show image score   [h]", MENU_SOLVER_SHOW_SCORE);
+	glutAddMenuEntry("Clear score history[H]", MENU_SOLVER_CLEAR_HISTORY);
+
+
+	int pointclouds = glutCreateMenu(menu);
+	glutAddMenuEntry("Bake transform ", MENU_POINTCLOUD_BAKE_TRANSFORM);
+	glutAddMenuEntry("Save pointcloud", MENU_POINTCLOUD_SAVE_CURRENT);
+
+	glutCreateMenu(menu);
+	glutAddSubMenu("Selection", selection);
+	glutAddSubMenu("Transformation", transformation);
+	glutAddSubMenu("Layout", layout);
+	glutAddSubMenu("View", view);
+	glutAddSubMenu("Solver", solver);
+	glutAddSubMenu("Point clouds", pointclouds);
 
 	glutAttachMenu(GLUT_RIGHT_BUTTON);
 
@@ -456,15 +589,10 @@ static void special(int key, int x, int y)
 
 	if (key == GLUT_KEY_F1)
 		regoApp->setPerspectiveLayout(winRes, mouse.coordinates);
-
 	if (key == GLUT_KEY_F2)
 		regoApp->setTopviewLayout(winRes, mouse.coordinates);
-
-
-
 	if (key == GLUT_KEY_F3)
 		regoApp->setThreeViewLayout(winRes, mouse.coordinates);
-
 	if (key == GLUT_KEY_F4)
 		regoApp->setContrastEditorLayout(winRes, mouse.coordinates);
 
