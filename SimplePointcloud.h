@@ -32,11 +32,11 @@ private:
 	std::string					filename;
 
 	// position and color opengl buffer
-	unsigned int				vertexBuffers[3];
+	unsigned int				vertexBuffers[2];
 		
 	typedef std::vector<glm::vec3> PointCloud;
 
-	PointCloud					vertices, normals, colors;
+	PointCloud					vertices, colors;
 
 	void loadTxt(const std::string& filename);
 	void loadBin(const std::string& filename);

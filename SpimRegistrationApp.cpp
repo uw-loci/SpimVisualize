@@ -1690,7 +1690,7 @@ void SpimRegistrationApp::maximizeViews()
 	if (currentVolumeValid())
 	{
 		for (auto it = prevLayouts.begin(); it != prevLayouts.end(); ++it)
-			it->second->maximizeView(interactionVolumes[currentVolume]->getBBox());
+			it->second->maximizeView(interactionVolumes[currentVolume]->getTransformedBBox());
 
 	}
 	else

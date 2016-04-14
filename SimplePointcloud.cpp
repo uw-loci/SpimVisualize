@@ -32,7 +32,7 @@ SimplePointcloud::SimplePointcloud(const std::string& f, const glm::mat4& t) : f
 	assert(points.size() == normals.size());
 	*/
 
-	pointCount = std::min(vertices.size(), std::min(colors.size(), normals.size()));
+	pointCount = std::min(vertices.size(), colors.size());
 	std::cout << "[File] Read " << pointCount << " points.\n";
 	
 	bbox.reset(vertices[0]);
@@ -41,50 +41,42 @@ SimplePointcloud::SimplePointcloud(const std::string& f, const glm::mat4& t) : f
 	
 	std::cout << "[Bbox] " << bbox.min << "->" << bbox.max << std::endl;
 
-	glGenBuffers(3, vertexBuffers);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[0]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertices.size(), glm::value_ptr(vertices[0]), GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[1]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*colors.size(), glm::value_ptr(colors[0]), GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[2]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*normals.size(), glm::value_ptr(normals[0]), GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glGenBuffers(2, vertexBuffers);
+	updateBuffers();
 }
 
 
 SimplePointcloud::~SimplePointcloud()
 {
-	glDeleteBuffers(3, vertexBuffers);
+	glDeleteBuffers(2, vertexBuffers);
 }
 
 void SimplePointcloud::draw() const
 {
 	glPushMatrix();
 	glMultMatrixf(glm::value_ptr(getTransform()[0]));
-	
+
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
-	glEnableClientState(GL_NORMAL_ARRAY);
 
+	/*
 	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[0]);
 	glVertexPointer(3, GL_FLOAT, 0, 0);
 	
 	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[1]);
 	glColorPointer(3, GL_FLOAT, 0, 0);
+	*/
 
-	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[2]);
-	glNormalPointer(GL_FLOAT, 0, 0);
+	glVertexPointer(3, GL_FLOAT, 0, glm::value_ptr(vertices[0]));
+	glColorPointer(3, GL_FLOAT, 0, glm::value_ptr(colors[0]));
 
 	glDrawArrays(GL_POINTS, 0, (GLsizei)pointCount);
 	
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	glDisableClientState(GL_VERTEX_ARRAY);
-	glDisableClientState(GL_COLOR_ARRAY);
 	glDisableClientState(GL_NORMAL_ARRAY);
+	
 
 	glPopMatrix();
 }
@@ -97,31 +89,35 @@ void SimplePointcloud::loadBin(const std::string& filename)
 	unsigned int points = 0;
 	file.read(reinterpret_cast<char*>(&points), sizeof(unsigned int));
 
-	std::cout << "[Debug] Reading " << points << " points from \"" << filename << "\".\n";
+	std::cout << "[Debug] Reading " << points << " points from \"" << filename << "\" ... ";
 
 	vertices.resize(points);
-	normals.resize(points);
 	colors.resize(points);
 
 	file.read(reinterpret_cast<char*>(glm::value_ptr(vertices[0])), sizeof(glm::vec3)*points);
-	file.read(reinterpret_cast<char*>(glm::value_ptr(normals[0])), sizeof(glm::vec3)*points);
 	file.read(reinterpret_cast<char*>(glm::value_ptr(colors[0])), sizeof(glm::vec3)*points);
+
+	std::cout << "done.\n";
 
 	updateBuffers();
 }
 
 
-void SimplePointcloud::saveBin(const std::string& filename)
+void SimplePointcloud::saveBin(const std::string& f)
 {
-	assert(vertices.size() == normals.size());
 	assert(vertices.size() == colors.size());
 
-	std::ofstream file(filename, std::ios::binary);
+	std::cout << "[Pointcloud] Saving pointcloud to \"" << f<< "\" ... ";
+
+	std::ofstream file(f, std::ios::binary);
 	uint32_t points = (uint32_t)vertices.size();
 	file.write(reinterpret_cast<const char*>(&points), sizeof(size_t));
 	file.write(reinterpret_cast<const char*>(glm::value_ptr(vertices[0])), sizeof(glm::vec3)*points);
-	file.write(reinterpret_cast<const char*>(glm::value_ptr(normals[0])), sizeof(glm::vec3)*points);
 	file.write(reinterpret_cast<const char*>(glm::value_ptr(colors[0])), sizeof(glm::vec3)*points);
+
+	std::cout << "done.\n";
+
+	this->filename = f;
 }
 
 void SimplePointcloud::loadTxt(const std::string& filename)
@@ -131,8 +127,7 @@ void SimplePointcloud::loadTxt(const std::string& filename)
 
 	vertices.clear();
 	colors.clear();
-	normals.clear();
-
+	
 	std::string tmp;
 	while (!file.eof())
 	{
@@ -157,7 +152,6 @@ void SimplePointcloud::loadTxt(const std::string& filename)
 
 		vertices.push_back(pos);
 		colors.push_back(color / 255.f);
-		normals.push_back(glm::normalize(normal));
 	}
 
 	updateBuffers();
@@ -165,18 +159,16 @@ void SimplePointcloud::loadTxt(const std::string& filename)
 
 void SimplePointcloud::updateBuffers()
 {
-
-
+	
 #ifndef NO_GRAPHICS
-	glGenBuffers(3, vertexBuffers);
 	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[0]);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertices.size(), glm::value_ptr(vertices[0]), GL_STATIC_DRAW);
-
+		
 	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[1]);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*colors.size(), glm::value_ptr(colors[0]), GL_STATIC_DRAW);
+	
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[2]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*normals.size(), glm::value_ptr(normals[0]), GL_STATIC_DRAW);
 #endif
 }
 
@@ -188,15 +180,18 @@ void SimplePointcloud::bakeTransform()
 
 	const mat4& T = getTransform();
 
-	// normal matrix
-	const mat3 N(inverse(transpose(T)));
-
 	for (size_t i = 0; i < vertices.size(); ++i)
 		vertices[i] = vec3(T * vec4(vertices[i], 1.f));
 
-	for (size_t i = 0; i < normals.size(); ++i)
-		normals[i] = N * normals[i];
-	
+	// update bbox
+	bbox.reset(vertices[0]);
+	for (size_t i = 1; i < vertices.size(); ++i)
+		bbox.extend(vertices[i]);
+
+	std::cout << "[Bbox] " << bbox.min << "->" << bbox.max << std::endl;
+
+
+
 	updateBuffers();
 	setTransform(glm::mat4(1.f));
 }

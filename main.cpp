@@ -757,12 +757,14 @@ int main(int argc, const char** argv)
 
 	try
 	{
+		
+		regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151111.txt_out.bin");
+		
 		/*
-		regoApp->addPointcloud("S:/datasets/time_varying/Yi Xian's Pumpkin/Pump_20151111.bin");
 		regoApp->addPointcloud("S:/datasets/time_varying/Yi Xian's Pumpkin/Pump_20151112.bin");
 		regoApp->addPointcloud("S:/datasets/time_varying/Yi Xian's Pumpkin/Pump_20151113.bin");
 		regoApp->addPointcloud("S:/datasets/time_varying/Yi Xian's Pumpkin/Pump_20151114.bin");
-		*/
+		
 		/*
 		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_1.tiff", glm::vec3(1.f));
 		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_2.tiff", glm::vec3(1.f));
@@ -780,7 +782,7 @@ int main(int argc, const char** argv)
 		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_6.tiff", "e:/spim/phantom/t1-head/reference/phantom_6.tiff.reference.txt");
 		*/
 
-		regoApp->addSpimStack("e:/spim/phantom/t1-head/t1-head.tiff", glm::vec3(1));
+		//regoApp->addSpimStack("e:/spim/phantom/t1-head/t1-head.tiff", glm::vec3(1));
 
 		regoApp->centerCamera();
 		regoApp->loadStackTransformations();
