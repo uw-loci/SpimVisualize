@@ -59,17 +59,13 @@ void SimplePointcloud::draw() const
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
 
-	/*
+	
 	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[0]);
 	glVertexPointer(3, GL_FLOAT, 0, 0);
 	
 	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[1]);
 	glColorPointer(3, GL_FLOAT, 0, 0);
-	*/
-
-	glVertexPointer(3, GL_FLOAT, 0, glm::value_ptr(vertices[0]));
-	glColorPointer(3, GL_FLOAT, 0, glm::value_ptr(colors[0]));
-
+	
 	glDrawArrays(GL_POINTS, 0, (GLsizei)pointCount);
 	
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
