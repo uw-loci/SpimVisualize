@@ -53,6 +53,9 @@ SimplePointcloud::~SimplePointcloud()
 
 void SimplePointcloud::draw() const
 {
+	if (!enabled)
+		return;
+
 	glPushMatrix();
 	glMultMatrixf(glm::value_ptr(getTransform()[0]));
 

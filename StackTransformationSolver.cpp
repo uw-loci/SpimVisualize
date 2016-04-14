@@ -121,7 +121,9 @@ const IStackTransformationSolver::Solution& UniformSamplingSolver::getCurrentSol
 
 const IStackTransformationSolver::Solution& UniformSamplingSolver::getBestSolution()
 {
-	assert(!solutions.empty());
+	if (solutions.empty())
+		throw std::runtime_error("Solver has no valid solutions!");
+	
 
 	
 	// remove all solutions that do not have a valid id. we can do that through the current solution?

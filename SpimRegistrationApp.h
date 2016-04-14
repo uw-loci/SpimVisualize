@@ -48,11 +48,15 @@ public:
 	void resize(const glm::ivec2& newSize);
 
 	//inline size_t getStacksCount() const { return stacks.size(); }
-	void toggleSelectStack(int n);
-	void toggleStack(int n);
-	inline void toggleCurrentStack() { toggleStack(currentVolume); }
-	void toggleAllStacks();
+	void toggleSelectVolume(int n);
+	void toggleVolume(int n);
+	inline void toggleCurrentVolume() { toggleVolume(currentVolume); }
+	void toggleAllVolumes();
 	void deselectAll();
+	void toggleVolumeLock(int n);
+	inline void toggleCurrentVolumeLock() {toggleVolumeLock(currentVolume);}
+	void unlockAllVolumes();
+
 
 	void startStackMove(const glm::ivec2& mouse);
 	void updateStackMove(const glm::ivec2& mouse);
@@ -64,7 +68,7 @@ public:
 	/// Undos the last transform applied. This also includes movements of a stack
 	void undoLastTransform();
 	void moveCurrentStack(const glm::vec2& delta);
-	void rotateCurrentStack(float rotY);
+	void rotateCurrentVolume(float rotY);
 
 	void setWidgetType(const std::string& control);
 

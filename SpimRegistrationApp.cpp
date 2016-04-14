@@ -713,7 +713,7 @@ void SpimRegistrationApp::updateMouseMotion(const glm::ivec2& cursor)
 	layout->updateMouseMove(cursor);
 }
 
-void SpimRegistrationApp::toggleSelectStack(int n)
+void SpimRegistrationApp::toggleSelectVolume(int n)
 {
 	if (n >= (int)interactionVolumes.size())
 		currentVolume= -1;
@@ -731,15 +731,31 @@ void SpimRegistrationApp::toggleSelectStack(int n)
 
 }
 
-void SpimRegistrationApp::toggleStack(int n)
+void SpimRegistrationApp::toggleVolume(int n)
 {
-	if (n >= (int)stacks.size() || n < 0)
+	if (n >= (int)interactionVolumes.size() || n < 0)
 		return;
 
-	stacks[n]->toggle();
+	interactionVolumes[n]->toggle();
 }
 
-void SpimRegistrationApp::rotateCurrentStack(float rotY)
+
+void SpimRegistrationApp::toggleVolumeLock(int n)
+{
+	if (n >= (int)interactionVolumes.size() || n < 0)
+		return;
+
+	interactionVolumes[n]->toggleLock();
+}
+
+void SpimRegistrationApp::unlockAllVolumes()
+{
+	for (size_t i = 0; i < interactionVolumes.size(); ++i)
+		interactionVolumes[i]->locked = false;
+}
+
+
+void SpimRegistrationApp::rotateCurrentVolume(float rotY)
 {
 	if (!currentVolumeValid())
 		return;
@@ -936,7 +952,7 @@ void SpimRegistrationApp::autoThreshold()
 	histogramsNeedUpdate = true;
 }
 
-void SpimRegistrationApp::toggleAllStacks()
+void SpimRegistrationApp::toggleAllVolumes()
 {
 
 	bool stat = !interactionVolumes[0]->enabled;
@@ -1086,39 +1102,36 @@ void SpimRegistrationApp::drawBoundingBoxes() const
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_COLOR_ARRAY);
 
-
-	for (size_t i = 0; i < stacks.size(); ++i)
+	for (size_t i = 0; i < interactionVolumes.size(); ++i)
 	{
-		if (stacks[i]->enabled)
+		if (!interactionVolumes[i]->enabled)
+			glColor3f(0.2, 0.2, 0.5);
+		else
 		{
 			glPushMatrix();
-			glMultMatrixf(glm::value_ptr(stacks[i]->getTransform()));
-
+			glMultMatrixf(glm::value_ptr(interactionVolumes[i]->getTransform()));
 
 			if ((int)i == currentVolume)
 				glColor3f(1, 1, 0);
-			else
-				glColor3f(0.6f, 0.6f, 0.6f);
-			stacks[i]->getBBox().draw();
+			else 
+				glColor3f(0.6, 0.6, 0.6);
+			
+			interactionVolumes[i]->getBBox().draw();
+
+
+
+			if (interactionVolumes[i]->locked)
+			{
+				glColor3f(1, 0, 0);
+				interactionVolumes[i]->drawLocked();
+			}
 
 			glPopMatrix();
 		}
+
+
 	}
 
-	for (size_t i = 0; i < pointclouds.size(); ++i)
-	{
-		glPushMatrix();
-		glMultMatrixf(glm::value_ptr(pointclouds[i]->getTransform()));
-
-
-		if ((int)i == currentVolume)
-			glColor3f(1, 1, 0);
-		else
-			glColor3f(0.6f, 0.6f, 0.6f);
-		pointclouds[i]->getBBox().draw();
-
-		glPopMatrix();
-	}
 
 	glColor3f(0, 1, 1);
 	globalBBox.draw();

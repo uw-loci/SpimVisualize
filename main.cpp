@@ -24,7 +24,12 @@ enum MenuItem
 	MENU_MODE_X,
 	MENU_MODE_Y,
 	MENU_MODE_Z,
+
 	MENU_SELECT_NONE,
+	MENU_SELECT_TOGGLE,
+	MENU_SELECT_LOCK,
+	MENU_SELECT_UNLOCK_ALL,
+
 	MENU_VIEW_FOCUS,
 	MENU_VIEW_ALL,
 	MENU_VIEW_AUTOCONTRAST,
@@ -124,6 +129,12 @@ static void menu(int item)
 	case MENU_SELECT_NONE:
 		regoApp->deselectAll();
 		break;
+	case MENU_SELECT_TOGGLE:
+		regoApp->toggleCurrentVolume();
+		break;
+	case MENU_SELECT_UNLOCK_ALL:
+		regoApp->unlockAllVolumes();
+		break;
 
 	case MENU_VIEW_FOCUS:
 		regoApp->centerCamera();
@@ -202,7 +213,11 @@ static void createRightClickMenu()
 	
 	int selection = glutCreateMenu(menu);
 	//glutAddMenuEntry("---[Selection]----", -1);
-	glutAddMenuEntry("Select None   [d]", MENU_SELECT_NONE);
+	glutAddMenuEntry("Select None    [d]", MENU_SELECT_NONE);
+	glutAddMenuEntry("Toggle selected[v]", MENU_SELECT_TOGGLE);
+
+	glutAddMenuEntry("Lock selected  [l]", MENU_SELECT_LOCK);
+	glutAddMenuEntry("Unlock all     [L]", MENU_SELECT_UNLOCK_ALL);
 
 
 	int transformation = glutCreateMenu(menu);
@@ -331,6 +346,10 @@ static void keyboard(unsigned char key, int x, int y)
 
 
 
+	if (key == 'l')
+		regoApp->toggleCurrentVolumeLock();
+	if (key == 'L')
+		regoApp->unlockAllVolumes();
 
 
 
@@ -414,31 +433,31 @@ static void keyboard(unsigned char key, int x, int y)
 		regoApp->clearRays();
 
 	if (key == '1')
-		regoApp->toggleSelectStack(0);
+		regoApp->toggleSelectVolume(0);
 
 	if (key == '2')
-		regoApp->toggleSelectStack(1);
+		regoApp->toggleSelectVolume(1);
 
 	if (key == '3')
-		regoApp->toggleSelectStack(2);
+		regoApp->toggleSelectVolume(2);
 
 	if (key == '4')
-		regoApp->toggleSelectStack(3);
+		regoApp->toggleSelectVolume(3);
 
 	if (key == '5')
-		regoApp->toggleSelectStack(4);
+		regoApp->toggleSelectVolume(4);
 
 	if (key == '6')
-		regoApp->toggleSelectStack(5);
+		regoApp->toggleSelectVolume(5);
 	
 	if (key == '7')
-		regoApp->toggleSelectStack(6);
+		regoApp->toggleSelectVolume(6);
 
 	if (key == '8')
-		regoApp->toggleSelectStack(7);
+		regoApp->toggleSelectVolume(7);
 
 	if (key == '9')
-		regoApp->toggleSelectStack(8);
+		regoApp->toggleSelectVolume(8);
 
 	if (key == '!')
 		regoApp->clearSampleStack();
@@ -484,9 +503,9 @@ static void keyboard(unsigned char key, int x, int y)
 
 
 	if (key == 'v')
-		regoApp->toggleCurrentStack();
+		regoApp->toggleCurrentVolume();
 	if (key == 'V')
-		regoApp->toggleAllStacks();
+		regoApp->toggleAllVolumes();
 
 
 	if (key == '-')
@@ -758,13 +777,15 @@ int main(int argc, const char** argv)
 	try
 	{
 		
-		regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151111.txt_out.bin");
-		
+		//regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151111.txt_out.bin");
+		regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151112.txt_out.bin");
+		regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151113.txt");
+
 		/*
-		regoApp->addPointcloud("S:/datasets/time_varying/Yi Xian's Pumpkin/Pump_20151112.bin");
-		regoApp->addPointcloud("S:/datasets/time_varying/Yi Xian's Pumpkin/Pump_20151113.bin");
-		regoApp->addPointcloud("S:/datasets/time_varying/Yi Xian's Pumpkin/Pump_20151114.bin");
-		
+		regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151114.txt");
+		regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151115.txt");
+
+
 		/*
 		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_1.tiff", glm::vec3(1.f));
 		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_2.tiff", glm::vec3(1.f));
