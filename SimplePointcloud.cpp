@@ -86,8 +86,8 @@ void SimplePointcloud::loadBin(const std::string& filename)
 	std::ifstream file(filename, std::ios::binary);
 	assert(file.is_open());
 
-	unsigned int points = 0;
-	file.read(reinterpret_cast<char*>(&points), sizeof(unsigned int));
+	uint32_t points = 0;
+	file.read(reinterpret_cast<char*>(&points), sizeof(uint32_t));
 
 	std::cout << "[Debug] Reading " << points << " points from \"" << filename << "\" ... ";
 
@@ -111,7 +111,7 @@ void SimplePointcloud::saveBin(const std::string& f)
 
 	std::ofstream file(f, std::ios::binary);
 	uint32_t points = (uint32_t)vertices.size();
-	file.write(reinterpret_cast<const char*>(&points), sizeof(size_t));
+	file.write(reinterpret_cast<const char*>(&points), sizeof(uint32_t));
 	file.write(reinterpret_cast<const char*>(glm::value_ptr(vertices[0])), sizeof(glm::vec3)*points);
 	file.write(reinterpret_cast<const char*>(glm::value_ptr(colors[0])), sizeof(glm::vec3)*points);
 
