@@ -805,10 +805,13 @@ int main(int argc, const char** argv)
 
 		//regoApp->addSpimStack("e:/spim/phantom/t1-head/t1-head.tiff", glm::vec3(1));
 
-		regoApp->centerCamera();
 		regoApp->loadStackTransformations();
 		//regoApp->loadContrastSettings();
 		
+
+		regoApp->centerCamera();
+		regoApp->maximizeViews();
+
 		regoApp->reloadShaders();
 
 	}

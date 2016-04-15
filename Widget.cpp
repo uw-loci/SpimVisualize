@@ -201,7 +201,7 @@ void TranslateWidget::applyTransform(const Viewport* vp)
 	}
 
 
-	std::cout << "[Widget] Translate: " << d << ", scale: " << scale << std::endl;
+	//std::cout << "[Widget] Translate: " << d << ", scale: " << scale << std::endl;
 
 	mat4 T = translate(d) * initialVolumeMatrix;
 	volume->setTransform(T);
@@ -303,7 +303,7 @@ void RotateWidget::applyTransform(const Viewport* vp)
 	//float delta = acos(dot(a, b) / (length(b)*length(a)));
 	float delta = atan2(a.y, a.x) - atan2(b.y, b.x);
 	delta *= -1;
-	std::cout << "[Widget] Angle: " << delta <<  std::endl;
+	//std::cout << "[Widget] Angle: " << delta <<  std::endl;
 
 	//float delta = moveScale * (currentMouseCoords - initialMouseCoords).x;
 
@@ -378,7 +378,7 @@ void ScaleWidget::applyTransform(const Viewport* vp)
 
 	float delta = length(b) / length(a);
 
-	std::cout << "[Widget] Scale: " << delta << std::endl;
+	//std::cout << "[Widget] Scale: " << delta << std::endl;
 
 	mat4 I = initialVolumeMatrix;
 	mat4 T = translate(volume->getBBox().getCentroid());
