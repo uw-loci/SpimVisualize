@@ -39,6 +39,7 @@ enum MenuItem
 	MENU_VIEW_CONTRAST_EDITOR,
 	MENU_VIEW_TOGGLE_GRID,
 	MENU_VIEW_TOGGLE_BBOXES,
+	MENU_VIEW_PRESENTATION,
 
 	MENU_SOLVER_DX,
 	MENU_SOLVER_DY,
@@ -165,6 +166,8 @@ static void menu(int item)
 	case MENU_VIEW_TOGGLE_BBOXES:
 		regoApp->toggleBboxes();
 		break;
+	case MENU_VIEW_PRESENTATION:
+		regoApp->toggleRotateCamera();
 
 
 	case MENU_SOLVER_DX:
@@ -252,7 +255,7 @@ static void createRightClickMenu()
 	glutAddMenuEntry("Zoom on selected     [m]", MENU_VIEW_ALL);
 	glutAddMenuEntry("Toggle bounding boxes[b]", MENU_VIEW_TOGGLE_BBOXES);
 	glutAddMenuEntry("Toggle grid          [g]", MENU_VIEW_TOGGLE_GRID);
-
+	glutAddMenuEntry("Toggle auto rotate   [R]", MENU_VIEW_PRESENTATION);
 
 	int solver = glutCreateMenu(menu);
 	glutAddMenuEntry("Uniform DX         [F5]", MENU_SOLVER_DX);
@@ -349,6 +352,8 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == 'a')
 		regoApp->runAlignmentOnce();
 
+	if (key == 'R')
+		regoApp->toggleRotateCamera();
 
 
 	if (key == 'l')
@@ -584,7 +589,10 @@ static void motion(int x, int y)
 		else
 		{
 
-			regoApp->updateStackMove(mouse.coordinates);
+			if (specialKey[Ctrl])
+				regoApp->updateStackMove(mouse.coordinates, 10.f);
+			else
+				regoApp->updateStackMove(mouse.coordinates);
 
 
 			// change contrast in the editor
@@ -791,7 +799,7 @@ int main(int argc, const char** argv)
 		//regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151116.txt");
 
 
-		
+		/*
 		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_1.tiff", glm::vec3(1.f));
 		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_2.tiff", glm::vec3(1.f));
 		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_3.tiff", glm::vec3(1.f));
@@ -799,14 +807,19 @@ int main(int argc, const char** argv)
 		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_5.tiff", glm::vec3(1.f));
 		
 
-		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_1.tiff", "e:/spim/phantom/t1-head/reference/phantom_1.tiff.reference.txt");
-		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_2.tiff", "e:/spim/phantom/t1-head/reference/phantom_2.tiff.reference.txt");
-		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_3.tiff", "e:/spim/phantom/t1-head/reference/phantom_3.tiff.reference.txt");
-		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_4.tiff", "e:/spim/phantom/t1-head/reference/phantom_4.tiff.reference.txt");
-		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_5.tiff", "e:/spim/phantom/t1-head/reference/phantom_5.tiff.reference.txt");
-		
+		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_1.tiff", "e:/spim/phantom/t1-head/reference/phantom_1.tiff.reference.txt", glm::vec3(1.f));
+		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_2.tiff", "e:/spim/phantom/t1-head/reference/phantom_2.tiff.reference.txt", glm::vec3(1.f));
+		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_3.tiff", "e:/spim/phantom/t1-head/reference/phantom_3.tiff.reference.txt", glm::vec3(1.f));
+		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_4.tiff", "e:/spim/phantom/t1-head/reference/phantom_4.tiff.reference.txt", glm::vec3(1.f));
+		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_5.tiff", "e:/spim/phantom/t1-head/reference/phantom_5.tiff.reference.txt", glm::vec3(1.f));
+		*/
 
+		regoApp->addSpimStack("e:/spim/5angles/spim_TL01_Angle1.ome.tiff", glm::vec3(0.62, 0.62, 3));
+		regoApp->addSpimStack("e:/spim/5angles/spim_TL01_Angle2.ome.tiff", glm::vec3(0.62, 0.62, 3));
+		regoApp->addSpimStack("e:/spim/5angles/spim_TL01_Angle3.ome.tiff", glm::vec3(0.62, 0.62, 3));
+		
 		//regoApp->addSpimStack("e:/spim/phantom/t1-head/t1-head.tiff", glm::vec3(1));
+		//regoApp->addSpimStack("e:/spim/phantom/cadaver/cadaver_512x512x106.16bit.raw", glm::vec3(1,1,5));
 
 		regoApp->loadStackTransformations();
 		//regoApp->loadContrastSettings();12

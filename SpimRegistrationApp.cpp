@@ -44,7 +44,7 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : configPath("./
 	volumeRenderTarget(nullptr), rayStartTarget(nullptr), stackSamplerTarget(nullptr), pointSpriteShader(nullptr),
 	useImageAutoContrast(false), runAlignment(false), renderTargetReadbackCurrent(false), calculateScore(false), drawHistory(false),
 	solver(nullptr), drawPhantoms(false), drawSolutionSpace(false), runAlignmentOnlyOncePlease(false),
-	controlWidget(nullptr), pointSpriteTexture(0)
+	controlWidget(nullptr), pointSpriteTexture(0), cameraAutoRotate(false)
 {
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
@@ -160,6 +160,15 @@ void SpimRegistrationApp::reloadVolumeShader()
 
 }
 
+
+void SpimRegistrationApp::toggleRotateCamera()
+{
+	cameraAutoRotate = !cameraAutoRotate;
+	cameraMoving = cameraAutoRotate;
+
+
+
+}
 
 void SpimRegistrationApp::draw()
 {
@@ -1608,6 +1617,21 @@ void SpimRegistrationApp::updateStackMove(const glm::ivec2& mouse)
 
 }
 
+void SpimRegistrationApp::updateStackMove(const glm::ivec2& mouse, float valueStep)
+{
+	if (!currentVolumeValid())
+		return;
+
+	updateGlobalBbox();
+
+	const Viewport* vp = layout->getActiveViewport();
+	if (vp && controlWidget)
+		controlWidget->updateMouseMove(vp, vp->getRelativeCoords(mouse), valueStep);
+}
+
+
+
+
 void SpimRegistrationApp::endStackMove(const glm::ivec2& mouse)
 {
 
@@ -1685,6 +1709,14 @@ void SpimRegistrationApp::update(float dt)
 
 	static float time = 2.f;
 	time -= dt;
+
+	if (cameraAutoRotate)
+	{
+		float rot = dt * 5.f;
+		rotateCamera(glm::vec2(0.f, rot));
+
+
+	}
 	
 	if (time <= 0.f && useImageAutoContrast)
 	{
@@ -2252,7 +2284,7 @@ static glm::mat4 loadFijiRegistration(const std::string& filename)
 	return glm::transpose(T);
 }
 
-void SpimRegistrationApp::addPhantom(const std::string& stackFilename, const std::string& referenceTransform, bool fijiTransform)
+void SpimRegistrationApp::addPhantom(const std::string& stackFilename, const std::string& referenceTransform, const glm::vec3& voxelDimensions, bool fijiTransform)
 {
 	Phantom p;
 	
@@ -2284,6 +2316,7 @@ void SpimRegistrationApp::addPhantom(const std::string& stackFilename, const std
 	{
 		std::cout << "[Phantom] Loading stack \"" << stackFilename << "\" for dimensions.\n";
 		std::auto_ptr<SpimStack> s(SpimStack::load(stackFilename));
+		s->setVoxelDimensions(voxelDimensions);
 		p.bbox = s->getBBox();
 	}
 	

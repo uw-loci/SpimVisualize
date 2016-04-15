@@ -36,9 +36,12 @@ public:
 
 
 	void addPointcloud(const std::string& filename);
-	void addPhantom(const std::string& stackFilename, const std::string& referenceTransform, bool fijiTransform = false);
+	void addPhantom(const std::string& stackFilename, const std::string& referenceTransform, const glm::vec3& voxelDimensions, bool fijiTransform = false);
 
 	//void loadPrevSolutionSpace(const std::string& filename);
+
+	// presentation mode -- rotate camera ... 
+	void toggleRotateCamera();
 
 	void reloadShaders();
 
@@ -60,6 +63,7 @@ public:
 
 	void startStackMove(const glm::ivec2& mouse);
 	void updateStackMove(const glm::ivec2& mouse);
+	void updateStackMove(const glm::ivec2& mouse, float valueStep);
 	void endStackMove(const glm::ivec2& mouse);
 
 	void setWidgetMode(const std::string& mode);
@@ -213,6 +217,8 @@ private:
 	
 	std::vector<SimplePointcloud*>	pointclouds;
 
+
+	bool					cameraAutoRotate;
 	bool					cameraMoving;
 
 

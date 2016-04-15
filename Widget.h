@@ -17,7 +17,7 @@ public:
 	virtual void draw(const Viewport* vp) const = 0;
 
 	virtual void beginMouseMove(const Viewport* vp, const glm::vec2& coords);
-	virtual void updateMouseMove(const Viewport* vp, const glm::vec2& coords);
+	virtual void updateMouseMove(const Viewport* vp, const glm::vec2& coords, float valueStep = 0.f);
 	virtual void endMouseMove(const Viewport* vp, const glm::vec2& coords);
 
 
@@ -53,7 +53,7 @@ protected:
 	Mode				mode;
 
 
-	virtual void applyTransform(const Viewport* vp) = 0;
+	virtual void applyTransform(const Viewport* vp, float valueStep) = 0;
 	
 };
 
@@ -64,7 +64,7 @@ public:
 
 
 protected:
-	virtual void applyTransform(const Viewport* vp);
+	virtual void applyTransform(const Viewport* vp, float valueStep);
 
 };
 
@@ -75,7 +75,7 @@ public:
 
 
 protected:
-	virtual void applyTransform(const Viewport* vp);
+	virtual void applyTransform(const Viewport* vp, float valueStep);
 };
 
 class ScaleWidget : public IWidget
@@ -85,7 +85,7 @@ public:
 
 
 protected:
-	virtual void applyTransform(const Viewport* vp);
+	virtual void applyTransform(const Viewport* vp, float valueStep);
 };
 
 
