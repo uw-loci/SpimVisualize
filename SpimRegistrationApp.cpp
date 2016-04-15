@@ -1059,6 +1059,9 @@ void SpimRegistrationApp::drawContrastEditor(const Viewport* vp)
 
 	// draw histogram
 	
+	if (histograms.empty())
+		return;
+
 	float histoWidth = histograms[0].size();
 	// the single offset between histograms
 	float delta = vp->size.x / (histoWidth * (histograms.size()+1));
@@ -2016,6 +2019,18 @@ void SpimRegistrationApp::selectSolver(const std::string& name)
 		newSolver = new ParameterSpaceMapping;
 	}
 
+	if (name == "Random Rotation")
+	{
+		cout << "[Solver] Creating new random rotation solver\n";
+		newSolver = new RandomRotationSolver;
+	}
+
+	if (name == "Uniform Scale")
+	{
+		cout << "[Solver] Creating new uniform scale solver\n";
+		newSolver = new UniformScaleSolver;
+	}
+
 
 	// only switch solvers if we have created a valid one
 	if (newSolver)
@@ -2524,14 +2539,6 @@ void SpimRegistrationApp::createFakeBeads(unsigned int beadCount)
 
 	cout << "done.\n";
 
-}
-
-void SpimRegistrationApp::applyGaussFilterToCurrentStack()
-{
-	if (!currentVolumeValid())
-		return;
-
-	stacks[currentVolume]->applyGaussianBlur(1.2, 2);
 }
 
 void SpimRegistrationApp::setWidgetType(const std::string& t)

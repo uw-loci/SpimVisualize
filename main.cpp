@@ -46,6 +46,8 @@ enum MenuItem
 	MENU_SOLVER_RY,
 	MENU_SOLVER_HILLCLIMB,
 	MENU_SOLVER_ANNEALING,
+	MENU_SOLVER_RANDOM_ROTATION,
+	MENU_SOLVER_UNIFORM_SCALE,
 	MENU_SOLVER_SHOW_SCORE,
 	MENU_SOLVER_CLEAR_HISTORY,
 
@@ -183,6 +185,10 @@ static void menu(int item)
 	case MENU_SOLVER_HILLCLIMB:
 		regoApp->selectSolver("Hillclimb");
 		break;
+	case MENU_SOLVER_RANDOM_ROTATION:
+		regoApp->selectSolver("Random Rotation");
+	case MENU_SOLVER_UNIFORM_SCALE:
+		regoApp->selectSolver("Uniform Scale");
 	case MENU_SOLVER_CLEAR_HISTORY:
 		regoApp->clearHistory();
 		break;
@@ -251,10 +257,12 @@ static void createRightClickMenu()
 	int solver = glutCreateMenu(menu);
 	glutAddMenuEntry("Uniform DX         [F5]", MENU_SOLVER_DX);
 	glutAddMenuEntry("Uniform DY         [F6]", MENU_SOLVER_DY);
-	glutAddMenuEntry("Uniform DZ         [F7]", MENU_VIEW_TOGGLE_GRID);
-	glutAddMenuEntry("Uniform RY         [F8]", MENU_VIEW_TOGGLE_GRID);
-	glutAddMenuEntry("Sim Annealing      [F9]", MENU_VIEW_TOGGLE_GRID);
-	glutAddMenuEntry("Multidim Hillclimb [F10]", MENU_VIEW_TOGGLE_GRID);
+	glutAddMenuEntry("Uniform DZ         [F7]", MENU_SOLVER_DZ);
+	glutAddMenuEntry("Uniform RY         [F8]", MENU_SOLVER_RY);
+	glutAddMenuEntry("Uniform Scale      [F9]", MENU_SOLVER_UNIFORM_SCALE);
+	glutAddMenuEntry("Multidim Hillclimb [F10]", MENU_SOLVER_HILLCLIMB);
+	glutAddMenuEntry("Random Rotation    [F11]", MENU_SOLVER_RANDOM_ROTATION);
+	glutAddMenuEntry("Sim Annealing           ", MENU_SOLVER_ANNEALING);
 
 	glutAddMenuEntry("Show image score   [h]", MENU_SOLVER_SHOW_SCORE);
 	glutAddMenuEntry("Clear score history[H]", MENU_SOLVER_CLEAR_HISTORY);
@@ -316,10 +324,7 @@ static void keyboard(unsigned char key, int x, int y)
 
 	if (key == 'g')
 		regoApp->toggleGrid();
-
-	if (key == 'G')
-		regoApp->applyGaussFilterToCurrentStack();
-
+		
 	if (key == 'b')
 		regoApp->toggleBboxes();
 	
@@ -625,11 +630,13 @@ static void special(int key, int x, int y)
 	if (key == GLUT_KEY_F8)
 		regoApp->selectSolver("Uniform RY");
 	if (key == GLUT_KEY_F9)
-		regoApp->selectSolver("Simulated Annealing");
+		regoApp->selectSolver("Uniform Scale");
 	if (key == GLUT_KEY_F10)
 		regoApp->selectSolver("Hillclimb");
 	if (key == GLUT_KEY_F11)
-		regoApp->selectSolver("Solution Parameterspace");
+		regoApp->selectSolver("Random Rotation");
+
+	
 
 	if (key == GLUT_KEY_UP)
 	{
@@ -777,13 +784,11 @@ int main(int argc, const char** argv)
 	try
 	{
 		
-		//regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151111.txt_out.bin");
+		regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151111.txt_out.bin");
 		regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151112.txt_out.bin");
-		regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151113.txt");
-
-		/*
-		regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151114.txt");
-		regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151115.txt");
+		//regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151113.txt_out.bin");
+		//regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151114.txt");
+		//regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151116.txt");
 
 
 		/*
@@ -806,7 +811,7 @@ int main(int argc, const char** argv)
 		//regoApp->addSpimStack("e:/spim/phantom/t1-head/t1-head.tiff", glm::vec3(1));
 
 		regoApp->loadStackTransformations();
-		//regoApp->loadContrastSettings();
+		//regoApp->loadContrastSettings();12
 		
 
 		regoApp->centerCamera();

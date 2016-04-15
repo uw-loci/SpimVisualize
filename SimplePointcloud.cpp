@@ -124,6 +124,9 @@ void SimplePointcloud::loadTxt(const std::string& filename)
 	std::ifstream file(filename);
 	assert(file.is_open());
 
+	if (!file.is_open())
+		throw std::runtime_error("Unable to open file \"" + filename + "\"!");
+
 	vertices.clear();
 	colors.clear();
 	

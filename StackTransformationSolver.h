@@ -106,6 +106,21 @@ protected:
 
 };
 
+
+// randomly rotates around a single selected axis
+class RandomRotationSolver : public UniformSamplingSolver
+{
+protected:
+	virtual void createCandidateSolutions(const InteractionVolume* v);
+};
+
+class UniformScaleSolver : public UniformSamplingSolver
+{
+protected:
+	virtual void createCandidateSolutions(const InteractionVolume* v);
+};
+
+
 class MultiDimensionalHillClimb : public IStackTransformationSolver
 {
 public:
