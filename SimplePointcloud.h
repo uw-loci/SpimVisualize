@@ -14,7 +14,10 @@ public:
 	~SimplePointcloud();
 
 	void draw() const;
-	
+
+	// very bare-bones rendering. All the shader setup (including matrices) must be done externally. No colors, only position 
+	void submitVertices() const;
+
 	inline size_t getPointcount() const { return pointCount; }
 	inline const std::vector<glm::vec3> getPoints() const { return vertices; }
 

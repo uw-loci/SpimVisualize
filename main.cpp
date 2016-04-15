@@ -784,20 +784,19 @@ int main(int argc, const char** argv)
 	try
 	{
 		
-		regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151111.txt_out.bin");
-		regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151112.txt_out.bin");
+		//regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151111.txt_out.bin");
+		//regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151112.txt_out.bin");
 		//regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151113.txt_out.bin");
 		//regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151114.txt");
 		//regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151116.txt");
 
 
-		/*
+		
 		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_1.tiff", glm::vec3(1.f));
 		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_2.tiff", glm::vec3(1.f));
 		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_3.tiff", glm::vec3(1.f));
 		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_4.tiff", glm::vec3(1.f));
 		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_5.tiff", glm::vec3(1.f));
-		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_6.tiff", glm::vec3(1.f));
 		
 
 		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_1.tiff", "e:/spim/phantom/t1-head/reference/phantom_1.tiff.reference.txt");
@@ -805,8 +804,7 @@ int main(int argc, const char** argv)
 		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_3.tiff", "e:/spim/phantom/t1-head/reference/phantom_3.tiff.reference.txt");
 		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_4.tiff", "e:/spim/phantom/t1-head/reference/phantom_4.tiff.reference.txt");
 		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_5.tiff", "e:/spim/phantom/t1-head/reference/phantom_5.tiff.reference.txt");
-		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_6.tiff", "e:/spim/phantom/t1-head/reference/phantom_6.tiff.reference.txt");
-		*/
+		
 
 		//regoApp->addSpimStack("e:/spim/phantom/t1-head/t1-head.tiff", glm::vec3(1));
 

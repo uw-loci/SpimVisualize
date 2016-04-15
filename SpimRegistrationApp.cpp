@@ -41,10 +41,10 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : configPath("./
 	cameraMoving(false), drawGrid(true), drawBboxes(false), drawSlices(false), currentVolume(-1), sliceCount(100), subsampleOnCameraMove(false),
 	pointShader(nullptr), volumeShader(nullptr), sliceShader(nullptr),
 	volumeRaycaster(nullptr), drawQuad(nullptr), volumeDifferenceShader(nullptr), drawPosition(nullptr), tonemapper(nullptr), gpuStackSampler(nullptr),
-	volumeRenderTarget(nullptr), rayStartTarget(nullptr), stackSamplerTarget(nullptr),
+	volumeRenderTarget(nullptr), rayStartTarget(nullptr), stackSamplerTarget(nullptr), pointSpriteShader(nullptr),
 	useImageAutoContrast(false), runAlignment(false), renderTargetReadbackCurrent(false), calculateScore(false), drawHistory(false),
 	solver(nullptr), drawPhantoms(false), drawSolutionSpace(false), runAlignmentOnlyOncePlease(false),
-	controlWidget(nullptr)
+	controlWidget(nullptr), pointSpriteTexture(0)
 {
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
@@ -63,6 +63,8 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : configPath("./
 
 	rayStartTarget = new Framebuffer(512, 512, GL_RGBA32F, GL_FLOAT);
 
+
+	createPointSpriteTexture();
 
 	calculateScore = true;
 	
@@ -87,7 +89,7 @@ SpimRegistrationApp::~SpimRegistrationApp()
 	delete volumeRaycaster;
 	delete drawPosition;
 	delete stackSamplerTarget;
-
+	delete pointSpriteShader;;
 	delete gpuStackSampler;
 
 	delete controlWidget;
@@ -134,6 +136,9 @@ void SpimRegistrationApp::reloadShaders()
 
 	delete gpuStackSampler;
 	gpuStackSampler = new Shader("shaders/samplePlane.vert", "shaders/samplePlane.frag");
+
+	delete pointSpriteShader;
+	pointSpriteShader = new Shader("shaders/pointsprite.vert", "shaders/pointsprite.frag");
 
 }
 
@@ -1879,6 +1884,38 @@ void SpimRegistrationApp::drawPointclouds(const Viewport* vp)
 	}
 }
 
+
+void SpimRegistrationApp::drawPointSpritePointclouds(const Viewport* vp)
+{
+	glm::mat4 mvp(1.f);
+	vp->camera->getMVP(mvp);
+
+	glPointSize(5);
+	glEnable(GL_POINT_SPRITE);
+
+
+	pointSpriteShader->bind();
+	pointSpriteShader->setUniform("mvp", mvp);
+	pointSpriteShader->setTexture2D("gaussmap", pointSpriteTexture);
+
+	glEnableClientState(GL_VERTEX_ARRAY);
+
+	
+	for (size_t i = 0; i < pointclouds.size(); ++i)
+	{
+		pointSpriteShader->setUniform("transform", pointclouds[i]->getTransform());
+		pointclouds[i]->draw();
+	}
+		
+	glDisableClientState(GL_VERTEX_ARRAY);
+
+	pointSpriteShader->disable();
+	glDisable(GL_POINT_SPRITE);
+	glPointSize(1);
+
+}
+
+
 void SpimRegistrationApp::drawSolutionParameterSpace(const Viewport* vp) const
 {
 	using namespace glm;
@@ -2853,5 +2890,56 @@ void SpimRegistrationApp::saveCurrentPointcloud()
 		std::string filename(pointclouds[currentVolume]->getFilename() + "_out.bin");
 		pointclouds[currentVolume]->saveBin(filename);
 	}
+
+}
+
+void SpimRegistrationApp::createPointSpriteTexture()
+{
+	glGenTextures(1, &pointSpriteTexture);
+	glBindTexture(GL_TEXTURE_2D, pointSpriteTexture);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	const size_t RES = 32;
+	std::vector<float> pixels(RES*RES);
+
+	// create a gaussian blur
+	for (size_t x = 0; x < RES; ++x)
+	{
+		for (size_t y = 0; y < RES; ++y)
+		{
+			// normalize and transform to center
+			float X = (float)x / RES;
+			X *= 2;
+			X -= 1;
+
+			float Y = (float)y / RES;
+			Y *= 2;
+			Y -= 1;
+
+
+			float r = sqrtf(X*X + Y*Y);
+			float v = exp(-4 * r);
+
+			pixels[x + y*RES] = v;
+		}
+	}
+
+	/*
+	std::cout << "[Debug] Created gauss texture:\n";
+	for (size_t y = 0; y < RES; ++y)
+	{
+		for (size_t x = 0; x < RES; ++x)
+			std::cout << std::setprecision(3) << pixels[x + y*RES] << " ";
+		std::cout << std::endl;
+	}
+	*/
+
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, RES, RES, 0, GL_R32F, GL_FLOAT, &pixels[0]);
+
 
 }

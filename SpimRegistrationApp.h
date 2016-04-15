@@ -238,6 +238,7 @@ private:
 	Shader*					drawQuad;
 	Shader*					volumeDifferenceShader;		
 	Shader*					drawPosition;
+	Shader*					pointSpriteShader;
 
 	// for contrast mapping
 	Shader*					tonemapper;
@@ -291,7 +292,8 @@ private:
 	void initializeRayTargets(const Viewport* vp);
 
 	void drawPointclouds(const Viewport* vp);
-	
+	void drawPointSpritePointclouds(const Viewport* vp);
+
 	void drawRays(const Viewport* vp);
 	void drawSolutionParameterSpace(const Viewport* vp) const;
 
@@ -329,6 +331,10 @@ private:
 	Shader*					gpuStackSampler;
 	Framebuffer*			stackSamplerTarget;
 
+
+
+	unsigned int	pointSpriteTexture;
+	void createPointSpriteTexture();
 
 
 	// this one will override runAlignment and always calculate the score 
