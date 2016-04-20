@@ -146,6 +146,7 @@ void SpimRegistrationApp::reloadVolumeShader()
 
 	std::vector<std::pair<std::string, std::string> > defines;
 	defines.push_back(std::make_pair("VOLUMES", boost::lexical_cast<std::string>(numberOfVolumes)));
+	defines.push_back(std::make_pair("STEPS", boost::lexical_cast<std::string>(config.raytraceSteps)));
 
 	delete volumeShader;
 	volumeShader = new Shader(config.shaderPath + "volume2.vert", config.shaderPath + "volume2.frag", defines);
@@ -1422,6 +1423,8 @@ void SpimRegistrationApp::raytraceVolumes(const Viewport* vp) const
 	// bind the ray start/end textures
 	volumeRaycaster->setTexture2D("rayStart", rayStartTarget->getColorbuffer(), (int)stacks.size());
 	volumeRaycaster->setMatrix4("inverseMVP", imvp);
+
+	volumeRaycaster->setUniform("stepLength", config.raytraceDelta);
 
 	glDisable(GL_DEPTH_TEST);
 	glDepthMask(GL_FALSE);

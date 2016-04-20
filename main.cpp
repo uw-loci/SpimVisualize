@@ -453,7 +453,9 @@ static void keyboard(unsigned char key, int x, int y)
 		regoApp->subsampleAllStacks();
 
 	if (key == 'Y')
-		regoApp->clearRays();
+		//regoApp->clearRays();
+		regoApp->reloadConfig();
+	
 
 	if (key == '1')
 		regoApp->toggleSelectVolume(0);
