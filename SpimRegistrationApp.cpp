@@ -36,7 +36,7 @@ const unsigned int STD_SLICE_COUNT = 100;
 #define USE_RAYTRACER 
 #define USE_POINTCLOUDS
 
-SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : configPath("./"), layout(nullptr), 
+SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : layout(nullptr), 
 	histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f),
 	cameraMoving(false), drawGrid(true), drawBboxes(false), drawSlices(false), currentVolume(-1), sliceCount(100), subsampleOnCameraMove(false),
 	pointShader(nullptr), volumeShader(nullptr), sliceShader(nullptr),
@@ -46,16 +46,14 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : configPath("./
 	solver(nullptr), drawPhantoms(false), drawSolutionSpace(false), runAlignmentOnlyOncePlease(false),
 	controlWidget(nullptr), pointSpriteTexture(0), cameraAutoRotate(false)
 {
+
+	config.setDefaults();
+
 	globalBBox.reset();
 	layout = new PerspectiveFullLayout(res);
 
 	prevLayouts["Perspective"] = layout;
-
-	
-	globalThreshold.min = 0;
-	globalThreshold.max = 256; // std::numeric_limits<unsigned short>::max();
-	
-
+		
 	resetSliceCount();
 	reloadShaders();
 
@@ -117,28 +115,28 @@ void SpimRegistrationApp::reloadShaders()
 	
 
 	delete pointShader;
-	pointShader = new Shader("shaders/points2.vert", "shaders/points2.frag");
+	pointShader = new Shader(config.shaderPath + "points2.vert", config.shaderPath + "points2.frag");
 
 	delete sliceShader;
-	sliceShader = new Shader("shaders/slices.vert", "shaders/slices.frag");
+	sliceShader = new Shader(config.shaderPath + "slices.vert", config.shaderPath + "slices.frag");
 
 	reloadVolumeShader();
 
 	delete drawQuad;
-	drawQuad = new Shader("shaders/drawQuad.vert", "shaders/drawQuad.frag");
+	drawQuad = new Shader(config.shaderPath + "drawQuad.vert", config.shaderPath + "drawQuad.frag");
 
 	
 	delete tonemapper;
-	tonemapper = new Shader("shaders/drawQuad.vert", "shaders/tonemapper.frag", defines);
+	tonemapper = new Shader(config.shaderPath + "drawQuad.vert", config.shaderPath + "tonemapper.frag", defines);
 
 	delete drawPosition;
-	drawPosition = new Shader("shaders/drawPosition.vert", "shaders/drawPosition.frag");
+	drawPosition = new Shader(config.shaderPath + "drawPosition.vert", config.shaderPath + "drawPosition.frag");
 
 	delete gpuStackSampler;
-	gpuStackSampler = new Shader("shaders/samplePlane.vert", "shaders/samplePlane.frag");
+	gpuStackSampler = new Shader(config.shaderPath + "samplePlane.vert", config.shaderPath + "samplePlane.frag");
 
 	delete pointSpriteShader;
-	pointSpriteShader = new Shader("shaders/pointsprite.vert", "shaders/pointsprite.frag");
+	pointSpriteShader = new Shader(config.shaderPath + "pointsprite.vert", config.shaderPath + "pointsprite.frag");
 
 }
 
@@ -150,13 +148,13 @@ void SpimRegistrationApp::reloadVolumeShader()
 	defines.push_back(std::make_pair("VOLUMES", boost::lexical_cast<std::string>(numberOfVolumes)));
 
 	delete volumeShader;
-	volumeShader = new Shader("shaders/volume2.vert", "shaders/volume2.frag", defines);
+	volumeShader = new Shader(config.shaderPath + "volume2.vert", config.shaderPath + "volume2.frag", defines);
 
 	delete volumeRaycaster;
-	volumeRaycaster = new Shader("shaders/volumeRaycast.vert", "shaders/volumeRaycast.frag", defines);
+	volumeRaycaster = new Shader(config.shaderPath + "volumeRaycast.vert", config.shaderPath + "volumeRaycast.frag", defines);
 
 	delete volumeDifferenceShader;
-	volumeDifferenceShader = new Shader("shaders/volumeDist.vert", "shaders/volumeDist.frag", defines);
+	volumeDifferenceShader = new Shader(config.shaderPath + "volumeDist.vert", config.shaderPath + "volumeDist.frag", defines);
 
 }
 
@@ -417,48 +415,6 @@ void SpimRegistrationApp::loadStackTransformations()
 	updateGlobalBbox();
 }
 
-void SpimRegistrationApp::saveContrastSettings() const
-{
-	std::string filename(configPath + "contrast.txt");
-	std::ofstream file(filename);
-
-	if (file.is_open())
-	{
-
-		assert(file.is_open());
-
-		std::cout << "[File] Saving contrast settings to \"" << filename << "\"\n";
-
-		file << "min: " << (int)globalThreshold.min << std::endl;
-		file << "max: " << (int)globalThreshold.max << std::endl;
-	}
-	else
-	{
-		throw std::runtime_error("Unable to write contrast settings to file \"" + filename + "\"!");
-	}
-}
-void SpimRegistrationApp::loadContrastSettings()
-{
-	std::string filename(configPath + "contrast.txt");
-	std::ifstream file(filename);
-
-	// fail gracefully
-	if (!file.is_open())
-	{
-		std::cout << "[Warning] Unable to load contrast settings from \"" << filename << "\", skipping.\n";
-		return;
-	}
-	std::cout << "[File] Loading contrast settings from \"" << filename << "\"\n";
-
-	std::string tmp;;
-	file >> tmp >> globalThreshold.min;
-	file >> tmp >> globalThreshold.max;
-
-	std::cout << "[Contrast] Global threshold: " << (int)globalThreshold.min << "->" << (int)globalThreshold.max << std::endl;
-}
-
-
-
 void SpimRegistrationApp::addSpimStack(const std::string& filename)
 {
 	addSpimStack(SpimStack::load(filename));
@@ -553,8 +509,8 @@ void SpimRegistrationApp::drawTonemappedQuad()
 	tonemapper->setUniform("minVal", minVal);
 	tonemapper->setUniform("maxVal", maxVal);
 
-	tonemapper->setUniform("minThreshold", (float)globalThreshold.min);
-	tonemapper->setUniform("maxThreshold", (float)globalThreshold.max);
+	tonemapper->setUniform("minThreshold", (float)config.threshold.min);
+	tonemapper->setUniform("maxThreshold", (float)config.threshold.max);
 
 	glBegin(GL_QUADS);
 	glVertex2i(0, 1);
@@ -802,11 +758,11 @@ void SpimRegistrationApp::moveCurrentStack(const glm::vec2& delta)
 
 void SpimRegistrationApp::contrastEditorApplyThresholds()
 {
-	unsigned short newMin = (unsigned short)(globalThreshold.min + minCursor * globalThreshold.getSpread());
-	unsigned short newMax = (unsigned short)(globalThreshold.min + maxCursor * globalThreshold.getSpread());
+	unsigned short newMin = (unsigned short)(config.threshold.min + minCursor * config.threshold.getSpread());
+	unsigned short newMax = (unsigned short)(config.threshold.min + maxCursor * config.threshold.getSpread());
 
-	globalThreshold.min = newMin;
-	globalThreshold.max = newMax;
+	config.threshold.min = newMin;
+	config.threshold.max = newMax;
 
 	minCursor = 0.f;
 	maxCursor = 1.f;
@@ -818,15 +774,15 @@ void SpimRegistrationApp::contrastEditorApplyThresholds()
 void SpimRegistrationApp::contrastEditorResetThresholds()
 {
 	
-	globalThreshold.min = 0;
+	config.threshold.min = 0;
 	
 	// range depends on the type of first stack
-	globalThreshold.max = 255;
+	config.threshold.max = 255;
 	if (!stacks.empty() && stacks[0]->getBytesPerVoxel() == 2)
-		globalThreshold.max = std::numeric_limits<unsigned short>::max();
+		config.threshold.max = std::numeric_limits<unsigned short>::max();
 
 
-	std::cout << "[Contrast] Resetting global threshold to [" << globalThreshold.min << " -> " << globalThreshold.max << "]\n";
+	std::cout << "[Contrast] Resetting global threshold to [" << config.threshold.min << " -> " << config.threshold.max << "]\n";
 
 
 
@@ -867,7 +823,7 @@ void SpimRegistrationApp::changeContrast(const glm::ivec2& cursor)
 		}
 
 		
-		unsigned int value = (unsigned int)(globalThreshold.min + (int)(currentContrastCursor * globalThreshold.getSpread()));
+		unsigned int value = (unsigned int)(config.threshold.min + (int)(currentContrastCursor * config.threshold.getSpread()));
 
 		if (value != lastValue)
 		{
@@ -892,40 +848,40 @@ void SpimRegistrationApp::changeContrast(const glm::ivec2& cursor)
 
 void SpimRegistrationApp::increaseMaxThreshold()
 {
-	globalThreshold.max += 5;
-	std::cout << "[Threshold] Max: " << (int)globalThreshold.max << std::endl;
+	config.threshold.max += 5;
+	std::cout << "[Threshold] Max: " << (int)config.threshold.max << std::endl;
 
 	histogramsNeedUpdate = true;
 }
 
 void SpimRegistrationApp::increaseMinThreshold()
 {
-	globalThreshold.min += 5;
-	if (globalThreshold.min > globalThreshold.max)
-		globalThreshold.min = globalThreshold.max;
-	std::cout << "[Threshold] Min: " << (int)globalThreshold.min << std::endl;
+	config.threshold.min += 5;
+	if (config.threshold.min > config.threshold.max)
+		config.threshold.min = config.threshold.max;
+	std::cout << "[Threshold] Min: " << (int)config.threshold.min << std::endl;
 
 	histogramsNeedUpdate = true;
 }
 
 void SpimRegistrationApp::decreaseMaxThreshold()
 {
-	globalThreshold.max -= 5;
-	if (globalThreshold.max < globalThreshold.min)
-		globalThreshold.max = globalThreshold.min;
+	config.threshold.max -= 5;
+	if (config.threshold.max < config.threshold.min)
+		config.threshold.max = config.threshold.min;
 
-	std::cout << "[Threshold] Max: " << (int)globalThreshold.max << std::endl;
+	std::cout << "[Threshold] Max: " << (int)config.threshold.max << std::endl;
 
 	histogramsNeedUpdate = true;
 }
 
 void SpimRegistrationApp::decreaseMinThreshold()
 {
-	globalThreshold.min -= 5;
-	if (globalThreshold.min < 0)
-		globalThreshold.min = 0;
+	config.threshold.min -= 5;
+	if (config.threshold.min < 0)
+		config.threshold.min = 0;
 
-	std::cout << "[Threshold] Min: " << (int)globalThreshold.min << std::endl;
+	std::cout << "[Threshold] Min: " << (int)config.threshold.min << std::endl;
 
 	histogramsNeedUpdate = true;
 }
@@ -935,10 +891,10 @@ void SpimRegistrationApp::autoThreshold()
 {
 	using namespace std;
 
-	globalThreshold.max = 0;
-	globalThreshold.min = numeric_limits<unsigned short>::max();
-	globalThreshold.mean = 0;
-	globalThreshold.stdDeviation = 0;
+	config.threshold.max = 0;
+	config.threshold.min = numeric_limits<unsigned short>::max();
+	config.threshold.mean = 0;
+	config.threshold.stdDeviation = 0;
 
 	for (size_t i = 0; i < stacks.size(); ++i)
 	{
@@ -946,20 +902,20 @@ void SpimRegistrationApp::autoThreshold()
 		cout << "[Contrast] Stack " << i << " contrast: [" << t.min << " -> " << t.max << "], mean: " << t.mean << ", std dev: " << t.stdDeviation << std::endl;
 
 
-		globalThreshold.min = min(globalThreshold.min, t.min);
-		globalThreshold.max = max(globalThreshold.max, t.max);
-		globalThreshold.mean += t.mean;
-		globalThreshold.stdDeviation = max(globalThreshold.stdDeviation, t.stdDeviation);
+		config.threshold.min = min(config.threshold.min, t.min);
+		config.threshold.max = max(config.threshold.max, t.max);
+		config.threshold.mean += t.mean;
+		config.threshold.stdDeviation = max(config.threshold.stdDeviation, t.stdDeviation);
 	}
 
-	globalThreshold.mean /= stacks.size();
+	config.threshold.mean /= stacks.size();
 
-	globalThreshold.min = (globalThreshold.mean - 3 * globalThreshold.stdDeviation);
-	globalThreshold.min = std::max(globalThreshold.min, 0.0);
+	config.threshold.min = (config.threshold.mean - 3 * config.threshold.stdDeviation);
+	config.threshold.min = std::max(config.threshold.min, 0.0);
 
-	globalThreshold.max = (globalThreshold.mean + 3 * globalThreshold.stdDeviation);
+	config.threshold.max = (config.threshold.mean + 3 * config.threshold.stdDeviation);
 
-	cout << "[Contrast] Global contrast: [" << globalThreshold.min << " -> " << globalThreshold.max << "], mean: " << globalThreshold.mean << ", std dev: " << globalThreshold.stdDeviation << std::endl;
+	cout << "[Contrast] Global contrast: [" << config.threshold.min << " -> " << config.threshold.max << "], mean: " << config.threshold.mean << ", std dev: " << config.threshold.stdDeviation << std::endl;
 
 
 
@@ -991,11 +947,11 @@ void SpimRegistrationApp::calculateHistograms()
 
 	size_t maxVal = 0;
 
-	std::cout << "[Contrast] Calculating histograms within " << globalThreshold.min << " -> " << globalThreshold.max << std::endl;
+	std::cout << "[Contrast] Calculating histograms within " << config.threshold.min << " -> " << config.threshold.max << std::endl;
 
 	for (size_t i = 0; i < stacks.size(); ++i)
 	{
-		std::vector<size_t> histoRaw = stacks[i]->calculateHistogram(globalThreshold);
+		std::vector<size_t> histoRaw = stacks[i]->calculateHistogram(config.threshold);
 
 		for (size_t j = 0; j < histoRaw.size(); ++j)
 			maxVal = std::max(maxVal, histoRaw[j]);
@@ -1044,8 +1000,8 @@ void SpimRegistrationApp::drawContrastEditor(const Viewport* vp)
 	glEnd();
 
 
-	const double leftLimit = globalThreshold.min;
-	const double rightLimit = globalThreshold.max;
+	const double leftLimit = config.threshold.min;
+	const double rightLimit = config.threshold.max;
 
 	glLineWidth(2.f);
 	glBegin(GL_LINES);
@@ -1244,10 +1200,10 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 	maxPVal = glm::min(maxPVal, glm::vec3(1.f));
 	minPVal = glm::max(minPVal, glm::vec3(-1.f));
 
-	shader->setUniform("minThreshold", (float)globalThreshold.min);
-	shader->setUniform("maxThreshold", (float)globalThreshold.max);
+	shader->setUniform("minThreshold", (float)config.threshold.min);
+	shader->setUniform("maxThreshold", (float)config.threshold.max);
 	shader->setUniform("sliceCount", (float)sliceCount);
-	shader->setUniform("stdDev", (float)globalThreshold.stdDeviation);
+	shader->setUniform("stdDev", (float)config.threshold.stdDeviation);
 
 	// reorder stacks so that the current volume is always at index 0
 	std::vector<SpimStack*> reorderedStacks(stacks);
@@ -1331,8 +1287,8 @@ void SpimRegistrationApp::drawAxisAlignedSlices(const glm::mat4& mvp, const glm:
 	shader->bind();
 	shader->setUniform("mvpMatrix", mvp);
 
-	shader->setUniform("maxThreshold", (int)globalThreshold.max);
-	shader->setUniform("minThreshold", (int)globalThreshold.min);
+	shader->setUniform("maxThreshold", (int)config.threshold.max);
+	shader->setUniform("minThreshold", (int)config.threshold.min);
 
 	for (size_t i = 0; i < stacks.size(); ++i)
 	{
@@ -1369,8 +1325,8 @@ void SpimRegistrationApp::drawAxisAlignedSlices(const Viewport* vp, const Shader
 	shader->bind();
 	shader->setUniform("mvpMatrix", mvp);
 
-	shader->setUniform("maxThreshold", (float)globalThreshold.max);
-	shader->setUniform("minThreshold", (float)globalThreshold.min);
+	shader->setUniform("maxThreshold", (float)config.threshold.max);
+	shader->setUniform("minThreshold", (float)config.threshold.min);
 
 	for (size_t i = 0; i < stacks.size(); ++i)
 	{
@@ -1457,8 +1413,8 @@ void SpimRegistrationApp::raytraceVolumes(const Viewport* vp) const
 	}
 
 	// set the global contrast
-	volumeRaycaster->setUniform("minThreshold", (float)globalThreshold.min);
-	volumeRaycaster->setUniform("maxThreshold", (float)globalThreshold.max);
+	volumeRaycaster->setUniform("minThreshold", (float)config.threshold.min);
+	volumeRaycaster->setUniform("maxThreshold", (float)config.threshold.max);
 
 
 	volumeRaycaster->setUniform("activeVolume", (int)currentVolume);

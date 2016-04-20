@@ -7,6 +7,7 @@
 #include <boost/utility.hpp>
 
 #include "AABB.h"
+#include "Config.h"
 #include "Ray.h"
 #include "StackRegistration.h"
 #include "TinyStats.h"
@@ -103,7 +104,9 @@ public:
 	/// \name Phantom creation
 	/// \{ 
 
-	void createEmptyRandomStack(const glm::ivec3& resolution, const glm::vec3& voxelDimensions = glm::vec3(1.f));
+
+	inline void createEmptyRandomStack() { createEmptyRandomStack(config.resampleResolution, config.defaultVoxelSize); }
+	void createEmptyRandomStack(const glm::ivec3& resolution, const glm::vec3& voxelDimensions);
 
 	void startSampleStack(int stack);
 	void clearSampleStack();
@@ -171,14 +174,11 @@ public:
 
 	inline void setCameraMoving(bool m) { cameraMoving = m; }
 
-
+	
 	void saveStackTransformations() const;
 	void loadStackTransformations();
 	void clearStackTransformations();
-
-	void saveContrastSettings() const;
-	void loadContrastSettings();
-
+	
 	inline void toggleGrid() { drawGrid = !drawGrid; }
 	inline void toggleBboxes() { drawBboxes = !drawBboxes; }
 	void toggleSlices();
@@ -189,12 +189,14 @@ public:
 
 	void alignPhantoms();
 
-
-	inline void setConfigPath(const std::string& p) { configPath = p; }
+	inline void loadConfig(const std::string& file) { config.load(file); }
+	inline void saveConfig(const std::string& file) const { config.save(file); }
+	inline void reloadConfig() { config.reload(); }
 
 private:
-	std::string				configPath;
-	
+	Config					config;
+
+
 	ILayout*				layout;
 	std::map<std::string, ILayout*>	prevLayouts;
 
@@ -203,10 +205,7 @@ private:
 	std::vector<SpimStack*>	stacks;
 
 	AABB					globalBBox;
-	// global contrast settings
-	Threshold				globalThreshold;
-
-
+	
 	// test interaction
 	std::vector<Ray>		rays;
 

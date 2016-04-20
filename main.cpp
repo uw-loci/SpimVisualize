@@ -56,7 +56,9 @@ enum MenuItem
 	MENU_POINTCLOUD_SAVE_CURRENT,
 
 	MENU_CREATE_PHANTOM,
-	MENU_SAMPLE_PHANTOM
+	MENU_SAMPLE_PHANTOM,
+
+	MENU_MISC_RELOAD_CONFIG
 	
 };
 
@@ -206,6 +208,11 @@ static void menu(int item)
 	case MENU_POINTCLOUD_SAVE_CURRENT:
 		regoApp->saveCurrentPointcloud();
 		break;
+
+
+	case MENU_MISC_RELOAD_CONFIG:
+		regoApp->reloadConfig();
+		break;
 		
 	default:
 
@@ -270,10 +277,15 @@ static void createRightClickMenu()
 	glutAddMenuEntry("Show image score   [h]", MENU_SOLVER_SHOW_SCORE);
 	glutAddMenuEntry("Clear score history[H]", MENU_SOLVER_CLEAR_HISTORY);
 
-
+	
 	int pointclouds = glutCreateMenu(menu);
 	glutAddMenuEntry("Bake transform ", MENU_POINTCLOUD_BAKE_TRANSFORM);
 	glutAddMenuEntry("Save pointcloud", MENU_POINTCLOUD_SAVE_CURRENT);
+
+	int misc = glutCreateMenu(menu);
+	glutAddMenuEntry("Reload config     [C]", MENU_MISC_RELOAD_CONFIG);
+
+
 
 	glutCreateMenu(menu);
 	glutAddSubMenu("Selection", selection);
@@ -282,6 +294,7 @@ static void createRightClickMenu()
 	glutAddSubMenu("View", view);
 	glutAddSubMenu("Solver", solver);
 	glutAddSubMenu("Point clouds", pointclouds);
+	glutAddSubMenu("Misc", misc);
 
 	glutAttachMenu(GLUT_RIGHT_BUTTON);
 
@@ -364,7 +377,7 @@ static void keyboard(unsigned char key, int x, int y)
 
 
 	if (key == 'e')
-		regoApp->createEmptyRandomStack(glm::ivec3(256, 256, 64), glm::vec3(1));
+		regoApp->createEmptyRandomStack();
 
 
 
@@ -732,7 +745,6 @@ static void cleanup()
 	try
 	{
 		regoApp->saveStackTransformations();
-		regoApp->saveContrastSettings();
 	}
 	catch (std::runtime_error& e)
 	{
@@ -744,14 +756,14 @@ static void cleanup()
 
 int main(int argc, const char** argv)
 {
-	/*
+	
 	if (argc < 2)
 	{
 		std::cerr << "[Error] No filename given!\n";
 		std::cerr << "[Usage] " << argv[0] << " <spimfile>\n";
 		return -1;
 	}
-	*/
+	
 
 	
 	glutInit(&argc, const_cast<char**>(argv));
@@ -785,44 +797,19 @@ int main(int argc, const char** argv)
 
 	regoApp = new SpimRegistrationApp(glm::ivec2(1024,768));
 
-#ifdef _WIN32
-	regoApp->setConfigPath("e:/regoApp/");
-#endif
 
 	try
 	{
-		
-		//regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151111.txt_out.bin");
-		//regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151112.txt_out.bin");
-		//regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151113.txt_out.bin");
-		//regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151114.txt");
-		//regoApp->addPointcloud("e:/Yi Xian's Pumpkin/Pump_20151116.txt");
 
 
-		/*
-		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_1.tiff", glm::vec3(1.f));
-		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_2.tiff", glm::vec3(1.f));
-		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_3.tiff", glm::vec3(1.f));
-		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_4.tiff", glm::vec3(1.f));
-		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_5.tiff", glm::vec3(1.f));
-		
+		regoApp->loadConfig("./config.cfg");
 
-		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_1.tiff", "e:/spim/phantom/t1-head/reference/phantom_1.tiff.reference.txt", glm::vec3(1.f));
-		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_2.tiff", "e:/spim/phantom/t1-head/reference/phantom_2.tiff.reference.txt", glm::vec3(1.f));
-		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_3.tiff", "e:/spim/phantom/t1-head/reference/phantom_3.tiff.reference.txt", glm::vec3(1.f));
-		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_4.tiff", "e:/spim/phantom/t1-head/reference/phantom_4.tiff.reference.txt", glm::vec3(1.f));
-		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_5.tiff", "e:/spim/phantom/t1-head/reference/phantom_5.tiff.reference.txt", glm::vec3(1.f));
-		*/
-
-		regoApp->addSpimStack("e:/spim/5angles/spim_TL01_Angle1.ome.tiff", glm::vec3(0.62, 0.62, 3));
-		regoApp->addSpimStack("e:/spim/5angles/spim_TL01_Angle2.ome.tiff", glm::vec3(0.62, 0.62, 3));
-		regoApp->addSpimStack("e:/spim/5angles/spim_TL01_Angle3.ome.tiff", glm::vec3(0.62, 0.62, 3));
-		
-		//regoApp->addSpimStack("e:/spim/phantom/t1-head/t1-head.tiff", glm::vec3(1));
-		//regoApp->addSpimStack("e:/spim/phantom/cadaver/cadaver_512x512x106.16bit.raw", glm::vec3(1,1,5));
+		for (int i = 1; i < argc; ++i)
+		{
+			regoApp->addSpimStack(argv[i]);
+		}
 
 		regoApp->loadStackTransformations();
-		//regoApp->loadContrastSettings();12
 		
 
 		regoApp->centerCamera();
