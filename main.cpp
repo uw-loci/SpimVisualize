@@ -793,7 +793,7 @@ int main(int argc, const char** argv)
 	glutInit(&argc, const_cast<char**>(argv));
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
 	glutInitWindowSize(1024, 768);
-	glutCreateWindow("Geometry Image");
+	glutCreateWindow("SpimViewer");
 	glewInit();
 
 	glutDisplayFunc(display);
