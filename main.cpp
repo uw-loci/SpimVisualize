@@ -14,14 +14,291 @@
 #undef near
 #undef far
 
+enum MenuItem
+{
+	MENU_TYPE_NONE= 0,
+	MENU_TYPE_TRANSLATE,
+	MENU_TYPE_ROTATE,
+	MENU_TYPE_SCALE,
+	MENU_MODE_VIEW,
+	MENU_MODE_X,
+	MENU_MODE_Y,
+	MENU_MODE_Z,
+
+	MENU_SELECT_NONE,
+	MENU_SELECT_TOGGLE,
+	MENU_SELECT_LOCK,
+	MENU_SELECT_UNLOCK_ALL,
+
+	MENU_VIEW_FOCUS,
+	MENU_VIEW_ALL,
+	MENU_VIEW_AUTOCONTRAST,
+	MENU_VIEW_SINGLE_3D,
+	MENU_VIEW_TOPDOWN,
+	MENU_VIEW_4VIEW,
+	MENU_VIEW_CONTRAST_EDITOR,
+	MENU_VIEW_TOGGLE_GRID,
+	MENU_VIEW_TOGGLE_BBOXES,
+	MENU_VIEW_PRESENTATION,
+
+	MENU_SOLVER_DX,
+	MENU_SOLVER_DY,
+	MENU_SOLVER_DZ,
+	MENU_SOLVER_RY,
+	MENU_SOLVER_HILLCLIMB,
+	MENU_SOLVER_ANNEALING,
+	MENU_SOLVER_RANDOM_ROTATION,
+	MENU_SOLVER_UNIFORM_SCALE,
+	MENU_SOLVER_SHOW_SCORE,
+	MENU_SOLVER_CLEAR_HISTORY,
+
+	MENU_POINTCLOUD_BAKE_TRANSFORM,
+	MENU_POINTCLOUD_SAVE_CURRENT,
+
+	MENU_CREATE_PHANTOM,
+	MENU_SAMPLE_PHANTOM,
+
+	MENU_MISC_RELOAD_CONFIG
+	
+};
+
+
 struct Mouse
 {
 	glm::ivec2		coordinates;
 	int				button[3];
 }				mouse;
 
+enum SpecialKey
+{
+	Shift = 0,
+	Ctrl,
+	Alt,
+	COUNT
+};
+
+bool specialKey[SpecialKey::COUNT];
+
 
 SpimRegistrationApp*	regoApp = nullptr;
+
+
+static void updateSpecialKeys()
+{
+	int specials = glutGetModifiers();
+	
+	specialKey[Shift] = specials & GLUT_ACTIVE_SHIFT;
+	specialKey[Ctrl] = specials & GLUT_ACTIVE_CTRL;
+	specialKey[Alt] = specials & GLUT_ACTIVE_ALT;
+}
+
+static void menu(int item)
+{
+
+	std::cout << "[Debug] Menu " << item << std::endl;
+
+	int w = glutGet(GLUT_WINDOW_WIDTH);
+	int h = glutGet(GLUT_WINDOW_HEIGHT);
+	const glm::ivec2 winRes(w, h);
+
+
+	switch ((MenuItem)item)
+	{
+	case MENU_TYPE_NONE:
+		regoApp->setWidgetType("None");
+		break;
+	case MENU_TYPE_TRANSLATE:
+		regoApp->setWidgetType("Translate");
+		break;
+	case MENU_TYPE_ROTATE:
+		regoApp->setWidgetType("Rotate");
+		break;
+	case MENU_TYPE_SCALE:
+		regoApp->setWidgetType("Scale");
+		break;
+
+	case MENU_MODE_VIEW:
+		regoApp->setWidgetMode("View");
+		break;
+
+	case MENU_MODE_X:
+		regoApp->setWidgetMode("X");
+		break;
+	case MENU_MODE_Y:
+		regoApp->setWidgetMode("Y");
+		break;
+	case MENU_MODE_Z:
+		regoApp->setWidgetMode("Z");
+		break;
+		
+	case MENU_SELECT_NONE:
+		regoApp->deselectAll();
+		break;
+	case MENU_SELECT_TOGGLE:
+		regoApp->toggleCurrentVolume();
+		break;
+	case MENU_SELECT_UNLOCK_ALL:
+		regoApp->unlockAllVolumes();
+		break;
+
+	case MENU_VIEW_FOCUS:
+		regoApp->centerCamera();
+		break;
+	case MENU_VIEW_ALL:
+		regoApp->maximizeViews();
+		break;
+	case MENU_VIEW_AUTOCONTRAST:
+		regoApp->autoThreshold();
+		break;
+	case MENU_VIEW_SINGLE_3D:
+		regoApp->setPerspectiveLayout(winRes, mouse.coordinates);
+		break;
+	case MENU_VIEW_TOPDOWN:
+		regoApp->setTopviewLayout(winRes, mouse.coordinates);
+		break;
+	case MENU_VIEW_4VIEW:
+		regoApp->setThreeViewLayout(winRes, mouse.coordinates);
+		break;
+	case MENU_VIEW_CONTRAST_EDITOR:
+		regoApp->setContrastEditorLayout(winRes, mouse.coordinates);
+		break;
+	case MENU_VIEW_TOGGLE_GRID:
+		regoApp->toggleGrid();
+		break;
+	case MENU_VIEW_TOGGLE_BBOXES:
+		regoApp->toggleBboxes();
+		break;
+	case MENU_VIEW_PRESENTATION:
+		regoApp->toggleRotateCamera();
+
+
+	case MENU_SOLVER_DX:
+		regoApp->selectSolver("DX");
+		break;
+	case MENU_SOLVER_DY:
+		regoApp->selectSolver("Uniform DY");
+		break;
+	case MENU_SOLVER_DZ:
+		regoApp->selectSolver("Uniform DZ");
+		break;
+	case MENU_SOLVER_RY:
+		regoApp->selectSolver("Uniform RY");
+		break;
+	case MENU_SOLVER_ANNEALING:
+		regoApp->selectSolver("Simulated Annealing");
+		break;
+	case MENU_SOLVER_HILLCLIMB:
+		regoApp->selectSolver("Hillclimb");
+		break;
+	case MENU_SOLVER_RANDOM_ROTATION:
+		regoApp->selectSolver("Random Rotation");
+	case MENU_SOLVER_UNIFORM_SCALE:
+		regoApp->selectSolver("Uniform Scale");
+	case MENU_SOLVER_CLEAR_HISTORY:
+		regoApp->clearHistory();
+		break;
+	case MENU_SOLVER_SHOW_SCORE:
+		regoApp->toggleHistory();
+		break;
+
+
+	case MENU_POINTCLOUD_BAKE_TRANSFORM:
+		regoApp->bakeSelectedTransform();
+		break;
+	case MENU_POINTCLOUD_SAVE_CURRENT:
+		regoApp->saveCurrentPointcloud();
+		break;
+
+
+	case MENU_MISC_RELOAD_CONFIG:
+		regoApp->reloadConfig();
+		break;
+		
+	default:
+
+		std::cout << "[Debug] " << (MenuItem)item << " is not a valid menu entry.\n";
+
+		break;
+	}
+
+
+}
+
+static void createRightClickMenu()
+{
+	
+	int selection = glutCreateMenu(menu);
+	//glutAddMenuEntry("---[Selection]----", -1);
+	glutAddMenuEntry("Select None    [d]", MENU_SELECT_NONE);
+	glutAddMenuEntry("Toggle selected[v]", MENU_SELECT_TOGGLE);
+
+	glutAddMenuEntry("Lock selected  [l]", MENU_SELECT_LOCK);
+	glutAddMenuEntry("Unlock all     [L]", MENU_SELECT_UNLOCK_ALL);
+
+
+	int transformation = glutCreateMenu(menu);
+	glutAddMenuEntry("---[Transform]---", -1);
+	glutAddMenuEntry("None", MENU_TYPE_NONE);
+	glutAddMenuEntry("Translate     [t]", MENU_TYPE_TRANSLATE);
+	glutAddMenuEntry("Rotate        [r]", MENU_TYPE_ROTATE);
+	glutAddMenuEntry("Scale         [s]", MENU_TYPE_SCALE);
+	glutAddMenuEntry("-----[Mode]------", -1);
+	glutAddMenuEntry("View Relative [v]", MENU_MODE_VIEW);
+	glutAddMenuEntry("Lock X        [x]", MENU_MODE_X);
+	glutAddMenuEntry("Lock Y        [y]", MENU_MODE_Y);
+	glutAddMenuEntry("Lock Z        [z]", MENU_MODE_Z);
+
+
+	int layout = glutCreateMenu(menu);
+	//glutAddMenuEntry("----[Layout]-----", -1);
+	glutAddMenuEntry("Perspective [F1]", MENU_VIEW_SINGLE_3D);
+	glutAddMenuEntry("Top down    [F2]", MENU_VIEW_TOPDOWN);
+	glutAddMenuEntry("Four view   [F3]", MENU_VIEW_4VIEW);
+	glutAddMenuEntry("Contrast Ed [F4]", MENU_VIEW_CONTRAST_EDITOR);
+	
+	int view = glutCreateMenu(menu);
+	glutAddMenuEntry("Auto Contrast [Shift][c]", MENU_VIEW_AUTOCONTRAST);
+	glutAddMenuEntry("Focus on selected    [f]", MENU_VIEW_FOCUS);
+	glutAddMenuEntry("Zoom on selected     [m]", MENU_VIEW_ALL);
+	glutAddMenuEntry("Toggle bounding boxes[b]", MENU_VIEW_TOGGLE_BBOXES);
+	glutAddMenuEntry("Toggle grid          [g]", MENU_VIEW_TOGGLE_GRID);
+	glutAddMenuEntry("Toggle auto rotate   [R]", MENU_VIEW_PRESENTATION);
+
+	int solver = glutCreateMenu(menu);
+	glutAddMenuEntry("Uniform DX         [F5]", MENU_SOLVER_DX);
+	glutAddMenuEntry("Uniform DY         [F6]", MENU_SOLVER_DY);
+	glutAddMenuEntry("Uniform DZ         [F7]", MENU_SOLVER_DZ);
+	glutAddMenuEntry("Uniform RY         [F8]", MENU_SOLVER_RY);
+	glutAddMenuEntry("Uniform Scale      [F9]", MENU_SOLVER_UNIFORM_SCALE);
+	glutAddMenuEntry("Multidim Hillclimb [F10]", MENU_SOLVER_HILLCLIMB);
+	glutAddMenuEntry("Random Rotation    [F11]", MENU_SOLVER_RANDOM_ROTATION);
+	glutAddMenuEntry("Sim Annealing           ", MENU_SOLVER_ANNEALING);
+
+	glutAddMenuEntry("Show image score   [h]", MENU_SOLVER_SHOW_SCORE);
+	glutAddMenuEntry("Clear score history[H]", MENU_SOLVER_CLEAR_HISTORY);
+
+	
+	int pointclouds = glutCreateMenu(menu);
+	glutAddMenuEntry("Bake transform ", MENU_POINTCLOUD_BAKE_TRANSFORM);
+	glutAddMenuEntry("Save pointcloud", MENU_POINTCLOUD_SAVE_CURRENT);
+
+	int misc = glutCreateMenu(menu);
+	glutAddMenuEntry("Reload config     [C]", MENU_MISC_RELOAD_CONFIG);
+
+
+
+	glutCreateMenu(menu);
+	glutAddSubMenu("Selection", selection);
+	glutAddSubMenu("Transformation", transformation);
+	glutAddSubMenu("Layout", layout);
+	glutAddSubMenu("View", view);
+	glutAddSubMenu("Solver", solver);
+	glutAddSubMenu("Point clouds", pointclouds);
+	glutAddSubMenu("Misc", misc);
+
+	glutAttachMenu(GLUT_RIGHT_BUTTON);
+
+}
 
 
 static void display()
@@ -52,6 +329,9 @@ static void idle()
 
 static void keyboard(unsigned char key, int x, int y)
 {
+	updateSpecialKeys();
+
+
 	if (key == 27)
 		exit(0);
 
@@ -60,10 +340,7 @@ static void keyboard(unsigned char key, int x, int y)
 
 	if (key == 'g')
 		regoApp->toggleGrid();
-
-	if (key == 'G')
-		regoApp->applyGaussFilterToCurrentStack();
-
+		
 	if (key == 'b')
 		regoApp->toggleBboxes();
 	
@@ -88,13 +365,19 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == 'a')
 		regoApp->runAlignmentOnce();
 
+	if (key == 'R')
+		regoApp->toggleRotateCamera();
 
 
+	if (key == 'l')
+		regoApp->toggleCurrentVolumeLock();
+	if (key == 'L')
+		regoApp->unlockAllVolumes();
 
 
 
 	if (key == 'e')
-		regoApp->createEmptyRandomStack(glm::ivec3(256, 256, 64), glm::vec3(1));
+		regoApp->createEmptyRandomStack();
 
 
 
@@ -120,11 +403,14 @@ static void keyboard(unsigned char key, int x, int y)
 	
 	if (key == 'c')
 	{
-		if (glutGetModifiers() == GLUT_ACTIVE_ALT)
+		regoApp->reloadConfig();
+
+	/*
+		if (specialKey[Alt])
 			regoApp->contrastEditorResetThresholds();
 		else
 			regoApp->contrastEditorApplyThresholds();
-
+	*/
 	}
 
 	if (key == ';')
@@ -170,34 +456,36 @@ static void keyboard(unsigned char key, int x, int y)
 		regoApp->subsampleAllStacks();
 
 	if (key == 'Y')
-		regoApp->clearRays();
+		//regoApp->clearRays();
+		regoApp->reloadConfig();
+	
 
 	if (key == '1')
-		regoApp->toggleSelectStack(0);
+		regoApp->toggleSelectVolume(0);
 
 	if (key == '2')
-		regoApp->toggleSelectStack(1);
+		regoApp->toggleSelectVolume(1);
 
 	if (key == '3')
-		regoApp->toggleSelectStack(2);
+		regoApp->toggleSelectVolume(2);
 
 	if (key == '4')
-		regoApp->toggleSelectStack(3);
+		regoApp->toggleSelectVolume(3);
 
 	if (key == '5')
-		regoApp->toggleSelectStack(4);
+		regoApp->toggleSelectVolume(4);
 
 	if (key == '6')
-		regoApp->toggleSelectStack(5);
+		regoApp->toggleSelectVolume(5);
 	
 	if (key == '7')
-		regoApp->toggleSelectStack(6);
+		regoApp->toggleSelectVolume(6);
 
 	if (key == '8')
-		regoApp->toggleSelectStack(7);
+		regoApp->toggleSelectVolume(7);
 
 	if (key == '9')
-		regoApp->toggleSelectStack(8);
+		regoApp->toggleSelectVolume(8);
 
 	if (key == '!')
 		regoApp->clearSampleStack();
@@ -243,9 +531,9 @@ static void keyboard(unsigned char key, int x, int y)
 
 
 	if (key == 'v')
-		regoApp->toggleCurrentStack();
+		regoApp->toggleCurrentVolume();
 	if (key == 'V')
-		regoApp->toggleAllStacks();
+		regoApp->toggleAllVolumes();
 
 
 	if (key == '-')
@@ -269,6 +557,8 @@ static void keyboard(unsigned char key, int x, int y)
 
 static void keyboardUp(unsigned char key, int x, int y)
 {
+	updateSpecialKeys();
+
 	if (key == ' ')
 		regoApp->endAutoAlign();
 
@@ -283,6 +573,9 @@ static void keyboardUp(unsigned char key, int x, int y)
 
 static void motion(int x, int y)
 {
+
+	updateSpecialKeys();
+
 	float dt = (mouse.coordinates.y - y) * 0.1f;
 	float dp = (mouse.coordinates.x - x) * 0.1f;
 
@@ -299,30 +592,34 @@ static void motion(int x, int y)
 	
 	if (mouse.button[1])
 		regoApp->panCamera(glm::vec2(dx, dy));
-
-	if (mouse.button[2])
-	{
-		if (glutGetModifiers() & GLUT_ACTIVE_SHIFT)
-			regoApp->panCamera(glm::vec2(dx, dy));
-		else
-			regoApp->rotateCamera(glm::vec2(dt, dp));
-
-
-	}
-
+		
 	if (mouse.button[0])
 	{
-		// let the application decide what to do with it:
-		// camera movement in a perspective window
-		//regoApp->rotateCamera(glm::vec2(dt, dp));
-		
+		// alt -- rotate
+		if (specialKey[Alt])
+			regoApp->rotateCamera(glm::vec2(dt, dp));
 
-		regoApp->updateStackMove(mouse.coordinates);
+		// shift -- pan
+		else if (specialKey[Shift])
+			regoApp->panCamera(glm::vec2(dx, dy));
 
-			
-		// change contrast in the editor
-		regoApp->changeContrast(glm::ivec2(x, h - y));
-		regoApp->inspectOutputImage(glm::ivec2(x, h - y));
+		// interact with data
+		else
+		{
+
+			if (specialKey[Ctrl])
+				regoApp->updateStackMove(mouse.coordinates, 10.f);
+			else
+				regoApp->updateStackMove(mouse.coordinates);
+
+
+			// change contrast in the editor
+			regoApp->changeContrast(glm::ivec2(x, h - y));
+			regoApp->inspectOutputImage(glm::ivec2(x, h - y));
+
+		}
+	
+
 	}
 
 	regoApp->updateMouseMotion(glm::ivec2(x, h - y));
@@ -342,15 +639,10 @@ static void special(int key, int x, int y)
 
 	if (key == GLUT_KEY_F1)
 		regoApp->setPerspectiveLayout(winRes, mouse.coordinates);
-
 	if (key == GLUT_KEY_F2)
 		regoApp->setTopviewLayout(winRes, mouse.coordinates);
-
-
-
 	if (key == GLUT_KEY_F3)
 		regoApp->setThreeViewLayout(winRes, mouse.coordinates);
-
 	if (key == GLUT_KEY_F4)
 		regoApp->setContrastEditorLayout(winRes, mouse.coordinates);
 
@@ -364,11 +656,13 @@ static void special(int key, int x, int y)
 	if (key == GLUT_KEY_F8)
 		regoApp->selectSolver("Uniform RY");
 	if (key == GLUT_KEY_F9)
-		regoApp->selectSolver("Simulated Annealing");
+		regoApp->selectSolver("Uniform Scale");
 	if (key == GLUT_KEY_F10)
 		regoApp->selectSolver("Hillclimb");
 	if (key == GLUT_KEY_F11)
-		regoApp->selectSolver("Solution Parameterspace");
+		regoApp->selectSolver("Random Rotation");
+
+	
 
 	if (key == GLUT_KEY_UP)
 	{
@@ -456,7 +750,6 @@ static void cleanup()
 	try
 	{
 		regoApp->saveStackTransformations();
-		regoApp->saveContrastSettings();
 	}
 	catch (std::runtime_error& e)
 	{
@@ -468,14 +761,14 @@ static void cleanup()
 
 int main(int argc, const char** argv)
 {
-	/*
+	
 	if (argc < 2)
 	{
 		std::cerr << "[Error] No filename given!\n";
 		std::cerr << "[Usage] " << argv[0] << " <spimfile>\n";
 		return -1;
 	}
-	*/
+	
 
 	
 	glutInit(&argc, const_cast<char**>(argv));
@@ -494,6 +787,9 @@ int main(int argc, const char** argv)
 	glutPassiveMotionFunc(passiveMotion);
 	glutSpecialFunc(special);
 	
+
+	createRightClickMenu();
+
 	glEnable(GL_DEPTH_TEST);
 	glPointSize(2.f);
 	glEnable(GL_CULL_FACE);
@@ -506,41 +802,24 @@ int main(int argc, const char** argv)
 
 	regoApp = new SpimRegistrationApp(glm::ivec2(1024,768));
 
-#ifdef _WIN32
-	regoApp->setConfigPath("e:/regoApp/");
-#endif
 
 	try
 	{
-		/*
-		regoApp->addPointcloud("S:/datasets/time_varying/Yi Xian's Pumpkin/Pump_20151111.bin");
-		regoApp->addPointcloud("S:/datasets/time_varying/Yi Xian's Pumpkin/Pump_20151112.bin");
-		regoApp->addPointcloud("S:/datasets/time_varying/Yi Xian's Pumpkin/Pump_20151113.bin");
-		regoApp->addPointcloud("S:/datasets/time_varying/Yi Xian's Pumpkin/Pump_20151114.bin");
-		*/
-		/*
-		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_1.tiff", glm::vec3(1.f));
-		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_2.tiff", glm::vec3(1.f));
-		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_3.tiff", glm::vec3(1.f));
-		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_4.tiff", glm::vec3(1.f));
-		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_5.tiff", glm::vec3(1.f));
-		regoApp->addSpimStack("E:/spim/phantom/t1-head/gaussed/phantom_6.tiff", glm::vec3(1.f));
+
+
+		regoApp->loadConfig("./config.cfg");
+
+		for (int i = 1; i < argc; ++i)
+		{
+			regoApp->addSpimStack(argv[i]);
+		}
+
+		regoApp->loadStackTransformations();
 		
-
-		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_1.tiff", "e:/spim/phantom/t1-head/reference/phantom_1.tiff.reference.txt");
-		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_2.tiff", "e:/spim/phantom/t1-head/reference/phantom_2.tiff.reference.txt");
-		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_3.tiff", "e:/spim/phantom/t1-head/reference/phantom_3.tiff.reference.txt");
-		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_4.tiff", "e:/spim/phantom/t1-head/reference/phantom_4.tiff.reference.txt");
-		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_5.tiff", "e:/spim/phantom/t1-head/reference/phantom_5.tiff.reference.txt");
-		regoApp->addPhantom("e:/spim/phantom/t1-head/gaussed/phantom_6.tiff", "e:/spim/phantom/t1-head/reference/phantom_6.tiff.reference.txt");
-		*/
-
-		regoApp->addSpimStack("e:/spim/phantom/t1-head/t1-head.tiff", glm::vec3(1));
 
 		regoApp->centerCamera();
-		regoApp->loadStackTransformations();
-		//regoApp->loadContrastSettings();
-		
+		regoApp->maximizeViews();
+
 		regoApp->reloadShaders();
 
 	}

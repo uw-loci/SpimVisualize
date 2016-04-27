@@ -9,8 +9,9 @@
 #include <glm/gtx/transform2.hpp>
 
 
+#include <GL/glew.h>
 
-InteractionVolume::InteractionVolume() : transform(1.f), enabled(true)
+InteractionVolume::InteractionVolume() : transform(1.f), enabled(true), locked(false)
 {
 }
 
@@ -34,6 +35,8 @@ AABB InteractionVolume::getTransformedBBox() const
 void InteractionVolume::saveTransform(const std::string& filename) const
 {
 	std::ofstream file(filename);
+	if (!file.is_open())
+		throw("Unable to save transform to \"" + filename + "\"");
 
 	if (file.is_open())
 	{
@@ -72,10 +75,16 @@ void InteractionVolume::loadTransform(const std::string& filename)
 	std::cout << "[SpimStack] Read transform: " << transform << " from \"" << filename << "\"\n";
 }
 
-void InteractionVolume::applyTransform(const glm::mat4& t)
+void InteractionVolume::setTransform(const glm::mat4& t)
 {
-	transform = t * transform;
-	inverseTransform = glm::inverse(transform);
+	if (locked)
+	{
+		std::cerr << "[Volume] Interaction volume is locked, not applying transform\n";
+		return;
+	}
+
+	transform = t; 
+	inverseTransform = glm::inverse(t);
 }
 
 void InteractionVolume::setRotation(float angle)
@@ -108,4 +117,30 @@ void InteractionVolume::rotate(float angle)
 void InteractionVolume::scaleUniform(float s)
 {
 	setTransform(glm::scale(glm::vec3(s)) * transform);
+}
+
+void InteractionVolume::drawLocked() const
+{
+	if (!locked)
+		return;
+
+#ifndef NO_GRAPHICS
+	using namespace glm;
+	std::vector<vec3> verts = bbox.getVertices();
+
+	/*
+	for (size_t i = 0; i < verts.size(); ++i)
+		verts[i] = vec3(getTransform() * vec4(verts[i], 1.f));
+	*/
+
+	static const unsigned char indices[] = { 0, 5, 1, 4, 1, 6, 2, 5, 2, 7, 3, 6, 3, 4, 0, 7, 7, 5, 4, 6, 1, 3, 0, 2 };
+
+	//glEnableClientState(GL_VERTEX_ARRAY);
+	glVertexPointer(3, GL_FLOAT, 0, value_ptr(verts[0]));
+	glDrawElements(GL_LINES, 24, GL_UNSIGNED_BYTE, indices);
+
+
+	//glDisableClientState(GL_VERTEX_ARRAY);
+	
+#endif
 }

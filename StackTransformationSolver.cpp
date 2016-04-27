@@ -121,7 +121,9 @@ const IStackTransformationSolver::Solution& UniformSamplingSolver::getCurrentSol
 
 const IStackTransformationSolver::Solution& UniformSamplingSolver::getBestSolution()
 {
-	assert(!solutions.empty());
+	if (solutions.empty())
+		throw std::runtime_error("Solver has no valid solutions!");
+	
 
 	
 	// remove all solutions that do not have a valid id. we can do that through the current solution?
@@ -239,6 +241,71 @@ void RYSolver::createCandidateSolutions(const InteractionVolume* v)
 
 	std::cout << "[RY Solver] Created " << solutions.size() << " candidate solutions.\n";
 }
+
+void RandomRotationSolver::createCandidateSolutions(const InteractionVolume* v)
+{
+	using namespace glm;
+
+	// creates a random point on a sphere
+	// see: http://math.stackexchange.com/questions/114135/how-can-i-pick-a-random-point-on-the-surface-of-a-sphere-with-equal-distribution
+	std::mt19937 rng(time(0));
+	float phi = 2.f * glm::pi<float>() * (float)rng() / rng.max();
+	float theta = acos(2*((float)rng()/rng.max()) - 1.f);
+
+
+	vec3 axis;
+	axis.x = cos(theta) *sin(phi);
+	axis.y = sin(theta)*sin(phi);
+	axis.z = cos(theta);
+
+
+	// try different rotations
+	for (int r = -20; r <= 20; ++r)
+	{
+		float a = radians((float)r / 5.f);
+
+		Solution s;
+		s.id = r;
+		s.score = 0;
+
+		s.matrix = translate(v->getTransform(), v->getBBox().getCentroid());
+		s.matrix = rotate(s.matrix, a, axis);
+		s.matrix = translate(s.matrix, v->getBBox().getCentroid() * -1.f);
+
+		//s.matrix = rotate(a, vec3(0, 1, 0));
+		solutions.push_back(s);
+
+	}
+
+
+}
+
+
+void UniformScaleSolver::createCandidateSolutions(const InteractionVolume* v)
+{
+	for (int i = -20; i <= 20; ++i)
+	{
+
+		// from -0.5 to +0.5
+
+		float factor = 1.f + (float)i / 40.f;
+
+	
+		Solution s;
+		s.id = i;
+		s.score = 0;
+
+		//s.matrix = translate(v->getTransform(), v->getBBox().getCentroid());
+		s.matrix = scale(s.matrix, glm::vec3(factor));
+		//s.matrix = translate(s.matrix, v->getBBox().getCentroid() * -1.f);
+
+		//s.matrix = rotate(a, vec3(0, 1, 0));
+		solutions.push_back(s);
+
+	}
+
+}
+
 
 MultiDimensionalHillClimb::MultiDimensionalHillClimb() : solutionCounter(0)
 {

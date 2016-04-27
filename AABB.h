@@ -33,6 +33,9 @@ struct AABB
 
 	std::vector<glm::vec3> getVertices() const;
 
+	/// scales the bbox around its centroid
+	void scale(const glm::vec3& s);
+
 	void calculate(const std::vector<glm::vec3>& points);
 
 	/// checks if the ray, defined by the origin o and vector v intersects this box

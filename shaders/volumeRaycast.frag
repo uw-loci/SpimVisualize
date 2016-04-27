@@ -11,7 +11,7 @@ struct Volume
 };
 
 #define VOLUMES 2
-#define STEPS 100
+#define STEPS 4000
 
 uniform Volume volume[VOLUMES];
 
@@ -22,7 +22,7 @@ uniform float		maxThreshold;
 
 uniform mat4		inverseMVP;
 
-uniform float		stepLength = 5.0;
+uniform float		stepLength = 2.0;
 
 uniform int  		activeVolume = -1;
 

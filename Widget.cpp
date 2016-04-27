@@ -75,17 +75,16 @@ void IWidget::beginMouseMove(const Viewport* vp, const glm::vec2& m)
 	//std::cout << "[Widget] Begin move " << initialMouseCoords << std::endl;
 }
 
-void IWidget::updateMouseMove(const Viewport* vp, const glm::vec2& m)
+void IWidget::updateMouseMove(const Viewport* vp, const glm::vec2& m, float valueStep)
 {	
 	currentMouseCoords = m;
 
 	if (active && volume)
-		this->applyTransform(vp);
+		this->applyTransform(vp, valueStep);
 
 
 	//std::cout << "[Widget] Update move " << currentMouseCoords << std::endl;
 }
-
 
 void IWidget::endMouseMove(const Viewport* vp, const glm::vec2& m)
 {
@@ -172,7 +171,7 @@ static void drawPyramid()
 
 
 
-void TranslateWidget::applyTransform(const Viewport* vp)
+void TranslateWidget::applyTransform(const Viewport* vp, float valueStep)
 {	
 	vec3 delta = vp->camera->calculatePlanarMovement(currentMouseCoords - initialMouseCoords);
 
@@ -180,6 +179,9 @@ void TranslateWidget::applyTransform(const Viewport* vp)
 	float scale = length(vp->camera->getPosition() - volume->getTransformedBBox().getCentroid());
 	//std::cout << "[Debug] Scale: " << scale << std::endl;;
 	
+
+	if (valueStep > 0.f)
+		scale = ceil(scale / valueStep) * valueStep;
 
 	delta *= scale;
 	
@@ -201,11 +203,10 @@ void TranslateWidget::applyTransform(const Viewport* vp)
 	}
 
 
-	std::cout << "[Widget] Translate: " << d << ", scale: " << scale << std::endl;
+	//std::cout << "[Widget] Translate: " << d << ", scale: " << scale << std::endl;
 
 	mat4 T = translate(d) * initialVolumeMatrix;
 	volume->setTransform(T);
-
 }
 
 
@@ -295,15 +296,22 @@ void TranslateWidget::draw(const Viewport* vp) const
 }
 
 
-void RotateWidget::applyTransform(const Viewport* vp)
+void RotateWidget::applyTransform(const Viewport* vp, float valueStep)
 {
 	vec2 a = initialMouseCoords - vec2(0.5f);
 	vec2 b = currentMouseCoords - vec2(0.5f);
 
 	//float delta = acos(dot(a, b) / (length(b)*length(a)));
 	float delta = atan2(a.y, a.x) - atan2(b.y, b.x);
-	delta *= -1;
-	std::cout << "[Widget] Angle: " << delta <<  std::endl;
+	
+	//std::cout << "[Widget] Angle: " << delta <<  std::endl;
+
+	float step = radians(valueStep);
+	if (step > 0.f)
+		delta = ceil(delta / step) * step;
+
+	
+	//delta *= -1;
 
 	//float delta = moveScale * (currentMouseCoords - initialMouseCoords).x;
 
@@ -371,14 +379,20 @@ void RotateWidget::draw(const Viewport* vp) const
 }
 
 
-void ScaleWidget::applyTransform(const Viewport* vp)
+void ScaleWidget::applyTransform(const Viewport* vp, float valueStep)
 {
 	vec2 a = initialMouseCoords - vec2(0.5f);
 	vec2 b = currentMouseCoords - vec2(0.5f);
 
 	float delta = length(b) / length(a);
 
-	std::cout << "[Widget] Scale: " << delta << std::endl;
+	if (valueStep > 0)
+	{
+		float step = valueStep / 100;
+		delta = ceil(delta / step) * step;
+	}
+
+	//std::cout << "[Widget] Scale: " << delta << std::endl;
 
 	mat4 I = initialVolumeMatrix;
 	mat4 T = translate(volume->getBBox().getCentroid());

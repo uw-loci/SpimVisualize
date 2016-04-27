@@ -7,6 +7,7 @@
 #include <boost/utility.hpp>
 
 #include "AABB.h"
+#include "Config.h"
 #include "Ray.h"
 #include "StackRegistration.h"
 #include "TinyStats.h"
@@ -36,9 +37,12 @@ public:
 
 
 	void addPointcloud(const std::string& filename);
-	void addPhantom(const std::string& stackFilename, const std::string& referenceTransform, bool fijiTransform = false);
+	void addPhantom(const std::string& stackFilename, const std::string& referenceTransform, const glm::vec3& voxelDimensions, bool fijiTransform = false);
 
 	//void loadPrevSolutionSpace(const std::string& filename);
+
+	// presentation mode -- rotate camera ... 
+	void toggleRotateCamera();
 
 	void reloadShaders();
 
@@ -48,13 +52,19 @@ public:
 	void resize(const glm::ivec2& newSize);
 
 	//inline size_t getStacksCount() const { return stacks.size(); }
-	void toggleSelectStack(int n);
-	void toggleStack(int n);
-	inline void toggleCurrentStack() { toggleStack(currentVolume); }
-	void toggleAllStacks();
+	void toggleSelectVolume(int n);
+	void toggleVolume(int n);
+	inline void toggleCurrentVolume() { toggleVolume(currentVolume); }
+	void toggleAllVolumes();
+	void deselectAll();
+	void toggleVolumeLock(int n);
+	inline void toggleCurrentVolumeLock() {toggleVolumeLock(currentVolume);}
+	void unlockAllVolumes();
+
 
 	void startStackMove(const glm::ivec2& mouse);
 	void updateStackMove(const glm::ivec2& mouse);
+	void updateStackMove(const glm::ivec2& mouse, float valueStep);
 	void endStackMove(const glm::ivec2& mouse);
 
 	void setWidgetMode(const std::string& mode);
@@ -63,7 +73,7 @@ public:
 	/// Undos the last transform applied. This also includes movements of a stack
 	void undoLastTransform();
 	void moveCurrentStack(const glm::vec2& delta);
-	void rotateCurrentStack(float rotY);
+	void rotateCurrentVolume(float rotY);
 
 	void setWidgetType(const std::string& control);
 
@@ -83,11 +93,20 @@ public:
 	void applyGaussFilterToCurrentStack();
 
 
+	/// \name Pointclods
+	/// \{
+
+	void bakeSelectedTransform();
+	void saveCurrentPointcloud();
+
+	/// \}
 
 	/// \name Phantom creation
 	/// \{ 
 
-	void createEmptyRandomStack(const glm::ivec3& resolution, const glm::vec3& voxelDimensions = glm::vec3(1.f));
+
+	inline void createEmptyRandomStack() { createEmptyRandomStack(config.resampleResolution, config.defaultVoxelSize); }
+	void createEmptyRandomStack(const glm::ivec3& resolution, const glm::vec3& voxelDimensions);
 
 	void startSampleStack(int stack);
 	void clearSampleStack();
@@ -155,14 +174,11 @@ public:
 
 	inline void setCameraMoving(bool m) { cameraMoving = m; }
 
-
+	
 	void saveStackTransformations() const;
 	void loadStackTransformations();
 	void clearStackTransformations();
-
-	void saveContrastSettings() const;
-	void loadContrastSettings();
-
+	
 	inline void toggleGrid() { drawGrid = !drawGrid; }
 	inline void toggleBboxes() { drawBboxes = !drawBboxes; }
 	void toggleSlices();
@@ -173,12 +189,14 @@ public:
 
 	void alignPhantoms();
 
-
-	inline void setConfigPath(const std::string& p) { configPath = p; }
+	inline void loadConfig(const std::string& file) { config.load(file); }
+	inline void saveConfig(const std::string& file) const { config.save(file); }
+	inline void reloadConfig() { config.reload(); reloadVolumeShader();  }
 
 private:
-	std::string				configPath;
-	
+	Config					config;
+
+
 	ILayout*				layout;
 	std::map<std::string, ILayout*>	prevLayouts;
 
@@ -187,10 +205,7 @@ private:
 	std::vector<SpimStack*>	stacks;
 
 	AABB					globalBBox;
-	// global contrast settings
-	Threshold				globalThreshold;
-
-
+	
 	// test interaction
 	std::vector<Ray>		rays;
 
@@ -201,6 +216,8 @@ private:
 	
 	std::vector<SimplePointcloud*>	pointclouds;
 
+
+	bool					cameraAutoRotate;
 	bool					cameraMoving;
 
 
@@ -226,6 +243,7 @@ private:
 	Shader*					drawQuad;
 	Shader*					volumeDifferenceShader;		
 	Shader*					drawPosition;
+	Shader*					pointSpriteShader;
 
 	// for contrast mapping
 	Shader*					tonemapper;
@@ -279,7 +297,8 @@ private:
 	void initializeRayTargets(const Viewport* vp);
 
 	void drawPointclouds(const Viewport* vp);
-	
+	void drawPointSpritePointclouds(const Viewport* vp);
+
 	void drawRays(const Viewport* vp);
 	void drawSolutionParameterSpace(const Viewport* vp) const;
 
@@ -319,6 +338,10 @@ private:
 
 
 
+	unsigned int	pointSpriteTexture;
+	void createPointSpriteTexture();
+
+
 	// this one will override runAlignment and always calculate the score 
 	bool				calculateScore;
 	TinyHistory<double>	scoreHistory;
@@ -333,7 +356,7 @@ private:
 	static glm::vec3 getRandomColor(unsigned int n);
 
 	inline bool currentVolumeValid() const { return currentVolume > -1 && currentVolume < (int)interactionVolumes.size(); }
-	
+
 	void saveVolumeTransform(unsigned int n);
 	void addInteractionVolume(InteractionVolume* v);
 	

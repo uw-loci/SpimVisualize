@@ -9,7 +9,8 @@ class InteractionVolume : boost::noncopyable
 {
 public:
 	bool			enabled;
-	
+	bool			locked;
+
 	InteractionVolume();
 	virtual ~InteractionVolume() {};
 
@@ -17,11 +18,14 @@ public:
 	virtual AABB getTransformedBBox() const;
 
 	inline void toggle() { enabled = !enabled; }
+	inline void toggleLock() { locked = !locked; }
+
+	virtual void drawLocked() const;
 
 
 	virtual void saveTransform(const std::string& filename) const;
 	virtual void loadTransform(const std::string& filename);
-	virtual void applyTransform(const glm::mat4& t);
+	inline void applyTransform(const glm::mat4& t) { setTransform(t * transform); }
 
 	/// sets the rotation around its center in degrees
 	virtual void setRotation(float angle);
@@ -40,8 +44,9 @@ public:
 
 	inline const glm::mat4& getTransform() const { return transform; }
 	inline const glm::mat4& getInverseTransform() const { return inverseTransform; }
-	inline void setTransform(const glm::mat4& t) { transform = t; inverseTransform = glm::inverse(t); }
 
+	void setTransform(const glm::mat4& t);
+	
 	inline bool isInsideVolume(const glm::vec4& worldSpacePt) const { return bbox.isInside(glm::vec3(inverseTransform * worldSpacePt)); }
 	inline bool isInsideVolume(const glm::vec3& worldSpacePt) const { return isInsideVolume(glm::vec4(worldSpacePt, 1.f)); }
 

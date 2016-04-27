@@ -340,3 +340,13 @@ float AABB::getBoundingSphereRadius() const
 	maxRad = sqrtf(maxRad);
 	return maxRad;
 }
+
+void AABB::scale(const glm::vec3& s)
+{
+	vec3 d = getSpan() * s;
+	d /= 2;
+
+	min = getCentroid() - d;
+	max = getCentroid() + d;
+
+}

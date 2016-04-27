@@ -18,6 +18,9 @@ struct Threshold
 
 	inline double getSpread() const { return max - min; }
 	inline double getRelativeValue(double v) const { return (v - min) / (max - min); }
+
+
+	inline void set(double Min, double Max) { max = Max; min = Min; mean = (max - min) / 2; stdDeviation = mean - min; }
 };
 
 class ReferencePoints : boost::noncopyable
