@@ -2,6 +2,7 @@ To build, run cmake on this directory. The project requires the following
 libraries installed:
 glut (or freeglut)
 glm
+glew
 FreeImage
 boost
 

@@ -58,7 +58,9 @@ enum MenuItem
 	MENU_CREATE_PHANTOM,
 	MENU_SAMPLE_PHANTOM,
 
-	MENU_MISC_RELOAD_CONFIG
+	MENU_MISC_RELOAD_CONFIG,
+	MENU_MISC_RELOAD_SHADERS,
+	MENU_MISC_SUBSAMPLE_ALL
 	
 };
 
@@ -213,7 +215,14 @@ static void menu(int item)
 	case MENU_MISC_RELOAD_CONFIG:
 		regoApp->reloadConfig();
 		break;
-		
+	case MENU_MISC_RELOAD_SHADERS:
+		regoApp->reloadShaders();
+		break;
+	
+	case MENU_MISC_SUBSAMPLE_ALL:
+		regoApp->subsampleAllStacks();
+		break;
+
 	default:
 
 		std::cout << "[Debug] " << (MenuItem)item << " is not a valid menu entry.\n";
@@ -283,8 +292,9 @@ static void createRightClickMenu()
 	glutAddMenuEntry("Save pointcloud", MENU_POINTCLOUD_SAVE_CURRENT);
 
 	int misc = glutCreateMenu(menu);
-	glutAddMenuEntry("Reload config     [C]", MENU_MISC_RELOAD_CONFIG);
-
+	glutAddMenuEntry("Reload config         [c]", MENU_MISC_RELOAD_CONFIG);
+	glutAddMenuEntry("Reload shaders [Shift][s]", MENU_MISC_RELOAD_SHADERS);
+	glutAddMenuEntry("Subsample all stacks  [u]", MENU_MISC_SUBSAMPLE_ALL);
 
 
 	glutCreateMenu(menu);
@@ -293,7 +303,7 @@ static void createRightClickMenu()
 	glutAddSubMenu("Layout", layout);
 	glutAddSubMenu("View", view);
 	glutAddSubMenu("Solver", solver);
-	glutAddSubMenu("Point clouds", pointclouds);
+	//glutAddSubMenu("Point clouds", pointclouds);
 	glutAddSubMenu("Misc", misc);
 
 	glutAttachMenu(GLUT_RIGHT_BUTTON);
