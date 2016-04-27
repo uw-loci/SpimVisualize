@@ -1,0 +1,10 @@
+To build, run cmake on this directory. The project requires the following 
+libraries installed:
+glut (or freeglut)
+glm
+FreeImage
+boost
+
+Once built, launch viewer and give it TIFF spim stacks as command line 
+parameters (drag+drop onto the .exe works in windows).
+
