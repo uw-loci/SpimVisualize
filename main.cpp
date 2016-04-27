@@ -749,7 +749,8 @@ static void cleanup()
 
 	try
 	{
-		regoApp->saveStackTransformations();
+		if (regoApp)
+			regoApp->saveStackTransformations();
 	}
 	catch (std::runtime_error& e)
 	{
@@ -757,6 +758,14 @@ static void cleanup()
 	}
 
 	delete regoApp;
+
+
+
+#ifdef _WIN32
+	//system("pause");
+#endif
+
+
 }
 
 int main(int argc, const char** argv)
@@ -800,13 +809,13 @@ int main(int argc, const char** argv)
 	glClampColor(GL_CLAMP_VERTEX_COLOR, GL_FALSE);
 	glClampColor(GL_CLAMP_FRAGMENT_COLOR, GL_FALSE);
 
-	regoApp = new SpimRegistrationApp(glm::ivec2(1024,768));
+
+	atexit(cleanup);
 
 
 	try
 	{
-
-
+		regoApp = new SpimRegistrationApp(glm::ivec2(1024, 768));
 		regoApp->loadConfig("./config.cfg");
 
 		for (int i = 1; i < argc; ++i)
@@ -822,24 +831,20 @@ int main(int argc, const char** argv)
 
 		regoApp->reloadShaders();
 
+		glutMainLoop();
+
 	}
 	catch (const std::runtime_error& e)
 	{
 		std::cerr << "[Error] " << e.what() << std::endl;
+		exit(1);
+		
 	}
 	catch (const std::string& e)
 	{
 		std::cerr << "[Error] " << e << std::endl;
+		exit(2);
 	}
-
-	atexit(cleanup);
-
-	glutMainLoop();
-
-#ifdef _WIN32
-	system("pause");
-#endif
-
 
 	return 0;
 }

@@ -115,28 +115,28 @@ void SpimRegistrationApp::reloadShaders()
 	
 
 	delete pointShader;
-	pointShader = new Shader(config.shaderPath + "points2.vert", config.shaderPath + "points2.frag");
+	pointShader = new Shader("shaders/points2.vert", "shaders/points2.frag");
 
 	delete sliceShader;
-	sliceShader = new Shader(config.shaderPath + "slices.vert", config.shaderPath + "slices.frag");
+	sliceShader = new Shader("shaders/slices.vert", "shaders/slices.frag");
 
 	reloadVolumeShader();
 
 	delete drawQuad;
-	drawQuad = new Shader(config.shaderPath + "drawQuad.vert", config.shaderPath + "drawQuad.frag");
+	drawQuad = new Shader("shaders/drawQuad.vert", "shaders/drawQuad.frag");
 
 	
 	delete tonemapper;
-	tonemapper = new Shader(config.shaderPath + "drawQuad.vert", config.shaderPath + "tonemapper.frag", defines);
+	tonemapper = new Shader("shaders/drawQuad.vert", "shaders/tonemapper.frag", defines);
 
 	delete drawPosition;
-	drawPosition = new Shader(config.shaderPath + "drawPosition.vert", config.shaderPath + "drawPosition.frag");
+	drawPosition = new Shader("shaders/drawPosition.vert", "shaders/drawPosition.frag");
 
 	delete gpuStackSampler;
-	gpuStackSampler = new Shader(config.shaderPath + "samplePlane.vert", config.shaderPath + "samplePlane.frag");
+	gpuStackSampler = new Shader("shaders/samplePlane.vert", "shaders/samplePlane.frag");
 
 	delete pointSpriteShader;
-	pointSpriteShader = new Shader(config.shaderPath + "pointsprite.vert", config.shaderPath + "pointsprite.frag");
+	pointSpriteShader = new Shader("shaders/pointsprite.vert", "shaders/pointsprite.frag");
 
 }
 
@@ -149,13 +149,13 @@ void SpimRegistrationApp::reloadVolumeShader()
 	defines.push_back(std::make_pair("STEPS", boost::lexical_cast<std::string>(config.raytraceSteps)));
 
 	delete volumeShader;
-	volumeShader = new Shader(config.shaderPath + "volume2.vert", config.shaderPath + "volume2.frag", defines);
+	volumeShader = new Shader("shaders/volume2.vert", "shaders/volume2.frag", defines);
 
 	delete volumeRaycaster;
-	volumeRaycaster = new Shader(config.shaderPath + "volumeRaycast.vert", config.shaderPath + "volumeRaycast.frag", defines);
+	volumeRaycaster = new Shader("shaders/volumeRaycast.vert", "shaders/volumeRaycast.frag", defines);
 
 	delete volumeDifferenceShader;
-	volumeDifferenceShader = new Shader(config.shaderPath + "volumeDist.vert", config.shaderPath + "volumeDist.frag", defines);
+	volumeDifferenceShader = new Shader("shaders/volumeDist.vert", "shaders/volumeDist.frag", defines);
 
 }
 
@@ -2644,10 +2644,17 @@ void SpimRegistrationApp::setWidgetMode(const std::string& mode)
 		controlWidget->setMode(mode);
 }
 
+void SpimRegistrationApp::createEmptyRandomStack()
+{
+	createEmptyRandomStack(config.resampleResolution, config.defaultVoxelSize);
+}
+
 void SpimRegistrationApp::createEmptyRandomStack(const glm::ivec3& resolution, const glm::vec3& voxelDimensions)
 {
 	assert(!stacks.empty());
 	using namespace glm;
+
+	std::cout << "[Resample] Creating empty stack with res of " << resolution << " and voxel dimensions of " << voxelDimensions << std::endl;
 
 	auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
 	auto rand = std::bind(std::uniform_real_distribution<float>(-1.f, 1.f), std::mt19937(seed));
@@ -2675,7 +2682,7 @@ void SpimRegistrationApp::createEmptyRandomStack(const glm::ivec3& resolution, c
 	float a = rand() * 90.f - 45.f;
 	stack->setRotation(a);
 
-	std::cout << "[App] Created random stack with dT " << delta << " and R=" << a << std::endl;
+	std::cout << "[Resample] Created random stack with dT " << delta << " and R=" << a << std::endl;
 
 
 	

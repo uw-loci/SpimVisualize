@@ -12,8 +12,6 @@ struct Config
 	glm::vec3		defaultVoxelSize;
 	glm::ivec3		resampleResolution;
 	
-	std::string		shaderPath;
-
 	unsigned int	raytraceSteps;
 	float			raytraceDelta;
 	

@@ -105,7 +105,7 @@ public:
 	/// \{ 
 
 
-	inline void createEmptyRandomStack() { createEmptyRandomStack(config.resampleResolution, config.defaultVoxelSize); }
+	void createEmptyRandomStack();
 	void createEmptyRandomStack(const glm::ivec3& resolution, const glm::vec3& voxelDimensions);
 
 	void startSampleStack(int stack);

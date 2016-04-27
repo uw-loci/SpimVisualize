@@ -3,12 +3,13 @@
 #include <iostream>
 #include <fstream>
 
+#include <glm/gtx/io.hpp>
+
 using namespace std;
 
 void Config::setDefaults()
 {
 	configFile = "./config.cfg";
-	shaderPath = "./shaders/";
 
 	defaultVoxelSize = glm::vec3(1, 1, 1);
 	raytraceSteps = 2000;
@@ -27,6 +28,7 @@ void Config::load(const string& filename)
 		throw runtime_error("Unable to open file \"" + filename + "\"!");
 
 
+
 	cout << "[Config] Loading config file \"" << filename << "\" ... \n";
 
 	configFile = filename;
@@ -38,23 +40,37 @@ void Config::load(const string& filename)
 		if (temp[0] == '#')
 			continue;
 
-		if (temp == "shaderPath")
-			file >> shaderPath;
 		if (temp == "voxelSize")
-			file >> defaultVoxelSize.x >> defaultVoxelSize.y >> defaultVoxelSize.z; 
+		{
+			file >> defaultVoxelSize.x >> defaultVoxelSize.y >> defaultVoxelSize.z;
+			cout << "[Config] Default voxel size: " << defaultVoxelSize << endl;
+		}
 		if (temp == "raytraceSteps")
+		{
 			file >> raytraceSteps;
+			cout << "[Config] Raytrace steps: " << raytraceSteps << endl;
+		}
+
 		if (temp == "raytraceDelta")
+		{
 			file >> raytraceDelta;
-
+			cout << "[Config] Ray trace delta: " << raytraceDelta << endl;
+		}
 		if (temp == "minThreshold")
+		{
 			file >> threshold.min;
+			cout << "[Config] Threshold.min: " << threshold.min << endl;
+		}
 		if (temp == "maxThreshold")
+		{
 			file >> threshold.max;
-
+			cout << "[Config] Threshold.max: " << threshold.max << endl;
+		}
 		if (temp == "resampleResolution")
+		{
 			file >> resampleResolution.x >> resampleResolution.y >> resampleResolution.z;
-
+			cout << "[Config] Resample resolution: " << resampleResolution << endl;
+		}
 	}
 
 
@@ -67,10 +83,6 @@ void Config::save(const string& filename) const
 	ofstream file(filename);
 	if (!file.is_open())
 		throw runtime_error("Unable to open file \"" + filename + "\"!");
-
-
-	file << "# general settings\n";
-	file << "shaderPath " << shaderPath << endl;
 
 	file << "# ray trace settings\n";
 	file << "voxelSize " << defaultVoxelSize.x << " " << defaultVoxelSize.y << " " << defaultVoxelSize.z << endl;
