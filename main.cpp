@@ -403,11 +403,14 @@ static void keyboard(unsigned char key, int x, int y)
 	
 	if (key == 'c')
 	{
+		regoApp->reloadConfig();
+
+	/*
 		if (specialKey[Alt])
 			regoApp->contrastEditorResetThresholds();
 		else
 			regoApp->contrastEditorApplyThresholds();
-
+	*/
 	}
 
 	if (key == ';')
