@@ -45,6 +45,7 @@ public:
 	void toggleRotateCamera();
 
 	void reloadShaders();
+	void reloadConfig();
 
 	void update(float dt);
 	void draw();
@@ -191,7 +192,6 @@ public:
 
 	inline void loadConfig(const std::string& file) { config.load(file); }
 	inline void saveConfig(const std::string& file) const { config.save(file); }
-	inline void reloadConfig() { config.reload(); reloadVolumeShader();  }
 
 private:
 	Config					config;

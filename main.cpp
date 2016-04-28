@@ -354,9 +354,6 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == 'b')
 		regoApp->toggleBboxes();
 	
-	if (key == 'B')
-		regoApp->createFakeBeads(2000);
-
 	if (key == 'p')
 		regoApp->togglePhantoms();
 	if (key == 'P')
@@ -464,11 +461,7 @@ static void keyboard(unsigned char key, int x, int y)
 
 	if (key == 'u')
 		regoApp->subsampleAllStacks();
-
-	if (key == 'Y')
-		//regoApp->clearRays();
-		regoApp->reloadConfig();
-	
+		
 
 	if (key == '1')
 		regoApp->toggleSelectVolume(0);

@@ -418,7 +418,11 @@ void SpimRegistrationApp::loadStackTransformations()
 
 void SpimRegistrationApp::addSpimStack(const std::string& filename)
 {
-	addSpimStack(SpimStack::load(filename));
+
+	SpimStack* stack = SpimStack::load(filename);
+	stack->setVoxelDimensions(config.defaultVoxelSize);
+	addSpimStack(stack);
+
 }
 
 void SpimRegistrationApp::addSpimStack(SpimStack* stack)
@@ -2689,6 +2693,21 @@ void SpimRegistrationApp::createEmptyRandomStack(const glm::ivec3& resolution, c
 	reloadVolumeShader();
 }
 
+void SpimRegistrationApp::reloadConfig()
+{
+	config.reload(); 
+	reloadVolumeShader(); 
+
+	/*
+	// apply new default scale to all volumes?
+	for (size_t i = 0; i < stacks.size(); ++i)
+	{
+		stacks[i]->setVoxelDimensions(config.defaultVoxelSize);
+		stacks[i]->update();
+	}
+	*/
+
+}
 
 
 void SpimRegistrationApp::drawStackSamples() const
