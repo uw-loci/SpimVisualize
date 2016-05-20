@@ -39,14 +39,14 @@ public:
 	virtual void setContent(const glm::ivec3& resolution, const void* data) = 0;
 	
 	// sets a single sample at a specific location
-	inline void setSample(const glm::ivec3& pos, double value) { setSample(getIndex(pos.x, pos.y, pos.z), value);	}
-	virtual void setSample(const size_t index, double value) = 0;
+	inline void setSample(const glm::ivec3& pos, float value) { setSample(getIndex(pos.x, pos.y, pos.z), value);	}
+	virtual void setSample(const size_t index, float value) = 0;
 
-	inline double getSample(const glm::vec3& worldCoords) const { return getSample(getStackVoxelCoords(worldCoords)); }
-	double getSample(const glm::ivec3& stackCoords) const;
+	inline float getSample(const glm::vec3& worldCoords) const { return getSample(getStackVoxelCoords(worldCoords)); }
+	float getSample(const glm::ivec3& stackCoords) const;
 	
 	// set all samples of a single z plane
-	void setPlaneSamples(const std::vector<double>& values, size_t zplane);
+	void setPlaneSamples(const std::vector<float>& values, size_t zplane);
 
 	// updates the internal stats and the texture
 	virtual void update();
@@ -96,8 +96,8 @@ public:
 	/// \{
 
 	
-	virtual void addSaltPepperNoise(double satl, double pepper, double amount);
-	virtual void applyGaussianBlur(double sigma, int radius);
+	virtual void addSaltPepperNoise(float satl, float pepper, float amount);
+	virtual void applyGaussianBlur(float sigma, int radius);
 	virtual void applyMedianFilter(const glm::ivec3& window);
 
 
@@ -125,18 +125,18 @@ protected:
 	// 2 display lists: 0->width and width->0 for quick front-to-back rendering
 	mutable unsigned int	volumeList[2];
 	
-	double					minVal, maxVal;
+	float					minVal, maxVal;
 	
 
 	virtual void updateStats();
 	virtual void updateTexture() = 0;
 
 
-	virtual double getValue(size_t index) const = 0;
-	virtual double getRelativeValue(size_t index) const = 0;
+	virtual float getValue(size_t index) const = 0;
+	virtual float getRelativeValue(size_t index) const = 0;
 	
-	virtual void getValues(double* data) const;
-	virtual void setValues(const double* data);
+	virtual void getValues(float* data) const;
+	virtual void setValues(const float* data);
 
 	virtual void loadImage(const std::string& filename) = 0;
 	virtual void loadBinary(const std::string& filename, const glm::ivec3& resolution) = 0;
@@ -169,7 +169,7 @@ public:
 
 	virtual void subsample(bool updateTexture = true);
 	virtual void setContent(const glm::ivec3& resolution, const void* data);
-	virtual void setSample(const size_t index, double value);
+	virtual void setSample(const size_t index, float value);
 
 	virtual size_t getBytesPerVoxel() const { return 2; }
 
@@ -187,13 +187,13 @@ private:
 	virtual void saveBinary(const std::string& filename);
 	virtual void saveImage(const std::string& filename);
 	
-	inline double getValue(size_t index) const
+	inline float getValue(size_t index) const
 	{
 		assert(index < width*height*depth);
-		return (double)volume[index];
+		return (float)volume[index];
 	}
 
-	inline double getRelativeValue(size_t index) const
+	inline float getRelativeValue(size_t index) const
 	{
 		return getValue(index) / std::numeric_limits<unsigned short>::max();
 	}
@@ -207,7 +207,7 @@ public:
 
 	virtual void subsample(bool updateTexture = true);
 	virtual void setContent(const glm::ivec3& resolution, const void* data);
-	virtual void setSample(const size_t index, double value);
+	virtual void setSample(const size_t index, float value);
 
 	virtual size_t getBytesPerVoxel() const { return 1; }
 
@@ -224,13 +224,13 @@ private:
 	virtual void saveBinary(const std::string& filename);
 	virtual void saveImage(const std::string& filename);
 
-	inline double getValue(size_t index) const
+	inline float getValue(size_t index) const
 	{
 		//assert(index < width*heigth*depth);
 		return (float)volume[index];
 	}
 
-	inline double getRelativeValue(size_t index) const
+	inline float getRelativeValue(size_t index) const
 	{
 		return getValue(index) / 255;
 	}

@@ -2797,7 +2797,7 @@ void SpimRegistrationApp::addStackSamples()
 
 
 	// set the sample
-	std::vector<double> samples(sliceSamples.size());
+	std::vector<float> samples(sliceSamples.size());
 	for (size_t i = 0; i < samples.size(); ++i)
 		samples[i] = sliceSamples[i].a;
 
@@ -2887,7 +2887,7 @@ void SpimRegistrationApp::addMultiStackSamples()
 
 
 	// set the sample
-	std::vector<double> samples(sliceSamples.size());
+	std::vector<float> samples(sliceSamples.size());
 	for (size_t i = 0; i < samples.size(); ++i)
 		samples[i] = sliceSamples[i].a;
 

@@ -679,7 +679,7 @@ vector<vec4> SpimStack::extractTransformedPoints(const SpimStack* clip, const Th
 			for (unsigned int y = 0; y < height; ++y)
 			{
 			
-				double v = getValue(getIndex(x, y, z));
+				float v = getValue(getIndex(x, y, z));
 				if (v >= t.min && v <= t.max)
 				{
 
@@ -936,14 +936,13 @@ Threshold SpimStack::getLimits() const
 	Threshold t;
 
 	t.max = 0;
-	t.min = numeric_limits<double>::max();
+	t.min = numeric_limits<float>::max();
 	t.mean = 0;
 
 	const size_t count = width*height*depth;
 
 	for (size_t i = 0; i < count; ++i)
 	{
-		//const unsigned short& v = volume[i];
 		const double v = getValue(i);
 		t.max = std::max(t.max, v);
 		t.min = std::min(t.min, v);
@@ -953,15 +952,15 @@ Threshold SpimStack::getLimits() const
 
 	t.mean /= count;
 
-	double variance = 0;
+	float variance = 0;
 	for (size_t i = 0; i < count; ++i)
 	{
-		double v = (double)getValue(i);
+		float v = (float)getValue(i);
 		variance = variance + (v - t.mean)*(v - t.mean);
 	}
 	
 	variance /= count;
-	t.stdDeviation = ::sqrt((double)variance);
+	t.stdDeviation = ::sqrt((float)variance);
 
 	return std::move(t);
 }
@@ -1041,12 +1040,12 @@ vector<size_t> SpimStack::calculateHistogram(const Threshold& t) const
 	
 	
 	vector<size_t> histogram(buckets, 0);
-	const double binWidth = t.getSpread() / buckets;
+	const float binWidth = t.getSpread() / buckets;
 		
 	size_t valid = 0;
 	for (size_t i = 0; i < getVoxelCount(); ++i)
 	{
-		double v = getValue(i);
+		float v = getValue(i);
 
 		if (v >= t.min && v <= t.max)
 		{
@@ -1223,7 +1222,7 @@ void SpimStack::updateStats()
 	minVal = std::numeric_limits<float>::max();
 	for (size_t i = 0; i < width*height*depth; ++i)
 	{
-		double val = getValue(i);
+		float val = getValue(i);
 		maxVal = std::max(maxVal, val);
 		minVal = std::min(minVal, val);
 	}
@@ -1237,9 +1236,9 @@ void SpimStack::updateStats()
 }
 
 
-double SpimStack::getSample(const glm::ivec3& stackCoords) const
+float SpimStack::getSample(const glm::ivec3& stackCoords) const
 {
-	double result = 0.f;
+	float result = 0.f;
 
 	// clamp stack coords
 	if (stackCoords.x >= 0 && stackCoords.x < (int)width &&
@@ -1254,7 +1253,7 @@ double SpimStack::getSample(const glm::ivec3& stackCoords) const
 }
 
 
-void SpimStack::setPlaneSamples(const std::vector<double>& values, size_t zplane)
+void SpimStack::setPlaneSamples(const std::vector<float>& values, size_t zplane)
 {
 	if (zplane >= depth)
 		throw std::runtime_error("[Stack] Plane " + std::to_string(zplane) + " is invalid.");
@@ -1272,13 +1271,13 @@ void SpimStack::setPlaneSamples(const std::vector<double>& values, size_t zplane
 }
 
 
-void SpimStack::getValues(double* data) const
+void SpimStack::getValues(float* data) const
 {
 	for (size_t i = 0; i < getVoxelCount(); ++i)
 		data[i] = getValue(i);
 }
 
-void SpimStack::setValues(const double* data)
+void SpimStack::setValues(const float* data)
 {	
 	for (size_t i = 0; i < getVoxelCount(); ++i)
 		this->setSample(i, data[i]);
@@ -1287,7 +1286,7 @@ void SpimStack::setValues(const double* data)
 }
 
 
-void SpimStack::addSaltPepperNoise(double salt, double pepper, double amount)
+void SpimStack::addSaltPepperNoise(float salt, float pepper, float amount)
 {
 	assert(amount > 0);
 	assert(amount < 1);
@@ -1317,28 +1316,28 @@ void SpimStack::addSaltPepperNoise(double salt, double pepper, double amount)
 
 }
 
-static inline double gauss3D(double  sigma, const glm::vec3& coord)
+static inline float gauss3D(float  sigma, const glm::vec3& coord)
 {
 	// 3D gaussian function. see http://math.stackexchange.com/questions/434629/3-d-generalization-of-the-gaussian-point-spread-function
-	const double N = 1.0 / sqrt(8.0 * pow(sigma, 6)*pow(std::_Pi, 3));
-	const double e = pow(sigma, 3)* pow(std::_Pi * 2, 1.5);
+	const float N = 1.0 / sqrt(8.0 * pow(sigma, 6)*pow(std::_Pi, 3));
+	const float e = pow(sigma, 3)* pow(std::_Pi * 2, 1.5);
 
 	return N * exp(-dot(coord, coord) / e);
 }
 
 
-void SpimStack::applyGaussianBlur(double sigma, int radius)
+void SpimStack::applyGaussianBlur(float sigma, int radius)
 {
 	std::cout << "[Stack] Allocating temp array for filtering ... \n";
-	double* temp = new double[getVoxelCount()];
+	float* temp = new float[getVoxelCount()];
 
 
 
 	std::cout << "[Stack] Creating filter mask ... ";
-	vector<double> mask((size_t)pow(radius*2+1,3));
+	vector<float> mask((size_t)pow(radius*2+1,3));
 
-	double minVal = gauss3D(sigma, vec3((float)-radius));
-	double maskSum = 0;
+	float minVal = gauss3D(sigma, vec3((float)-radius));
+	float maskSum = 0;
 
 	for (int x = -radius; x <= radius; ++x)
 		for (int y = -radius; y <= radius; ++y)
@@ -1363,7 +1362,7 @@ void SpimStack::applyGaussianBlur(double sigma, int radius)
 				ivec3 center(x, y, z);
 				
 
-				double sum = 0;
+				float sum = 0;
 
 				// multiply the mask with the surrounding voxel neighbourhood
 #pragma omp parallel for shared (sum)
@@ -1376,8 +1375,8 @@ void SpimStack::applyGaussianBlur(double sigma, int radius)
 							ivec3 c = center + ivec3(i, j, k);
 							c = clamp(c, ivec3(0), ivec3(width, height, depth) - ivec3(1));
 
-							double val = getSample(c);
-							double g = gauss3D(sigma, vec3(x, y, z)) / minVal;
+							float val = getSample(c);
+							float g = gauss3D(sigma, vec3(x, y, z)) / minVal;
 
 							val *= g;
 
@@ -1409,7 +1408,7 @@ void SpimStack::applyGaussianBlur(double sigma, int radius)
 void SpimStack::applyMedianFilter(const glm::ivec3& winSize)
 {
 	std::cout << "[Stack] Allocating temp array for filtering ... \n";
-	double* temp = new double[getVoxelCount()];
+	float* temp = new float[getVoxelCount()];
 
 	std::cout << "[Stack] Running filter, be patient ( O(n^6) ) ";
 
@@ -1427,7 +1426,7 @@ void SpimStack::applyMedianFilter(const glm::ivec3& winSize)
 
 
 				ivec3 center(x, y, z);
-				TinyHistory<double> window;
+				TinyHistory<float> window;
 
 
 				// ouch ... O(n^6) I am weeping inside but also too lazy to optimize
@@ -1695,7 +1694,7 @@ void SpimStackU16::setContent(const glm::ivec3& res, const void* data)
 }
 
 
-void SpimStackU16::setSample(size_t index, double value)
+void SpimStackU16::setSample(size_t index, float value)
 {
 	assert(index < width*height*depth);
 	volume[index] = static_cast<unsigned short>(value);
@@ -1848,7 +1847,7 @@ void SpimStackU8::setContent(const glm::ivec3& resolution, const void* data)
 	update();
 }
 
-void SpimStackU8::setSample(const size_t index, double value)
+void SpimStackU8::setSample(const size_t index, float value)
 {
 	assert(index < width*height*depth);
 	volume[index] = static_cast<unsigned char>(value);
