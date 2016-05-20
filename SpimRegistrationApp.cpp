@@ -2704,15 +2704,13 @@ void SpimRegistrationApp::reloadConfig()
 	config.reload(); 
 	reloadVolumeShader(); 
 
-	/*
 	// apply new default scale to all volumes?
 	for (size_t i = 0; i < stacks.size(); ++i)
 	{
 		stacks[i]->setVoxelDimensions(config.defaultVoxelSize);
 		stacks[i]->update();
 	}
-	*/
-
+	
 }
 
 
@@ -3053,3 +3051,16 @@ void SpimRegistrationApp::createPointSpriteTexture()
 
 
 }
+
+void SpimRegistrationApp::resliceStack(unsigned int stack)
+{
+	if (stack > stacks.size())
+	{
+		std::cerr << "[Reslice] Stack " << stack << " outside valid range.\n";
+		return;
+	}
+
+	stacks[stack]->reslice(0, stacks[stack]->getDepth() / 2);
+}
+
+

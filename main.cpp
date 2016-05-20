@@ -827,43 +827,17 @@ int main(int argc, const char** argv)
 			regoApp->addSpimStack(argv[i]);
 		}
 		*/
-		/*
-		regoApp->addSpimStack("e:/spim/drosophila_example_tiff/spim_TL18_Angle0.tif", glm::vec3(0.73, 0.73, 2));
-		regoApp->addSpimStack("e:/spim/drosophila_example_tiff/spim_TL18_Angle45.tif", glm::vec3(0.73, 0.73, 2));
-		regoApp->addSpimStack("e:/spim/drosophila_example_tiff/spim_TL18_Angle90.tif", glm::vec3(0.73, 0.73, 2));
-		regoApp->addSpimStack("e:/spim/drosophila_example_tiff/spim_TL18_Angle135.tif", glm::vec3(0.73, 0.73, 2));
-		regoApp->addSpimStack("e:/spim/drosophila_example_tiff/spim_TL18_Angle180.tif", glm::vec3(0.73, 0.73, 2));
-		regoApp->addSpimStack("e:/spim/drosophila_example_tiff/spim_TL18_Angle225.tif", glm::vec3(0.73, 0.73, 2));
-		regoApp->addSpimStack("e:/spim/drosophila_example_tiff/spim_TL18_Angle270.tif", glm::vec3(0.73, 0.73, 2));
-
-		regoApp->addPhantom("e:/spim/drosophila_example_tiff/spim_TL18_Angle0.tif", "e:/spim/drosophila_example_tiff/registration/spim_TL18_Angle0.tif.registration", glm::vec3(0.73, 0.73, 2), true);
-		regoApp->addPhantom("e:/spim/drosophila_example_tiff/spim_TL18_Angle45.tif", "e:/spim/drosophila_example_tiff/registration/spim_TL18_Angle45.tif.registration", glm::vec3(0.73, 0.73, 2), true);
-		regoApp->addPhantom("e:/spim/drosophila_example_tiff/spim_TL18_Angle90.tif", "e:/spim/drosophila_example_tiff/registration/spim_TL18_Angle90.tif.registration", glm::vec3(0.73, 0.73, 2), true);
-		regoApp->addPhantom("e:/spim/drosophila_example_tiff/spim_TL18_Angle135.tif", "e:/spim/drosophila_example_tiff/registration/spim_TL18_Angle135.tif.registration", glm::vec3(0.73, 0.73, 2), true);
-		regoApp->addPhantom("e:/spim/drosophila_example_tiff/spim_TL18_Angle180.tif", "e:/spim/drosophila_example_tiff/registration/spim_TL18_Angle180.tif.registration", glm::vec3(0.73, 0.73, 2), true);
-		regoApp->addPhantom("e:/spim/drosophila_example_tiff/spim_TL18_Angle225.tif", "e:/spim/drosophila_example_tiff/registration/spim_TL18_Angle225.tif.registration", glm::vec3(0.73, 0.73, 2), true);
-		regoApp->addPhantom("e:/spim/drosophila_example_tiff/spim_TL18_Angle270.tif", "e:/spim/drosophila_example_tiff/registration/spim_TL18_Angle270.tif.registration", glm::vec3(0.73, 0.73, 2), true);
-		
-		/*
-		regoApp->addSpimStack("e:/spim/phantom/drosophila/phantom_1.tiff");
-		regoApp->addSpimStack("e:/spim/phantom/drosophila/phantom_2.tiff");
-		
-		
-		regoApp->addSpimStack("e:/spim/phantom/drosophila/phantom_3.tiff");
-		regoApp->addSpimStack("e:/spim/phantom/drosophila/phantom_4.tiff");
-		
-		regoApp->loadStackTransformations();
-
-		
-		regoApp->addPhantom("e:/spim/phantom/drosophila/phantom_1.tiff", "e:/spim/phantom/drosophila/phantom_1.tiff.reference.txt", glm::vec3(.73, .73, 2));
-		regoApp->addPhantom("e:/spim/phantom/drosophila/phantom_2.tiff", "e:/spim/phantom/drosophila/phantom_2.tiff.reference.txt", glm::vec3(.73, .73, 2));
-		regoApp->addPhantom("e:/spim/phantom/drosophila/phantom_3.tiff", "e:/spim/phantom/drosophila/phantom_3.tiff.reference.txt", glm::vec3(.73, .73, 2));
-		regoApp->addPhantom("e:/spim/phantom/drosophila/phantom_4.tiff", "e:/spim/phantom/drosophila/phantom_4.tiff.reference.txt", glm::vec3(.73, .73, 2));
-		*/
 
 
-		regoApp->addSpimStack("e:/spim/test root/spim_TL01_Angle0.ome.tiff");
-		regoApp->addSpimStack("e:/spim/test root/spim_TL01_Angle1.ome.tiff");
+		regoApp->addSpimStack("e:/spim/Mousetail/5xz2mousetailclearnegtivedegree0.tif");
+		regoApp->addSpimStack("e:/spim/Mousetail/5xz2mousetailclearnegtivedegree72.tif");
+		
+		regoApp->resliceStack(0);
+		regoApp->resliceStack(1);
+		
+		//regoApp->addSpimStack("e:/spim/Mousetail/5xz2mousetailclearnegtivedegree144.tif");
+		
+		//regoApp->addSpimStack("e:/spim/Mousetail/5xz2mousetailclearnegtivedegree216.tif");
 
 		regoApp->centerCamera();
 		regoApp->maximizeViews();

@@ -193,6 +193,11 @@ public:
 	inline void loadConfig(const std::string& file) { config.load(file); }
 	inline void saveConfig(const std::string& file) const { config.save(file); }
 
+
+	void resliceStack(unsigned int stack);
+
+
+
 private:
 	Config					config;
 

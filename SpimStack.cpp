@@ -1647,6 +1647,46 @@ void SpimStackU16::subsample(bool updateTextureData)
 		updateTexture();
 }
 
+void SpimStackU16::reslice(unsigned int minZ, unsigned int maxZ)
+{
+	if (minZ >= maxZ ||
+		minZ >= depth ||
+		maxZ >= depth)
+	{
+		std::cerr << "[Spimstack] Invalid z-reslice params: " << minZ << "->" << maxZ << ", valid range: 0-" << width - 1 << std::endl;
+		return;
+	}
+
+
+	unsigned short* newData = new unsigned short[width*height*depth/2];
+
+	for (unsigned int z = minZ; z < maxZ; ++z)
+	{
+		for (unsigned int x = 0, nx = 0; x < width; x += 2, ++nx)
+		{
+			for (unsigned int y = 0, ny = 0; y < height; y += 2, ++ny)
+			{
+				//std::cout << "x y z " << x << "," << y << "," << z << " -> " << (x * 2) << "," << (y * 2) << "," << z << std::endl;
+
+				const unsigned short val = volume[x + y*width + z*width*height];
+				newData[nx + ny*width + z*width * height] = val;
+			}
+		}
+	}
+
+
+	delete[] volume;
+	volume = newData;
+	depth /= 2;
+
+
+	std::cout << "[Spimstack] Resliced stack " << getFilename() << " to " << width << "x" << height << "x" << depth << endl;
+
+	updateTexture();
+
+}
+
+
 void SpimStackU16::updateTexture()
 {
 #ifndef NO_GRAPHICS
@@ -1822,6 +1862,46 @@ void SpimStackU8::subsample(bool updateTextureData)
 	if (updateTextureData)
 		updateTexture();
 }
+
+void SpimStackU8::reslice(unsigned int minZ, unsigned int maxZ)
+{
+	if (minZ >= maxZ ||
+		minZ >= depth ||
+		maxZ >= depth)
+	{
+		std::cerr << "[Spimstack] Invalid z-reslice params: " << minZ << "->" << maxZ << ", valid range: 0-" << width - 1 << std::endl;
+		return;
+	}
+
+
+	unsigned char* newData = new unsigned char[width*height*depth / 2];
+
+	for (unsigned int z = minZ; z < maxZ; ++z)
+	{
+		for (unsigned int x = 0, nx = 0; x < width; x += 2, ++nx)
+		{
+			for (unsigned int y = 0, ny = 0; y < height; y += 2, ++ny)
+			{
+				//std::cout << "x y z " << x << "," << y << "," << z << " -> " << (x * 2) << "," << (y * 2) << "," << z << std::endl;
+
+				const unsigned char val = volume[x + y*width + z*width*height];
+				newData[nx + ny*width + z*width * height] = val;
+			}
+		}
+	}
+
+
+	delete[] volume;
+	volume = newData;
+	depth /= 2;
+
+	std::cout << "[Spimstack] Resliced stack " << getFilename() << " to " << width << "x" << height << "x" << depth << endl;
+
+	updateTexture();
+
+}
+
+
 
 void SpimStackU8::updateTexture()
 {

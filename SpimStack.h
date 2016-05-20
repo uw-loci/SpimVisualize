@@ -50,6 +50,9 @@ public:
 
 	// updates the internal stats and the texture
 	virtual void update();
+
+	// reslices this stack along z
+	virtual void reslice(unsigned int minZ, unsigned int maxZ) = 0;
 			
 
 	virtual size_t getBytesPerVoxel() const = 0;
@@ -171,6 +174,8 @@ public:
 	virtual void setContent(const glm::ivec3& resolution, const void* data);
 	virtual void setSample(const size_t index, float value);
 
+	virtual void reslice(unsigned int minZ, unsigned int maxZ);
+
 	virtual size_t getBytesPerVoxel() const { return 2; }
 
 private:
@@ -209,6 +214,8 @@ public:
 	virtual void setContent(const glm::ivec3& resolution, const void* data);
 	virtual void setSample(const size_t index, float value);
 
+	virtual void reslice(unsigned int minZ, unsigned int maxZ);
+
 	virtual size_t getBytesPerVoxel() const { return 1; }
 
 private:
@@ -235,4 +242,3 @@ private:
 		return getValue(index) / 255;
 	}
 };
-
