@@ -124,7 +124,7 @@ protected:
 class MultiDimensionalHillClimb : public IStackTransformationSolver
 {
 public:
-	MultiDimensionalHillClimb();
+	MultiDimensionalHillClimb(const std::vector<InteractionVolume*>& volumes);
 
 
 	virtual void initialize(const InteractionVolume* v);
@@ -143,7 +143,8 @@ private:
 	unsigned int				solutionCounter;
 	std::mt19937				rng;
 
-	const InteractionVolume*	currentVolume;
+	const std::vector<InteractionVolume*>	volumes;
+	const InteractionVolume*				currentVolume;
 	void createPotentialSolutions();
 };
 

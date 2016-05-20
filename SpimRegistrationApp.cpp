@@ -41,7 +41,7 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : layout(nullptr
 	cameraMoving(false), drawGrid(true), drawBboxes(false), drawSlices(false), currentVolume(-1), sliceCount(100), subsampleOnCameraMove(false),
 	pointShader(nullptr), volumeShader(nullptr), sliceShader(nullptr),
 	volumeRaycaster(nullptr), drawQuad(nullptr), volumeDifferenceShader(nullptr), drawPosition(nullptr), tonemapper(nullptr), gpuStackSampler(nullptr),
-	volumeRenderTarget(nullptr), rayStartTarget(nullptr), stackSamplerTarget(nullptr), pointSpriteShader(nullptr),
+	volumeRenderTarget(nullptr), rayStartTarget(nullptr), stackSamplerTarget(nullptr), pointSpriteShader(nullptr), gpuMultiStackSampler(nullptr),
 	useImageAutoContrast(false), runAlignment(false), renderTargetReadbackCurrent(false), calculateScore(false), drawHistory(false),
 	solver(nullptr), drawPhantoms(false), drawSolutionSpace(false), runAlignmentOnlyOncePlease(false),
 	controlWidget(nullptr), pointSpriteTexture(0), cameraAutoRotate(false)
@@ -89,6 +89,7 @@ SpimRegistrationApp::~SpimRegistrationApp()
 	delete stackSamplerTarget;
 	delete pointSpriteShader;;
 	delete gpuStackSampler;
+	delete gpuMultiStackSampler;
 
 	delete controlWidget;
 
@@ -107,11 +108,8 @@ SpimRegistrationApp::~SpimRegistrationApp()
 
 void SpimRegistrationApp::reloadShaders()
 {
-	
-	int numberOfVolumes = std::max(1, (int)stacks.size());
-
-	std::vector<std::pair<std::string, std::string> > defines;
-	defines.push_back(std::make_pair("VOLUMES", boost::lexical_cast<std::string>(numberOfVolumes)));
+	// these are all the shaders that depend on the number of volumes etc
+	reloadVolumeShader();
 	
 
 	delete pointShader;
@@ -119,16 +117,10 @@ void SpimRegistrationApp::reloadShaders()
 
 	delete sliceShader;
 	sliceShader = new Shader("shaders/slices.vert", "shaders/slices.frag");
-
-	reloadVolumeShader();
-
+		
 	delete drawQuad;
 	drawQuad = new Shader("shaders/drawQuad.vert", "shaders/drawQuad.frag");
-
 	
-	delete tonemapper;
-	tonemapper = new Shader("shaders/drawQuad.vert", "shaders/tonemapper.frag", defines);
-
 	delete drawPosition;
 	drawPosition = new Shader("shaders/drawPosition.vert", "shaders/drawPosition.frag");
 
@@ -148,6 +140,11 @@ void SpimRegistrationApp::reloadVolumeShader()
 	defines.push_back(std::make_pair("VOLUMES", boost::lexical_cast<std::string>(numberOfVolumes)));
 	defines.push_back(std::make_pair("STEPS", boost::lexical_cast<std::string>(config.raytraceSteps)));
 
+
+
+	delete tonemapper;
+	tonemapper = new Shader("shaders/drawQuad.vert", "shaders/tonemapper.frag", defines);
+
 	delete volumeShader;
 	volumeShader = new Shader("shaders/volume2.vert", "shaders/volume2.frag", defines);
 
@@ -156,7 +153,9 @@ void SpimRegistrationApp::reloadVolumeShader()
 
 	delete volumeDifferenceShader;
 	volumeDifferenceShader = new Shader("shaders/volumeDist.vert", "shaders/volumeDist.frag", defines);
-
+	
+	delete gpuMultiStackSampler;
+	gpuMultiStackSampler = new Shader("shaders/samplePlane2.vert", "shaders/samplePlane2.frag", defines);
 }
 
 
@@ -1697,8 +1696,11 @@ void SpimRegistrationApp::update(float dt)
 	}
 
 	if (sampleStack != -1)
-		addStackSamples();
+	{
 
+		addMultiStackSamples();
+		//addStackSamples();
+	}
 }
 
 void SpimRegistrationApp::maximizeViews()
@@ -2042,7 +2044,11 @@ void SpimRegistrationApp::selectSolver(const std::string& name)
 	if (name == "Hillclimb")
 	{
 		cout << "[Solver] Creating new Multidimensional hillclimb solver\n";
-		newSolver = new MultiDimensionalHillClimb;
+
+		std::vector<InteractionVolume*> volumes;
+		for (size_t i = 0; i < stacks.size(); ++i)
+			volumes.push_back(stacks[i]);
+		newSolver = new MultiDimensionalHillClimb(volumes);
 	}
 
 	if (name == "Solution Parameterspace")
@@ -2800,6 +2806,92 @@ void SpimRegistrationApp::addStackSamples()
 
 	//fill in the correct slice of points
 	//stackSamples.insert(stackSamples.end(), sliceSamples.begin(), sliceSamples.end());
+
+	stackSamples = sliceSamples;
+
+
+	++lastStackSample;
+	if (lastStackSample == stack->getDepth())
+	{
+		stack->update();
+		endSampleStack();
+
+
+		stackSamples.clear();
+	}
+
+}
+
+
+void SpimRegistrationApp::addMultiStackSamples()
+{
+	if (sampleStack == -1)
+		return;
+
+
+
+	SpimStack* stack = stacks[sampleStack];
+
+	if (lastStackSample >= stack->getDepth() || lastStackSample < 0)
+		return;
+
+	//std::cout << "[Sampling] Rendering slice " << lastStackSample << " ... \n";
+
+	stackSamplerTarget->bind();
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	gpuMultiStackSampler->bind();
+
+	// set sampling volume
+	gpuMultiStackSampler->setUniform("planeTransform", stack->getTransform());
+	gpuMultiStackSampler->setUniform("zPlane", (float)lastStackSample);
+	gpuMultiStackSampler->setUniform("planeResolution", (float)stack->getWidth(), (float)stack->getHeight());
+	gpuMultiStackSampler->setUniform("planeScale", stack->getVoxelDimensions());
+
+	// set reference volumes
+	for (size_t i = 0; i < stacks.size(); ++i)
+	{
+		const std::string volumeName = std::string("volumes[") + std::to_string(i) + std::string("]");
+	
+		gpuMultiStackSampler->setTexture3D(volumeName + ".volume", stacks[i]->getTexture(), i);		
+		gpuMultiStackSampler->setUniform(volumeName + ".inverseTransform", stacks[i]->getInverseTransform());
+		gpuMultiStackSampler->setUniform(volumeName + ".resolution", stacks[i]->getVoxelDimensions());
+		gpuMultiStackSampler->setUniform(volumeName + ".scale", stacks[i]->getWidth(), stacks[i]->getHeight(), stacks[i]->getDepth());
+		gpuMultiStackSampler->setUniform(volumeName + ".enabled", i != sampleStack);
+	}
+
+
+	// draw the correct z-plane
+	glBegin(GL_QUADS);
+	glVertex2i(0, 0);
+	glVertex2i(1, 0);
+	glVertex2i(1, 1);
+	glVertex2i(0, 1);
+	glEnd();
+
+
+	gpuMultiStackSampler->disable();
+	stackSamplerTarget->disable();
+
+
+	// read back
+	stackSamplerTarget->bind();
+	std::vector<glm::vec4> sliceSamples(stack->getWidth()*stack->getHeight());
+	glReadBuffer(GL_COLOR_ATTACHMENT0);
+
+	glReadPixels(0, 0, stackSamplerTarget->getWidth(), stackSamplerTarget->getHeight(), GL_RGBA, GL_FLOAT, glm::value_ptr(sliceSamples[0]));
+
+	stackSamplerTarget->disable();
+	glReadBuffer(GL_BACK);
+
+
+
+	// set the sample
+	std::vector<double> samples(sliceSamples.size());
+	for (size_t i = 0; i < samples.size(); ++i)
+		samples[i] = sliceSamples[i].a;
+
+	stack->setPlaneSamples(samples, lastStackSample);
 
 	stackSamples = sliceSamples;
 

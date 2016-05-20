@@ -294,11 +294,11 @@ void UniformScaleSolver::createCandidateSolutions(const InteractionVolume* v)
 		s.id = i;
 		s.score = 0;
 
-		//s.matrix = translate(v->getTransform(), v->getBBox().getCentroid());
+		s.matrix = translate(v->getTransform(), v->getBBox().getCentroid());
 		s.matrix = scale(s.matrix, glm::vec3(factor));
-		//s.matrix = translate(s.matrix, v->getBBox().getCentroid() * -1.f);
+		s.matrix = translate(s.matrix, v->getBBox().getCentroid() * -1.f);
 
-		//s.matrix = rotate(a, vec3(0, 1, 0));
+
 		solutions.push_back(s);
 
 	}
@@ -306,7 +306,7 @@ void UniformScaleSolver::createCandidateSolutions(const InteractionVolume* v)
 }
 
 
-MultiDimensionalHillClimb::MultiDimensionalHillClimb() : solutionCounter(0)
+MultiDimensionalHillClimb::MultiDimensionalHillClimb(const std::vector<InteractionVolume*>& v) : volumes(v), solutionCounter(0)
 {
 }
 
@@ -319,7 +319,8 @@ void MultiDimensionalHillClimb::initialize(const InteractionVolume* v)
 	resetSolution();
 	history.reset();
 
-	currentVolume = v;
+	// ignore this
+	//currentVolume = v;
 	createPotentialSolutions();
 }
 
@@ -337,6 +338,22 @@ bool MultiDimensionalHillClimb::nextSolution()
 	if (potentialSolutions.empty())
 	{
 		std::cout << "[Hillclimb] Best score in last run was " << bestSolution.score << std::endl;
+
+		// select a new active volume
+		if (volumes.empty())
+			throw std::runtime_error("MDHillclimb has got an empty set of potential volumes!");
+
+    	currentVolume = 0;
+		while (!currentVolume)
+		{
+			currentVolume = volumes[rng() % volumes.size()];
+			if (currentVolume->locked)
+				currentVolume = 0;
+		}
+
+		std::cout << "[Hillclimb] Selected new volume: " << currentVolume << std::endl;
+
+
 		createPotentialSolutions();
 	}
 	return true;

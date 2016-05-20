@@ -1527,6 +1527,8 @@ void SpimStackU16::loadImage(const std::string& filename)
 		assert(bpp == 16);
 	
 
+		// metadata parsing not working as it should :(
+		/*
 		// if it is an .ome file there should be metadata for us to use
 		FITAG* tag = 0;
 		FIMETADATA* mdHandle = 0;
@@ -1544,7 +1546,7 @@ void SpimStackU16::loadImage(const std::string& filename)
 
 			FreeImage_FindCloseMetadata(mdHandle);
 		}
-
+		*/
 
 
 

@@ -765,7 +765,7 @@ static void cleanup()
 
 
 #ifdef _WIN32
-	system("pause");
+	//system("pause");
 #endif
 
 

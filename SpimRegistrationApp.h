@@ -331,9 +331,14 @@ private:
 	
 	size_t						lastStackSample;
 	void addStackSamples();
+	void addMultiStackSamples();
 
 	// for GPU stack sampling
+	// single stack sampler
 	Shader*					gpuStackSampler;
+
+	// multistack sampler
+	Shader*					gpuMultiStackSampler;
 	Framebuffer*			stackSamplerTarget;
 
 
