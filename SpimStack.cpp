@@ -1513,6 +1513,9 @@ void SpimStackU16::loadImage(const std::string& filename)
 	bool initialized = false;
 
 
+	
+
+
 	for (unsigned int z = 0; z < depth; ++z)
 	{
 		FIBITMAP* bm = FreeImage_LockPage(fmb, z);
@@ -1522,7 +1525,28 @@ void SpimStackU16::loadImage(const std::string& filename)
 		
 		unsigned int bpp = FreeImage_GetBPP(bm);
 		assert(bpp == 16);
-		
+	
+
+		// if it is an .ome file there should be metadata for us to use
+		FITAG* tag = 0;
+		FIMETADATA* mdHandle = 0;
+		FREE_IMAGE_MDMODEL mdModel = FIMD_EXIF_MAIN;
+
+		mdHandle = FreeImage_FindFirstMetadata(mdModel, bm, &tag);
+		if (mdHandle)
+		{
+			std::cout << "Found metadata:\n";
+			do
+			{
+				printf("%s: %s\n", FreeImage_GetTagKey(tag), FreeImage_TagToString(mdModel, tag));
+
+			} while (FreeImage_FindNextMetadata(mdHandle, &tag));
+
+			FreeImage_FindCloseMetadata(mdHandle);
+		}
+
+
+
 
 		if (!initialized)
 		{
