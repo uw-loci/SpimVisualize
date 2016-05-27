@@ -58,6 +58,8 @@ enum MenuItem
 	MENU_CREATE_PHANTOM,
 	MENU_SAMPLE_PHANTOM,
 
+
+
 	MENU_MISC_RELOAD_CONFIG,
 	MENU_MISC_RELOAD_SHADERS,
 	MENU_MISC_SUBSAMPLE_ALL
@@ -211,6 +213,10 @@ static void menu(int item)
 		regoApp->saveCurrentPointcloud();
 		break;
 
+
+	case MENU_CREATE_PHANTOM:
+		regoApp->createEmptyFullSizedStack();
+		break;
 
 	case MENU_MISC_RELOAD_CONFIG:
 		regoApp->reloadConfig();
@@ -384,8 +390,8 @@ static void keyboard(unsigned char key, int x, int y)
 
 
 	if (key == 'e')
-		regoApp->createEmptyRandomStack();
-
+		//regoApp->createEmptyRandomStack();
+		regoApp->createEmptyFullSizedStack();
 
 
 
@@ -749,20 +755,7 @@ static void reshape(int w, int h)
 
 static void cleanup()
 {
-
-	try
-	{
-		if (regoApp)
-			regoApp->saveStackTransformations();
-	}
-	catch (std::runtime_error& e)
-	{
-		std::cerr << "[Error] " << e.what() << std::endl;
-	}
-
 	delete regoApp;
-
-
 
 #ifdef _WIN32
 	//system("pause");

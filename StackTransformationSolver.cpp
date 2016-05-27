@@ -11,6 +11,7 @@
 
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/transform2.hpp>
+#include <glm/gtx/transform.hpp>
 
 #include "Framebuffer.h"
 #include "InteractionVolume.h"
@@ -230,9 +231,17 @@ void RYSolver::createCandidateSolutions(const InteractionVolume* v)
 		s.id = r;
 		s.score = 0;
 
-		s.matrix = createRotationMatrix(a, v);
+		//s.matrix = createRotationMatrix(a, v);
 
 		
+		mat4 I = v->getTransform();
+		mat4 T = translate(v->getBBox().getCentroid());
+
+		// simplified from: I*T* rot * I-1*I
+		mat4 R = I * T * rotate(a, glm::vec3(0,1,0)) * inverse(T);
+		s.matrix = R;
+
+
 		//s.matrix = rotate(a, vec3(0, 1, 0));
 		solutions.push_back(s);
 

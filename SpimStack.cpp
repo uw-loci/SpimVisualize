@@ -1689,10 +1689,12 @@ void SpimStackU16::reslice(unsigned int minZ, unsigned int maxZ)
 
 void SpimStackU16::updateTexture()
 {
+	if (!volume)
+		throw std::runtime_error("Invalid volume data!");
+
 #ifndef NO_GRAPHICS
-	cout << "[Stack] Updating 3D texture ... ";
+	cout << "[Stack] Updating 3D texture (" << volumeTextureId << ")" << width << "x" << height << "x" << depth << " ... ";
 	glBindTexture(GL_TEXTURE_3D, volumeTextureId);
-	assert(volume);
 	glTexImage3D(GL_TEXTURE_3D, 0, GL_R16UI, width, height, depth, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, volume);
 	cout << "done.\n";
 #else
@@ -1705,20 +1707,27 @@ void SpimStackU16::setContent(const glm::ivec3& res, const void* data)
 {
 	delete[] volume;
 
-	width = res.x;
+    width = res.x;
 	height = res.y;
 	depth = res.z;
+
+	cout << "[Stack] Setting content with res " << width << "x" << height << "x" << depth << std::endl;
 
 	filename = "";
 	
 	volume = new unsigned short[width*height*depth];
 
 	if (data)
+	{
 		memcpy(volume, data, width*height*depth*sizeof(unsigned short));
+		updateTexture();
+	}
 	else
+	{
 		memset(volume, 0, width*height*depth*sizeof(unsigned short));
-	
-	updateTexture();
+		glBindTexture(GL_TEXTURE_3D, volumeTextureId);
+		glTexImage3D(GL_TEXTURE_3D, 0, GL_R16UI, width, height, depth, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, 0);
+	}
 	
 	if (data)
 		updateStats();
