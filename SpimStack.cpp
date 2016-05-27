@@ -1693,7 +1693,9 @@ void SpimStackU16::updateTexture()
 		throw std::runtime_error("Invalid volume data!");
 
 #ifndef NO_GRAPHICS
-	cout << "[Stack] Updating 3D texture (" << volumeTextureId << ")" << width << "x" << height << "x" << depth << " ... ";
+
+	size_t size = width*height*depth*sizeof(unsigned short) / 1024 / 1024;
+	cout << "[Stack] Updating 3D texture (" << volumeTextureId << ") " << width << "x" << height << "x" << depth << ", estimated size: " << size << "MB ... ";
 	glBindTexture(GL_TEXTURE_3D, volumeTextureId);
 	glTexImage3D(GL_TEXTURE_3D, 0, GL_R16UI, width, height, depth, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, volume);
 	cout << "done.\n";
@@ -1706,6 +1708,7 @@ void SpimStackU16::updateTexture()
 void SpimStackU16::setContent(const glm::ivec3& res, const void* data)
 {
 	delete[] volume;
+	volume = nullptr;
 
     width = res.x;
 	height = res.y;
@@ -1736,9 +1739,8 @@ void SpimStackU16::setContent(const glm::ivec3& res, const void* data)
 		maxVal = 0; 
 		minVal = 0;
 
-		vec3 vol = dimensions * vec3(width, height, depth);
 		bbox.min = vec3(0.f); // -vol * 0.5f;
-		bbox.max = vol;// *0.5f;
+		bbox.max = dimensions * vec3(width, height, depth);
 	}
 }
 

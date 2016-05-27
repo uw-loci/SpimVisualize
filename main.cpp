@@ -55,8 +55,8 @@ enum MenuItem
 	MENU_POINTCLOUD_BAKE_TRANSFORM,
 	MENU_POINTCLOUD_SAVE_CURRENT,
 
-	MENU_CREATE_PHANTOM,
-	MENU_SAMPLE_PHANTOM,
+	MENU_RESAMPLE_CREATE_EMPTY,
+	MENU_RESAMPLE_SELECTED,
 
 
 
@@ -212,10 +212,12 @@ static void menu(int item)
 	case MENU_POINTCLOUD_SAVE_CURRENT:
 		regoApp->saveCurrentPointcloud();
 		break;
-
-
-	case MENU_CREATE_PHANTOM:
+		
+	case MENU_RESAMPLE_CREATE_EMPTY:
 		regoApp->createEmptyFullSizedStack();
+		break;
+	case MENU_RESAMPLE_SELECTED:
+		regoApp->resampleSelectedStack();
 		break;
 
 	case MENU_MISC_RELOAD_CONFIG:
@@ -279,7 +281,7 @@ static void createRightClickMenu()
 	glutAddMenuEntry("Toggle grid          [g]", MENU_VIEW_TOGGLE_GRID);
 	glutAddMenuEntry("Toggle auto rotate   [R]", MENU_VIEW_PRESENTATION);
 
-	int solver = glutCreateMenu(menu);
+	//int solver = glutCreateMenu(menu);
 	glutAddMenuEntry("Uniform DX         [F5]", MENU_SOLVER_DX);
 	glutAddMenuEntry("Uniform DY         [F6]", MENU_SOLVER_DY);
 	glutAddMenuEntry("Uniform DZ         [F7]", MENU_SOLVER_DZ);
@@ -291,6 +293,12 @@ static void createRightClickMenu()
 
 	glutAddMenuEntry("Show image score   [h]", MENU_SOLVER_SHOW_SCORE);
 	glutAddMenuEntry("Clear score history[H]", MENU_SOLVER_CLEAR_HISTORY);
+
+
+	int resampling = glutCreateMenu(menu);
+	glutAddMenuEntry("Create empty stack [e]", MENU_RESAMPLE_CREATE_EMPTY);
+	glutAddMenuEntry("Resample selected stack", MENU_RESAMPLE_SELECTED);
+
 
 	
 	int pointclouds = glutCreateMenu(menu);
@@ -308,7 +316,8 @@ static void createRightClickMenu()
 	glutAddSubMenu("Transformation", transformation);
 	glutAddSubMenu("Layout", layout);
 	glutAddSubMenu("View", view);
-	glutAddSubMenu("Solver", solver);
+	glutAddSubMenu("Resample", resampling);
+	//glutAddSubMenu("Solver", solver);
 	//glutAddSubMenu("Point clouds", pointclouds);
 	glutAddSubMenu("Misc", misc);
 

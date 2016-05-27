@@ -114,6 +114,8 @@ public:
 	void clearSampleStack();
 	void endSampleStack();
 
+	inline void resampleSelectedStack() { startSampleStack(currentVolume); }
+
 
 
 	/// \}
