@@ -160,7 +160,7 @@ void main()
 			aggregateColor += (color_table[min(v, 6)] * val);	
 		}
 
-		finalValue = vec4(aggregateColor, 1.0 );
+		finalValue = vec4(aggregateColor, meanValue);
 
 
 		if (!hitAnyVolume)

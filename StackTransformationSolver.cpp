@@ -105,7 +105,7 @@ void UniformSamplingSolver::recordCurrentScore(double s)
 	if (hasValidCurrentSolution())
 	{
 		std::cout << "[Solver] Recording score of " << s << " for current solution.\n";
-		solutions[currentSolution].score += s;
+		solutions[currentSolution].score = s;
 	
 		history.add(s);
 	}
@@ -123,9 +123,7 @@ const IStackTransformationSolver::Solution& UniformSamplingSolver::getBestSoluti
 {
 	if (solutions.empty())
 		throw std::runtime_error("Solver has no valid solutions!");
-	
-
-	
+		
 	// remove all solutions that do not have a valid id. we can do that through the current solution?
 	size_t oldSize = solutions.size();
 	if (currentSolution < (int)solutions.size() - 1)
@@ -135,19 +133,22 @@ const IStackTransformationSolver::Solution& UniformSamplingSolver::getBestSoluti
 
 	std::cout << "[Debug] Solutions: ";
 	for (size_t i = 0; i < solutions.size(); ++i)
-		std::cout << solutions[i].score << ", ";
-	std::cout << std::endl;
-
+		std::cout << solutions[i].score << std::endl;
+	std::cout << "[Debug] --------------\n";
 
 	std::cout << "[Debug] Sorting " << solutions.size() << " solutions ... \n";
 	std::sort(solutions.begin(), solutions.end());
 	
 
+	std::cout << "[Debug] Solutions: ";
+	for (size_t i = 0; i < solutions.size(); ++i)
+		std::cout << solutions[i].score << std::endl;
+	std::cout << "[Debug] --------------\n";
 
 
-	std::cout << "[Debug] Worst: " << solutions.back().score << ", best: " << solutions.front().score << std::endl;
+	std::cout << "[Debug] Worst: " << solutions.front().score << ", best: " << solutions.back().score << std::endl;
 	
-	return solutions.front();
+	return solutions.back();
 }
 
 
@@ -371,7 +372,7 @@ void MultiDimensionalHillClimb::recordCurrentScore(double score)
 {
 	if (score > bestSolution.score)
 	{
-		bestSolution = potentialSolutions.back();
+		bestSolution = potentialSolutions.front();
 		history.add(score);
 	}
 }
