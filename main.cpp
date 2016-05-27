@@ -765,10 +765,15 @@ static void cleanup()
 
 
 #ifdef _WIN32
-	system("pause");
+	//system("pause");
 #endif
 
 
+}
+
+static inline std::string extractPath(const std::string& path)
+{
+	return path.substr(0, path.find_last_of("\\"));
 }
 
 int main(int argc, const char** argv)
@@ -819,16 +824,24 @@ int main(int argc, const char** argv)
 	try
 	{
 		regoApp = new SpimRegistrationApp(glm::ivec2(1024, 768));
-		regoApp->loadConfig("./config.cfg");
+
+		// set the shader path based on the exe's location
+		regoApp->setShaderPath(extractPath(argv[0]) + "/shaders/");
 
 
-#ifdef _WIN32
-		std::string basePath(argv[0]);
-		std::cout << "Basepath: " << basePath << " -> ";
-		basePath = basePath.substr(0, basePath.find_last_of("\\"));
-		std::cout << basePath << std::endl;
-		regoApp->setShaderPath(basePath + "/shaders/");
-#endif
+		// load global config
+		regoApp->loadConfig(extractPath(argv[0]) + "/config.cfg");
+
+		// try to load the local config
+		try
+		{
+			regoApp->loadConfig(extractPath(argv[1]) + "/config.cfg");
+		}
+		catch (const std::runtime_error& e)
+		{
+			std::cout << "Unable to load local config.";
+		}
+
 
 		for (int i = 1; i < argc; ++i)
 		{
