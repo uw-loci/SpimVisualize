@@ -102,9 +102,7 @@ static void compileShader(const std::string& fileName, GLint shader, const std::
 	file.open( fileName.c_str() );
 
 	if (!file.is_open())
-	{
-		ShaderLog::error("Error opening file " + fileName + ".");
-	}
+		throw std::runtime_error("Error opening file " + fileName + ".");
 
 	std::string line;
 	while (!file.eof())

@@ -765,7 +765,7 @@ static void cleanup()
 
 
 #ifdef _WIN32
-	//system("pause");
+	system("pause");
 #endif
 
 
@@ -815,11 +815,20 @@ int main(int argc, const char** argv)
 
 	atexit(cleanup);
 
-
+	
 	try
 	{
 		regoApp = new SpimRegistrationApp(glm::ivec2(1024, 768));
 		regoApp->loadConfig("./config.cfg");
+
+
+#ifdef _WIN32
+		std::string basePath(argv[0]);
+		std::cout << "Basepath: " << basePath << " -> ";
+		basePath = basePath.substr(0, basePath.find_last_of("\\"));
+		std::cout << basePath << std::endl;
+		regoApp->setShaderPath(basePath + "/shaders/");
+#endif
 
 		for (int i = 1; i < argc; ++i)
 		{
@@ -856,6 +865,11 @@ int main(int argc, const char** argv)
 	{
 		std::cerr << "[Error] " << e << std::endl;
 		exit(2);
+	}
+	catch (...)
+	{
+		std::cerr << "[Error] Unknown error.\n";
+		exit(-1);
 	}
 
 	return 0;

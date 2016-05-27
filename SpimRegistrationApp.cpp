@@ -36,7 +36,7 @@ const unsigned int STD_SLICE_COUNT = 100;
 #define USE_RAYTRACER 
 #define USE_POINTCLOUDS
 
-SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : layout(nullptr), 
+SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : layout(nullptr), shaderPath("./shaders/"),
 	histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f),
 	cameraMoving(false), drawGrid(true), drawBboxes(false), drawSlices(false), currentVolume(-1), sliceCount(100), subsampleOnCameraMove(false),
 	pointShader(nullptr), volumeShader(nullptr), sliceShader(nullptr),
@@ -55,8 +55,7 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : layout(nullptr
 	prevLayouts["Perspective"] = layout;
 		
 	resetSliceCount();
-	reloadShaders();
-
+	
 	volumeRenderTarget = new Framebuffer(1024, 1024, GL_RGBA32F, GL_FLOAT);
 
 	rayStartTarget = new Framebuffer(512, 512, GL_RGBA32F, GL_FLOAT);
@@ -111,24 +110,23 @@ void SpimRegistrationApp::reloadShaders()
 	// these are all the shaders that depend on the number of volumes etc
 	reloadVolumeShader();
 	
-
 	delete pointShader;
-	pointShader = new Shader("shaders/points2.vert", "shaders/points2.frag");
+	pointShader = new Shader(shaderPath + "points2.vert", shaderPath + "points2.frag");
 
 	delete sliceShader;
-	sliceShader = new Shader("shaders/slices.vert", "shaders/slices.frag");
+	sliceShader = new Shader(shaderPath + "slices.vert", shaderPath + "slices.frag");
 		
 	delete drawQuad;
-	drawQuad = new Shader("shaders/drawQuad.vert", "shaders/drawQuad.frag");
+	drawQuad = new Shader(shaderPath + "drawQuad.vert", shaderPath + "drawQuad.frag");
 	
 	delete drawPosition;
-	drawPosition = new Shader("shaders/drawPosition.vert", "shaders/drawPosition.frag");
+	drawPosition = new Shader(shaderPath + "drawPosition.vert", shaderPath + "drawPosition.frag");
 
 	delete gpuStackSampler;
-	gpuStackSampler = new Shader("shaders/samplePlane.vert", "shaders/samplePlane.frag");
+	gpuStackSampler = new Shader(shaderPath + "samplePlane.vert", shaderPath + "samplePlane.frag");
 
 	delete pointSpriteShader;
-	pointSpriteShader = new Shader("shaders/pointsprite.vert", "shaders/pointsprite.frag");
+	pointSpriteShader = new Shader(shaderPath + "pointsprite.vert", shaderPath + "pointsprite.frag");
 
 }
 
@@ -143,19 +141,19 @@ void SpimRegistrationApp::reloadVolumeShader()
 
 
 	delete tonemapper;
-	tonemapper = new Shader("shaders/drawQuad.vert", "shaders/tonemapper.frag", defines);
+	tonemapper = new Shader(shaderPath + "drawQuad.vert", shaderPath + "tonemapper.frag", defines);
 
 	delete volumeShader;
-	volumeShader = new Shader("shaders/volume2.vert", "shaders/volume2.frag", defines);
+	volumeShader = new Shader(shaderPath + "volume2.vert", shaderPath + "volume2.frag", defines);
 
 	delete volumeRaycaster;
-	volumeRaycaster = new Shader("shaders/volumeRaycast.vert", "shaders/volumeRaycast.frag", defines);
+	volumeRaycaster = new Shader(shaderPath + "volumeRaycast.vert", shaderPath + "volumeRaycast.frag", defines);
 
 	delete volumeDifferenceShader;
-	volumeDifferenceShader = new Shader("shaders/volumeDist.vert", "shaders/volumeDist.frag", defines);
+	volumeDifferenceShader = new Shader(shaderPath + "volumeDist.vert", shaderPath + "volumeDist.frag", defines);
 	
 	delete gpuMultiStackSampler;
-	gpuMultiStackSampler = new Shader("shaders/samplePlane2.vert", "shaders/samplePlane2.frag", defines);
+	gpuMultiStackSampler = new Shader(shaderPath + "samplePlane2.vert", shaderPath + "samplePlane2.frag", defines);
 }
 
 
@@ -170,6 +168,9 @@ void SpimRegistrationApp::toggleRotateCamera()
 
 void SpimRegistrationApp::draw()
 {
+	if (!pointShader)
+		reloadShaders();
+
 	renderTargetReadbackCurrent = false;
 
 	for (size_t i = 0; i < layout->getViewCount(); ++i)

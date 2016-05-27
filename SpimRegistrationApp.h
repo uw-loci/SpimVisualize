@@ -197,10 +197,11 @@ public:
 	void resliceStack(unsigned int stack);
 
 
+	inline void setShaderPath(const std::string& sp) { shaderPath = sp; }
 
 private:
 	Config					config;
-
+	std::string				shaderPath;
 
 	ILayout*				layout;
 	std::map<std::string, ILayout*>	prevLayouts;
