@@ -821,20 +821,19 @@ int main(int argc, const char** argv)
 		regoApp = new SpimRegistrationApp(glm::ivec2(1024, 768));
 		regoApp->loadConfig("./config.cfg");
 
-		/*
 		for (int i = 1; i < argc; ++i)
 		{
 			regoApp->addSpimStack(argv[i]);
 		}
+
+		/*
+		regoApp->addSpimStack("e:/spim/121914 Fish4 no beads_aligned_by_jayne/spim_TL01_Angle0.ome.tiff");
+		regoApp->addSpimStack("e:/spim/121914 Fish4 no beads_aligned_by_jayne/spim_TL01_Angle1.ome.tiff");
+		regoApp->addSpimStack("e:/spim/121914 Fish4 no beads_aligned_by_jayne/spim_TL01_Angle2.ome.tiff");
 		*/
 
+		regoApp->loadStackTransformations();
 
-		regoApp->addSpimStack("e:/spim/Mousetail/5xz2mousetailclearnegtivedegree0.tif");
-		regoApp->addSpimStack("e:/spim/Mousetail/5xz2mousetailclearnegtivedegree72.tif");
-		
-		regoApp->resliceStack(0);
-		regoApp->resliceStack(1);
-		
 		//regoApp->addSpimStack("e:/spim/Mousetail/5xz2mousetailclearnegtivedegree144.tif");
 		
 		//regoApp->addSpimStack("e:/spim/Mousetail/5xz2mousetailclearnegtivedegree216.tif");
