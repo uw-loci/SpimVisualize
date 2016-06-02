@@ -33,10 +33,11 @@ enum MenuItem
 	MENU_VIEW_FOCUS,
 	MENU_VIEW_ALL,
 	MENU_VIEW_AUTOCONTRAST,
-	MENU_VIEW_SINGLE_3D,
-	MENU_VIEW_TOPDOWN,
-	MENU_VIEW_4VIEW,
-	MENU_VIEW_CONTRAST_EDITOR,
+	MENU_VIEW_PERSPECTIVE,
+	MENU_VIEW_FOURVIEW,
+	MENU_VIEW_ORTHOX,
+	MENU_VIEW_ORTHOY,
+	MENU_VIEW_ORTHOZ,
 	MENU_VIEW_TOGGLE_GRID,
 	MENU_VIEW_TOGGLE_BBOXES,
 	MENU_VIEW_PRESENTATION,
@@ -95,12 +96,12 @@ static void updateSpecialKeys()
 	specialKey[Shift] = specials & GLUT_ACTIVE_SHIFT;
 	specialKey[Ctrl] = specials & GLUT_ACTIVE_CTRL;
 	specialKey[Alt] = specials & GLUT_ACTIVE_ALT;
+
+	//std::cout << "[Debug] Specials: Shift: " << specialKey[Shift] << ", Ctrl: " << specialKey[Ctrl] << ", Alt: " << specialKey[Alt] << std::endl;
 }
 
 static void menu(int item)
 {
-
-	std::cout << "[Debug] Menu " << item << std::endl;
 
 	int w = glutGet(GLUT_WINDOW_WIDTH);
 	int h = glutGet(GLUT_WINDOW_HEIGHT);
@@ -155,17 +156,18 @@ static void menu(int item)
 	case MENU_VIEW_AUTOCONTRAST:
 		regoApp->autoThreshold();
 		break;
-	case MENU_VIEW_SINGLE_3D:
-		regoApp->setPerspectiveLayout(winRes, mouse.coordinates);
+	case MENU_VIEW_PERSPECTIVE:
+	case MENU_VIEW_FOURVIEW:
+		regoApp->setLayout("MainView", winRes, mouse.coordinates);
 		break;
-	case MENU_VIEW_TOPDOWN:
-		regoApp->setTopviewLayout(winRes, mouse.coordinates);
+	case MENU_VIEW_ORTHOX:
+		regoApp->setLayout("OrthoX", winRes, mouse.coordinates);
 		break;
-	case MENU_VIEW_4VIEW:
-		regoApp->setThreeViewLayout(winRes, mouse.coordinates);
+	case MENU_VIEW_ORTHOY:
+		regoApp->setLayout("OrthoY", winRes, mouse.coordinates);
 		break;
-	case MENU_VIEW_CONTRAST_EDITOR:
-		regoApp->setContrastEditorLayout(winRes, mouse.coordinates);
+	case MENU_VIEW_ORTHOZ:
+		regoApp->setLayout("OrthoZ", winRes, mouse.coordinates);
 		break;
 	case MENU_VIEW_TOGGLE_GRID:
 		regoApp->toggleGrid();
@@ -277,10 +279,11 @@ static void createRightClickMenu()
 
 	int layout = glutCreateMenu(menu);
 	//glutAddMenuEntry("----[Layout]-----", -1);
-	glutAddMenuEntry("Perspective [F1]", MENU_VIEW_SINGLE_3D);
-	glutAddMenuEntry("Top down    [F2]", MENU_VIEW_TOPDOWN);
-	glutAddMenuEntry("Four view   [F3]", MENU_VIEW_4VIEW);
-	glutAddMenuEntry("Contrast Ed [F4]", MENU_VIEW_CONTRAST_EDITOR);
+	glutAddMenuEntry("Perspective       [F1]", MENU_VIEW_PERSPECTIVE);
+	glutAddMenuEntry("Four view         [F1]", MENU_VIEW_FOURVIEW);
+	glutAddMenuEntry("Along X           [F2]", MENU_VIEW_ORTHOX);
+	glutAddMenuEntry("Along Y (top down)[F3]", MENU_VIEW_ORTHOY);
+	glutAddMenuEntry("Along Z           [F4]", MENU_VIEW_ORTHOZ);
 	
 	int view = glutCreateMenu(menu);
 	glutAddMenuEntry("Auto Contrast [Shift][c]", MENU_VIEW_AUTOCONTRAST);
@@ -525,12 +528,6 @@ static void keyboard(unsigned char key, int x, int y)
 		regoApp->increaseSliceCount();
 		
 
-	if (key == 's')
-	{
-		if (specialKey[Ctrl])
-			regoApp->saveStackTransformations();
-	}
-
 	if (key == 'S')
 		regoApp->reloadShaders();
 
@@ -550,7 +547,14 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == 'r')
 		regoApp->setWidgetType("Rotate");
 	if (key == 's')
-		regoApp->setWidgetType("Scale");
+	{
+		std::cout << "[Debug] Ctrl? " << std::boolalpha << specialKey[Ctrl] << std::endl;
+
+		if (specialKey[Ctrl])
+			regoApp->saveStackTransformations();
+		else
+			regoApp->setWidgetType("Scale");
+	}
 
 	if (key == 'x')
 		regoApp->setWidgetMode("X");
@@ -747,13 +751,14 @@ static void special(int key, int x, int y)
 	const glm::ivec2 winRes(w, h);
 
 	if (key == GLUT_KEY_F1)
-		regoApp->setPerspectiveLayout(winRes, mouse.coordinates);
+		regoApp->setLayout("MainView", winRes, mouse.coordinates);
+
 	if (key == GLUT_KEY_F2)
-		regoApp->setTopviewLayout(winRes, mouse.coordinates);
+		regoApp->setLayout("OrthoX", winRes, mouse.coordinates);
 	if (key == GLUT_KEY_F3)
-		regoApp->setThreeViewLayout(winRes, mouse.coordinates);
+		regoApp->setLayout("OrthoY", winRes, mouse.coordinates);
 	if (key == GLUT_KEY_F4)
-		regoApp->setContrastEditorLayout(winRes, mouse.coordinates);
+		regoApp->setLayout("OrthoZ", winRes, mouse.coordinates);
 
 
 	if (key == GLUT_KEY_F5)

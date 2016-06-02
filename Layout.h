@@ -75,6 +75,36 @@ public:
 	*/
 };
 
+class SwitchableLayoutContainer : public ILayout
+{
+public:
+	SwitchableLayoutContainer(ILayout* a, ILayout* b);
+	virtual ~SwitchableLayoutContainer();
+
+
+	inline void switchLayouts() { currentLayout = 1 - currentLayout; }
+	inline ILayout* getCurrentLayout() { return layouts[currentLayout]; }
+	
+	virtual Viewport* getActiveViewport() { return layouts[currentLayout]->getActiveViewport(); }
+
+	virtual void updateMouseMove(const glm::ivec2& coords) { layouts[currentLayout]->updateMouseMove(coords); }
+	virtual void resize(const glm::ivec2& size) { layouts[currentLayout]->resize(size); }
+
+	virtual size_t getViewCount() const { return layouts[currentLayout]->getViewCount(); }
+	virtual Viewport* getView(unsigned int n) { return layouts[currentLayout]->getView(n); }
+
+	virtual void panActiveViewport(const glm::vec2& delta) { layouts[currentLayout]->panActiveViewport(delta); }
+
+	virtual void maximizeView(const AABB& bbox) { layouts[currentLayout]->maximizeView(bbox); }
+
+	virtual bool isSingleView() const { return layouts[currentLayout]->isSingleView(); }
+
+private:
+	ILayout*		layouts[2];
+	int				currentLayout;
+
+};
+
 
 class FourViewLayout : public ILayout
 {
@@ -127,6 +157,12 @@ class TopViewFullLayout : public SingleViewLayout
 {
 public:
 	TopViewFullLayout(const glm::ivec2& resolution);
+};
+
+class OrthoViewFullLayout : public SingleViewLayout
+{
+public:
+	OrthoViewFullLayout(const glm::ivec2& resolution, Viewport::ViewportName name);
 };
 
 class PerspectiveFullLayout : public SingleViewLayout

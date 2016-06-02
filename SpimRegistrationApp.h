@@ -154,11 +154,8 @@ public:
 
 	/// \name Views/Layout
 	/// \{
-	void setPerspectiveLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
-	void setTopviewLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
-	void setThreeViewLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
-	void setContrastEditorLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords);
-	
+	void setLayout(const std::string& name, const glm::ivec2& res, const glm::ivec2& mouseCoords);
+
 	/// \}
 
 

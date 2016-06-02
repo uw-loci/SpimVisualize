@@ -50,9 +50,10 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : layout(nullptr
 	config.setDefaults();
 
 	globalBBox.reset();
-	layout = new PerspectiveFullLayout(res);
 
-	prevLayouts["Perspective"] = layout;
+
+	layout = new SwitchableLayoutContainer(new PerspectiveFullLayout(res), new FourViewLayout(res));
+	prevLayouts["MainView"] = layout;
 		
 	resetSliceCount();
 	
@@ -393,13 +394,15 @@ void SpimRegistrationApp::clearStackTransformations()
 
 void SpimRegistrationApp::saveStackTransformations() const
 {
+	std::cout << "[Debug] Saving stack transformations.\n";
+
 	std::for_each(stacks.begin(), stacks.end(), [](const SpimStack* s)
 	{
 		std::string filename = s->getFilename() + ".registration.txt";
 		s->saveTransform(filename);
 	});
 
-
+	
 	std::for_each(pointclouds.begin(), pointclouds.end(), [](const SimplePointcloud* p)
 	{
 		std::string filename = p->getFilename() + ".registration.txt";
@@ -579,75 +582,61 @@ void SpimRegistrationApp::resize(const glm::ivec2& newSize)
 	layout->resize(newSize);
 }
 
-
-void SpimRegistrationApp::setPerspectiveLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords)
+void SpimRegistrationApp::setLayout(const std::string& name, const glm::ivec2& res, const glm::ivec2& mouseCoords)
 {
-	std::cout << "[Layout] Creating fullscreen perspective layout ... \n";
-	
-	if (prevLayouts["Perspective"])
+	if (name == "MainView")
 	{
-		layout = prevLayouts["Perspective"];
-		layout->resize(res);
+		if (layout == prevLayouts["MainView"])
+		{
+			SwitchableLayoutContainer* slc = dynamic_cast<SwitchableLayoutContainer*>(layout);
+			if (slc)
+				slc->switchLayouts();
+		}
+		else
+		{
+			layout = prevLayouts["MainView"];
+			layout->resize(res);
+		}
 	}
-	else
+	else if (name == "OrthoY")
 	{
-		layout = new PerspectiveFullLayout(res);
-		prevLayouts["Perspective"] = layout;
+		if (prevLayouts["OrthoY"])
+		{
+			layout = prevLayouts["OrthoY"];
+			layout->resize(res);
+		}
+		else
+		{
+			layout = new TopViewFullLayout(res);
+			prevLayouts["OrthoY"] = layout;
+		}
+
 	}
-	
-	layout->updateMouseMove(mouseCoords);
-}
-
-
-void SpimRegistrationApp::setTopviewLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords)
-{
-	std::cout << "[Layout] Creating fullscreen top-view layout ... \n";
-
-	if (prevLayouts["TopView"])
+	else if (name == "OrthoX")
 	{
-		layout = prevLayouts["TopView"];
-		layout->resize(res);
+		if (prevLayouts["OrthoX"])
+		{
+			layout = prevLayouts["OrthoX"];
+			layout->resize(res);
+		}
+		else
+		{
+			layout = new OrthoViewFullLayout(res, Viewport::ORTHO_X);
+			prevLayouts["OrthoX"] = layout;
+		}
 	}
-	else
+	else if (name == "OrthoZ")
 	{
-		layout = new TopViewFullLayout(res);
-		prevLayouts["TopView"] = layout;
-	}
-
-	layout->updateMouseMove(mouseCoords);
-}
-
-void SpimRegistrationApp::setThreeViewLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords)
-{
-	std::cout << "[Layout] Creating four-view layout ... \n";
-	if (prevLayouts["FourView"])
-	{
-		layout = prevLayouts["FourView"];
-		layout->resize(res);
-	}
-	else
-	{
-		layout = new FourViewLayout(res);
-		prevLayouts["FourView"] = layout;
-	}
-
-	layout->updateMouseMove(mouseCoords);
-}
-
-
-void SpimRegistrationApp::setContrastEditorLayout(const glm::ivec2& res, const glm::ivec2& mouseCoords)
-{
-	
-	std::cout << "[Layout] Creating contrast editor layout ... \n";
-	if (prevLayouts["ContrastEditor"])
-	{
-		layout = prevLayouts["ContrastEditor"];
-		layout->resize(res);
-	}
-	else
-	{
-		layout = new ContrastEditLayout(res);
-		prevLayouts["ContrastEditor"] = layout;
+		if (prevLayouts["OrthoZ"])
+		{
+			layout = prevLayouts["OrthoZ"];
+			layout->resize(res);
+		}
+		else
+		{
+			layout = new OrthoViewFullLayout(res, Viewport::ORTHO_Z);
+			prevLayouts["OrthoZ"] = layout;
+		}
 	}
 
 	layout->updateMouseMove(mouseCoords);

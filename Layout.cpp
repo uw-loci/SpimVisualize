@@ -62,6 +62,20 @@ void Viewport::maximizeView(const AABB& bbox)
 
 }
 
+SwitchableLayoutContainer::SwitchableLayoutContainer(ILayout* a, ILayout* b) : currentLayout(0)
+{
+	layouts[0] = a;
+	layouts[1] = b;
+}
+
+SwitchableLayoutContainer::~SwitchableLayoutContainer()
+{
+	delete layouts[0];
+	delete layouts[1];
+}
+
+
+
 SingleViewLayout::SingleViewLayout(const ivec2& resolution)
 {
 	viewport.position = ivec2(0);
@@ -108,6 +122,35 @@ TopViewFullLayout::TopViewFullLayout(const ivec2& resolution) : SingleViewLayout
 	viewport.color = vec3(1.f);
 	viewport.camera = new OrthoCamera(vec3(0.f, -1, 0), vec3(1.f, 0.f, 0.f));
 	viewport.camera->aspect = (float)resolution.x / resolution.y;
+}
+
+
+OrthoViewFullLayout::OrthoViewFullLayout(const glm::ivec2& resolution, Viewport::ViewportName axis) : SingleViewLayout(resolution)
+{
+
+	switch (axis)
+	{
+	case Viewport::ORTHO_X:
+		viewport.camera = new OrthoCamera(glm::vec3(-1, 0, 0), glm::vec3(0.f, 1.f, 0.f));
+		viewport.color = vec3(1, 0, 0);
+		break;
+
+	case Viewport::ORTHO_Y:
+		viewport.camera = new OrthoCamera(glm::vec3(0, -1, 0), glm::vec3(1.f, 0.f, 0.f));
+		viewport.color = vec3(0, 1, 0);
+		break;
+
+	case Viewport::ORTHO_Z:
+		viewport.camera = new OrthoCamera(glm::vec3(0, 0, -1), glm::vec3(0.f, 1.f, 0.f));
+		viewport.color = vec3(0, 0, 1);
+		break;
+
+	default:
+		throw runtime_error("Invalid viewport/axis id for ortho layout!");
+	}
+	viewport.name = axis;
+	viewport.camera->aspect = (float)resolution.x / resolution.y;
+
 }
 
 
