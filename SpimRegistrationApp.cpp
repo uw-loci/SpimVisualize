@@ -73,6 +73,19 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : layout(nullptr
 
 SpimRegistrationApp::~SpimRegistrationApp()
 {
+
+	if (config.saveStackTransformationsOnExit)
+	{
+		try
+		{
+			this->saveStackTransformations();
+		}
+		catch (const std::runtime_error& err)
+		{
+			std::cerr << "[Error] " << err.what() << std::endl;
+		}
+	}
+
 	delete solver;
 	
 	delete volumeRenderTarget;

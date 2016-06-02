@@ -18,6 +18,8 @@ void Config::setDefaults()
 	resampleResolution = glm::ivec3(512, 512, 64);
 
 	threshold.set(0, 255);
+
+	saveStackTransformationsOnExit = true;
 }
 
 
@@ -39,6 +41,12 @@ void Config::load(const string& filename)
 		file >> temp;
 		if (temp[0] == '#')
 			continue;
+
+		if (temp == "saveTransforms")
+		{
+			file >> saveStackTransformationsOnExit;
+			cout << "[Config] Save stack transforms on exit: " << std::boolalpha << saveStackTransformationsOnExit << endl;
+		}
 
 		if (temp == "voxelSize")
 		{
@@ -83,6 +91,9 @@ void Config::save(const string& filename) const
 	ofstream file(filename);
 	if (!file.is_open())
 		throw runtime_error("Unable to open file \"" + filename + "\"!");
+
+	file << "# general\n";
+	file << "saveTransforms " << (int)saveStackTransformationsOnExit << endl;
 
 	file << "# ray trace settings\n";
 	file << "voxelSize " << defaultVoxelSize.x << " " << defaultVoxelSize.y << " " << defaultVoxelSize.z << endl;

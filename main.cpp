@@ -62,8 +62,9 @@ enum MenuItem
 
 	MENU_MISC_RELOAD_CONFIG,
 	MENU_MISC_RELOAD_SHADERS,
-	MENU_MISC_SUBSAMPLE_ALL
-	
+	MENU_MISC_SUBSAMPLE_ALL,
+	MENU_MISC_SAVE_ALL_TRANSFORMS,
+	MENU_MISC_RELOAD_ALL_TRANSFORMS
 };
 
 
@@ -231,6 +232,14 @@ static void menu(int item)
 		regoApp->subsampleAllStacks();
 		break;
 
+	case MENU_MISC_SAVE_ALL_TRANSFORMS:
+		regoApp->saveStackTransformations();
+		break;
+
+	case MENU_MISC_RELOAD_ALL_TRANSFORMS:
+		regoApp->loadStackTransformations();
+		break;
+
 	default:
 
 		std::cout << "[Debug] " << (MenuItem)item << " is not a valid menu entry.\n";
@@ -306,9 +315,11 @@ static void createRightClickMenu()
 	glutAddMenuEntry("Save pointcloud", MENU_POINTCLOUD_SAVE_CURRENT);
 
 	int misc = glutCreateMenu(menu);
-	glutAddMenuEntry("Reload config         [c]", MENU_MISC_RELOAD_CONFIG);
-	glutAddMenuEntry("Reload shaders [Shift][s]", MENU_MISC_RELOAD_SHADERS);
-	glutAddMenuEntry("Subsample all stacks  [u]", MENU_MISC_SUBSAMPLE_ALL);
+	glutAddMenuEntry("Reload config                  [c]", MENU_MISC_RELOAD_CONFIG);
+	glutAddMenuEntry("Reload shaders          [Shift][s]", MENU_MISC_RELOAD_SHADERS);
+	glutAddMenuEntry("Subsample all stacks           [u]", MENU_MISC_SUBSAMPLE_ALL);
+	glutAddMenuEntry("Save all registrations   [Ctrl][S]", MENU_MISC_SAVE_ALL_TRANSFORMS);
+	glutAddMenuEntry("Reload all registrations [Ctrl][L]", MENU_MISC_RELOAD_ALL_TRANSFORMS);
 
 
 	glutCreateMenu(menu);
@@ -324,6 +335,73 @@ static void createRightClickMenu()
 	glutAttachMenu(GLUT_RIGHT_BUTTON);
 
 }
+
+static int queryVRAM(bool total)
+{
+	std::string glExtensionsString_(reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS)));
+	std::string glVendorString_(reinterpret_cast<const char*>(glGetString(GL_VENDOR)));
+	int availableTexMem = -1;
+	bool nVidia = true;
+
+	if (glVendorString_.find("ATI") != std::string::npos)
+	{
+		nVidia = false;
+	}
+
+	if (total)
+	{
+		if (nVidia) {
+			if (glExtensionsString_.find("GL_NVX_gpu_memory_info") != std::string::npos){
+				GLint retVal;
+				glGetIntegerv(GL_GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX, &retVal);
+				availableTexMem = static_cast<int>(retVal);
+			}
+			else {
+				printf("No GL_NVX_gpu_memory_info support!!!");
+			}
+		}
+		else {
+			//ATI
+			if (glExtensionsString_.find("GL_ATI_meminfo") != std::string::npos) {
+				GLint retVal[4];
+				glGetIntegerv(GL_TEXTURE_FREE_MEMORY_ATI, retVal);
+				availableTexMem = static_cast<int>(retVal[0]); //0=total 1=availabel
+			}
+			else {
+				printf("No GL_ATI_meminfo support");
+			}
+		}
+
+		return availableTexMem;
+	}
+
+	if (nVidia) {
+		if (glExtensionsString_.find("GL_NVX_gpu_memory_info") != std::string::npos){
+			GLint retVal;
+			int memFlag = 0;
+			glGetIntegerv(memFlag, &retVal);
+			availableTexMem = static_cast<int>(retVal);
+		}
+		else {
+			printf("No GL_NVX_gpu_memory_info support!!!");
+		}
+	}
+	else {
+		if (glExtensionsString_.find("GL_ATI_meminfo") != std::string::npos) {
+
+			GLint retVal[4];
+			glGetIntegerv(GL_TEXTURE_FREE_MEMORY_ATI, retVal);
+			availableTexMem = static_cast<int>(retVal[1]); //0=total 1=availabel
+		}
+		else {
+			printf("No GL_ATI_meminfo support");
+		}
+	}
+
+	return availableTexMem;
+}
+
+
 
 
 static void display()
@@ -392,7 +470,13 @@ static void keyboard(unsigned char key, int x, int y)
 
 
 	if (key == 'l')
-		regoApp->toggleCurrentVolumeLock();
+	{
+		if (specialKey[Ctrl])
+			regoApp->loadStackTransformations();
+		else
+			regoApp->toggleCurrentVolumeLock();
+
+	}
 	if (key == 'L')
 		regoApp->unlockAllVolumes();
 
@@ -440,6 +524,13 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == '\'')
 		regoApp->increaseSliceCount();
 		
+
+	if (key == 's')
+	{
+		if (specialKey[Ctrl])
+			regoApp->saveStackTransformations();
+	}
+
 	if (key == 'S')
 		regoApp->reloadShaders();
 
