@@ -650,9 +650,9 @@ static void keyboard(unsigned char key, int x, int y)
 
 
 	if (key == '-')
-		regoApp->zoomCamera(0.7f);
-	if (key == '=')
 		regoApp->zoomCamera(1.4f);
+	if (key == '=')
+		regoApp->zoomCamera(0.7f);
 	if (key == 'f')
 		regoApp->centerCamera();
 
@@ -930,6 +930,7 @@ int main(int argc, const char** argv)
 		// load global config
 		regoApp->loadConfig(extractPath(argv[0]) + "/config.cfg");
 
+		/*
 		// try to load the local config
 		try
 		{
@@ -939,12 +940,13 @@ int main(int argc, const char** argv)
 		{
 			std::cout << "Unable to load local config.";
 		}
-
-
+		
+		
 		for (int i = 1; i < argc; ++i)
 		{
 			regoApp->addSpimStack(argv[i]);
 		}
+		*/
 
 		/*
 		regoApp->addSpimStack("e:/spim/121914 Fish4 no beads_aligned_by_jayne/spim_TL01_Angle0.ome.tiff");
@@ -952,12 +954,24 @@ int main(int argc, const char** argv)
 		regoApp->addSpimStack("e:/spim/121914 Fish4 no beads_aligned_by_jayne/spim_TL01_Angle2.ome.tiff");
 		*/
 
+
+
+		SpimStack* s0 = SpimStack::load("e:/spim/Mousetail/5xz2mousetailclearnegtivedegree144.tif");
+		SpimStack* s1 = SpimStack::load("e:/spim/Mousetail/5xz2mousetailclearnegtivedegree216.tif");
+		s0->reslice(0, s0->getDepth() / 2); 
+		s1->reslice(0, s1->getDepth() / 2);
+
+		regoApp->addSpimStack(s0);
+		regoApp->addSpimStack(s1);
+
+
+		regoApp->loadConfig("e:/spim/Mousetail/config.cfg");
+
+
+
 		regoApp->loadStackTransformations();
 
-		//regoApp->addSpimStack("e:/spim/Mousetail/5xz2mousetailclearnegtivedegree144.tif");
 		
-		//regoApp->addSpimStack("e:/spim/Mousetail/5xz2mousetailclearnegtivedegree216.tif");
-
 		regoApp->centerCamera();
 		regoApp->maximizeViews();
 

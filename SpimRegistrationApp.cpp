@@ -192,9 +192,11 @@ void SpimRegistrationApp::draw()
 		const Viewport* vp = layout->getView((unsigned int)i);
 		vp->setup();
 
+		/*
 		if (vp->name == Viewport::CONTRAST_EDITOR)
 			drawContrastEditor(vp);
 		else
+		*/
 		{
 
 			// apply new transform
@@ -1399,6 +1401,9 @@ void SpimRegistrationApp::raytraceVolumes(const Viewport* vp) const
 		sprintf_s(uname, "volume[%d].bboxMin", i);
 		volumeRaycaster->setUniform(uname, bbox.min);
 
+
+		sprintf_s(uname, "volume[%d].enabled", i);
+		volumeRaycaster->setUniform(uname, stacks[i]->enabled);
 
 #else
 		char uname[256];
