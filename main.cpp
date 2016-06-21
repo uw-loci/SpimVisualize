@@ -930,7 +930,6 @@ int main(int argc, const char** argv)
 		// load global config
 		regoApp->loadConfig(extractPath(argv[0]) + "/config.cfg");
 
-		/*
 		// try to load the local config
 		try
 		{
@@ -946,7 +945,7 @@ int main(int argc, const char** argv)
 		{
 			regoApp->addSpimStack(argv[i]);
 		}
-		*/
+		
 
 		/*
 		regoApp->addSpimStack("e:/spim/121914 Fish4 no beads_aligned_by_jayne/spim_TL01_Angle0.ome.tiff");
@@ -955,7 +954,7 @@ int main(int argc, const char** argv)
 		*/
 
 
-
+		/*
 		SpimStack* s0 = SpimStack::load("e:/spim/Mousetail/5xz2mousetailclearnegtivedegree144.tif");
 		SpimStack* s1 = SpimStack::load("e:/spim/Mousetail/5xz2mousetailclearnegtivedegree216.tif");
 		s0->reslice(0, s0->getDepth() / 2); 
@@ -966,7 +965,7 @@ int main(int argc, const char** argv)
 
 
 		regoApp->loadConfig("e:/spim/Mousetail/config.cfg");
-
+		*/
 
 
 		regoApp->loadStackTransformations();

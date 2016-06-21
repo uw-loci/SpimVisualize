@@ -2745,6 +2745,8 @@ void SpimRegistrationApp::reloadConfig()
 		stacks[i]->setVoxelDimensions(config.defaultVoxelSize);
 		stacks[i]->update();
 	}
+
+	updateGlobalBbox();
 	
 }
 
