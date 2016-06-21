@@ -97,7 +97,9 @@ static void updateSpecialKeys()
 	specialKey[Ctrl] = specials & GLUT_ACTIVE_CTRL;
 	specialKey[Alt] = specials & GLUT_ACTIVE_ALT;
 
-	//std::cout << "[Debug] Specials: Shift: " << specialKey[Shift] << ", Ctrl: " << specialKey[Ctrl] << ", Alt: " << specialKey[Alt] << std::endl;
+
+
+	std::cout << "[Debug] Specials: Shift: " << specialKey[Shift] << ", Ctrl: " << specialKey[Ctrl] << ", Alt: " << specialKey[Alt] << std::endl;
 }
 
 static void menu(int item)
@@ -436,7 +438,12 @@ static void idle()
 static void keyboard(unsigned char key, int x, int y)
 {
 	updateSpecialKeys();
+	//std::cout << "[Debug] " << key << " (" << (int)key << ")\n";
+	
 
+	// ctrl-s
+	if (key == 19)
+		regoApp->saveStackTransformations();
 
 	if (key == 27)
 		exit(0);
@@ -514,6 +521,8 @@ static void keyboard(unsigned char key, int x, int y)
 	{
 		regoApp->reloadConfig();
 
+
+
 	/*
 		if (specialKey[Alt])
 			regoApp->contrastEditorResetThresholds();
@@ -547,14 +556,7 @@ static void keyboard(unsigned char key, int x, int y)
 	if (key == 'r')
 		regoApp->setWidgetType("Rotate");
 	if (key == 's')
-	{
-		std::cout << "[Debug] Ctrl? " << std::boolalpha << specialKey[Ctrl] << std::endl;
-
-		if (specialKey[Ctrl])
-			regoApp->saveStackTransformations();
-		else
-			regoApp->setWidgetType("Scale");
-	}
+		regoApp->setWidgetType("Scale");
 
 	if (key == 'x')
 		regoApp->setWidgetMode("X");
@@ -746,6 +748,10 @@ static void passiveMotion(int x, int y)
 
 static void special(int key, int x, int y)
 {
+	//std::cout << "[Debug] Special: " << key << std::endl;
+
+
+
 	int w = glutGet(GLUT_WINDOW_WIDTH);
 	int h = glutGet(GLUT_WINDOW_HEIGHT);
 	const glm::ivec2 winRes(w, h);
@@ -982,18 +988,18 @@ int main(int argc, const char** argv)
 	catch (const std::runtime_error& e)
 	{
 		std::cerr << "[Error] " << e.what() << std::endl;
-		exit(1);
-		
+		return 1;
+
 	}
 	catch (const std::string& e)
 	{
 		std::cerr << "[Error] " << e << std::endl;
-		exit(2);
+		return 2;
 	}
 	catch (...)
 	{
 		std::cerr << "[Error] Unknown error.\n";
-		exit(-1);
+		return -1;
 	}
 
 	return 0;

@@ -71,7 +71,7 @@ void Viewport::drawTitle() const
 	glLoadIdentity();
 
 
-	glRasterPos2i(size.y-10, 10);
+	glRasterPos2i(10, size.y-20);
 	glColor4f(1, 1, 1, 1);
 	
 	for (int i = 0; i < name.length(); ++i)
