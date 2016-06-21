@@ -3,6 +3,7 @@
 #include "AABB.h"
 
 #include <GL/glew.h>
+#include <GL/glut.h>
 
 #include <fstream>
 #include <cassert>
@@ -13,6 +14,10 @@ using namespace glm;
 
 const float CAMERA_DISTANCE = 4000.f;
 const vec3 CAMERA_TARGET(0.f);
+
+#undef near
+#undef far
+
 
 void Viewport::setup() const
 {
@@ -51,6 +56,32 @@ void Viewport::drawBorder() const
 
 	glEnable(GL_DEPTH_TEST);
 
+}
+
+
+void Viewport::drawTitle() const
+{
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glLoadIdentity();
+	glOrtho(0, size.x, 0, size.y, 0, 1);
+
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+
+
+	glRasterPos2i(size.y-10, 10);
+	glColor4f(1, 1, 1, 1);
+	
+	for (int i = 0; i < name.length(); ++i)
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, name[i]);
+
+
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glMatrixMode(GL_MODELVIEW);
+	glPopMatrix();
 }
 
 
@@ -118,39 +149,39 @@ void SingleViewLayout::panActiveViewport(const vec2& delta)
 
 TopViewFullLayout::TopViewFullLayout(const ivec2& resolution) : SingleViewLayout(resolution)
 {
-	viewport.name = Viewport::ORTHO_Y;
+	viewport.name = "Ortho Y";
 	viewport.color = vec3(1.f);
 	viewport.camera = new OrthoCamera(vec3(0.f, -1, 0), vec3(1.f, 0.f, 0.f));
 	viewport.camera->aspect = (float)resolution.x / resolution.y;
 }
 
 
-OrthoViewFullLayout::OrthoViewFullLayout(const glm::ivec2& resolution, Viewport::ViewportName axis) : SingleViewLayout(resolution)
+OrthoViewFullLayout::OrthoViewFullLayout(const glm::ivec2& resolution, const std::string& axis) : SingleViewLayout(resolution)
 {
 
-	switch (axis)
+	if (axis == "Ortho X")
 	{
-	case Viewport::ORTHO_X:
 		viewport.camera = new OrthoCamera(glm::vec3(-1, 0, 0), glm::vec3(0.f, 1.f, 0.f));
 		viewport.color = vec3(1, 0, 0);
-		break;
 
-	case Viewport::ORTHO_Y:
+	}
+	else if (axis == "Ortho Y")
+	{
 		viewport.camera = new OrthoCamera(glm::vec3(0, -1, 0), glm::vec3(1.f, 0.f, 0.f));
 		viewport.color = vec3(0, 1, 0);
-		break;
 
-	case Viewport::ORTHO_Z:
+	}
+	else if (axis == "Ortho Z")
+	{
 		viewport.camera = new OrthoCamera(glm::vec3(0, 0, -1), glm::vec3(0.f, 1.f, 0.f));
 		viewport.color = vec3(0, 0, 1);
-		break;
 
-	default:
-		throw runtime_error("Invalid viewport/axis id for ortho layout!");
 	}
+	else
+		throw runtime_error("Invalid viewport/axis id for ortho layout!");
+
 	viewport.name = axis;
 	viewport.camera->aspect = (float)resolution.x / resolution.y;
-
 }
 
 
@@ -158,7 +189,7 @@ PerspectiveFullLayout::PerspectiveFullLayout(const ivec2& resolution) : SingleVi
 {
 	viewport.camera = new OrbitCamera;
 	viewport.color = vec3(1.f);
-	viewport.name = Viewport::PERSPECTIVE;
+	viewport.name = "Perspective";
 
 	OrbitCamera* cam = dynamic_cast<OrbitCamera*>(viewport.camera);
 	cam->far = CAMERA_DISTANCE * 4.f;
@@ -172,19 +203,19 @@ PerspectiveFullLayout::PerspectiveFullLayout(const ivec2& resolution) : SingleVi
 
 FourViewLayout::FourViewLayout(const ivec2& size)
 {
-	views[0].name = Viewport::ORTHO_X;
+	views[0].name = "Ortho X";
 	views[0].camera = new OrthoCamera(glm::vec3(-1, 0, 0), glm::vec3(0.f, 1.f, 0.f));
 	views[0].color = vec3(1, 0, 0);
 
-	views[1].name = Viewport::ORTHO_Y;
+	views[1].name = "Ortho Y";
 	views[1].camera = new OrthoCamera(glm::vec3(0.f, -1, 0), glm::vec3(1.f, 0.f, 0.f));
 	views[1].color = vec3(0, 1, 0);
 
-	views[2].name = Viewport::ORTHO_Z;
+	views[2].name = "Ortho Z";
 	views[2].camera = new OrthoCamera(glm::vec3(0, 0.f, -1), glm::vec3(0.f, 1.f, 0.f));
 	views[2].color = vec3(0, 0, 1);
 
-	views[3].name = Viewport::PERSPECTIVE;
+	views[3].name = "Perspective";
 	views[3].camera = new OrbitCamera;
 	views[3].color = vec3(1);
 
@@ -255,11 +286,11 @@ void FourViewLayout::maximizeView(const AABB& bbox)
 ContrastEditLayout::ContrastEditLayout(const glm::ivec2& res)
 {
 
-	views[0].name = Viewport::PERSPECTIVE;
+	views[0].name = "Perspective";
 	views[0].camera = new OrbitCamera;
 	views[0].color = vec3(1);
 
-	views[1].name = Viewport::CONTRAST_EDITOR;
+	views[1].name = "Histogram";
 	views[1].camera = new UnitCamera; // OrthoCamera(glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f, 1.f, 0.f), 1.1f);
 	views[1].color = vec3(1, 1, 0);
 		

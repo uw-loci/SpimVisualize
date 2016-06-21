@@ -14,8 +14,8 @@ public:
 	glm::ivec2		position, size;
 
 	glm::vec3		color;
-
-	enum ViewportName { ORTHO_X = 0, ORTHO_Y, ORTHO_Z, PERSPECTIVE, CONTRAST_EDITOR} name;
+	
+	std::string		name;
 
 	ICamera*		camera;
 	bool			highlighted;
@@ -47,6 +47,7 @@ public:
 
 	void setup() const;
 	void drawBorder() const;
+	void drawTitle() const;
 };
 
 
@@ -162,7 +163,7 @@ public:
 class OrthoViewFullLayout : public SingleViewLayout
 {
 public:
-	OrthoViewFullLayout(const glm::ivec2& resolution, Viewport::ViewportName name);
+	OrthoViewFullLayout(const glm::ivec2& resolution, const std::string& name);
 };
 
 class PerspectiveFullLayout : public SingleViewLayout

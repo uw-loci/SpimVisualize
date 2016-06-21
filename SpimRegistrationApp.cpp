@@ -367,6 +367,7 @@ void SpimRegistrationApp::draw()
 		}
 
 		vp->drawBorder();
+		vp->drawTitle();
 
 	}
 
@@ -609,7 +610,11 @@ void SpimRegistrationApp::setLayout(const std::string& name, const glm::ivec2& r
 		}
 		else
 		{
+			/*
 			layout = new TopViewFullLayout(res);
+			prevLayouts["OrthoY"] = layout;
+			*/
+			layout = new OrthoViewFullLayout(res, "Ortho Y");
 			prevLayouts["OrthoY"] = layout;
 		}
 
@@ -623,7 +628,7 @@ void SpimRegistrationApp::setLayout(const std::string& name, const glm::ivec2& r
 		}
 		else
 		{
-			layout = new OrthoViewFullLayout(res, Viewport::ORTHO_X);
+			layout = new OrthoViewFullLayout(res, "Ortho X");
 			prevLayouts["OrthoX"] = layout;
 		}
 	}
@@ -636,7 +641,7 @@ void SpimRegistrationApp::setLayout(const std::string& name, const glm::ivec2& r
 		}
 		else
 		{
-			layout = new OrthoViewFullLayout(res, Viewport::ORTHO_Z);
+			layout = new OrthoViewFullLayout(res, "Ortho Z");
 			prevLayouts["OrthoZ"] = layout;
 		}
 	}
@@ -679,7 +684,7 @@ void SpimRegistrationApp::panCamera(const glm::vec2& delta)
 void SpimRegistrationApp::rotateCamera(const glm::vec2& delta)
 {
 	Viewport* vp = layout->getActiveViewport();
-	if (vp && vp->name == Viewport::PERSPECTIVE)
+	if (vp && vp->name == "Perspective")
 		vp->camera->rotate(delta.x, delta.y);
 
 	setCameraMoving(true);
@@ -756,7 +761,7 @@ void SpimRegistrationApp::moveCurrentStack(const glm::vec2& delta)
 		return;
 
 	Viewport* vp = layout->getActiveViewport();
-	if (vp && vp->name != Viewport::CONTRAST_EDITOR)
+	if (vp && vp->name != "Histrogram")
 	{
 		//stacks[currentStack]->move(vp->camera->calculatePlanarMovement(delta));
 		interactionVolumes[currentVolume]->move(vp->camera->calculatePlanarMovement(delta));
@@ -804,7 +809,7 @@ void SpimRegistrationApp::contrastEditorResetThresholds()
 void SpimRegistrationApp::changeContrast(const glm::ivec2& cursor)
 {
 	Viewport* vp = layout->getActiveViewport();
-	if (vp && vp->name == Viewport::CONTRAST_EDITOR)
+	if (vp && vp->name == "Histogram")
 	{
 		// find closest contrast slider
 		
@@ -1128,7 +1133,7 @@ void SpimRegistrationApp::drawGroundGrid(const Viewport* vp) const
 	glColor4f(0.3f, 0.3f, 0.3f, 1.f);
 
 
-	if (vp->name == Viewport::PERSPECTIVE || vp->name == Viewport::ORTHO_Y)
+	if (vp->name == "Perspective" || vp->name == "Ortho Y")
 	{
 		glBegin(GL_LINES);
 		for (int i = -1000; i <= 1000; i += 100)
@@ -1142,7 +1147,7 @@ void SpimRegistrationApp::drawGroundGrid(const Viewport* vp) const
 		glEnd();
 	}
 
-	if (vp->name == Viewport::ORTHO_X)
+	if (vp->name == "Ortho X")
 	{
 		glBegin(GL_LINES);
 		for (int i = -1000; i <= 1000; i += 100)
@@ -1156,7 +1161,7 @@ void SpimRegistrationApp::drawGroundGrid(const Viewport* vp) const
 		glEnd();
 	}
 
-	if (vp->name == Viewport::ORTHO_Z)
+	if (vp->name == "Ortho Z")
 	{
 		glBegin(GL_LINES);
 		for (int i = -1000; i <= 1000; i += 100)
