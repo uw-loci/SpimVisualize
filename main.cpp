@@ -96,10 +96,8 @@ static void updateSpecialKeys()
 	specialKey[Shift] = specials & GLUT_ACTIVE_SHIFT;
 	specialKey[Ctrl] = specials & GLUT_ACTIVE_CTRL;
 	specialKey[Alt] = specials & GLUT_ACTIVE_ALT;
-
-
-
-	std::cout << "[Debug] Specials: Shift: " << specialKey[Shift] << ", Ctrl: " << specialKey[Ctrl] << ", Alt: " << specialKey[Alt] << std::endl;
+	
+	//std::cout << "[Debug] Specials: Shift: " << specialKey[Shift] << ", Ctrl: " << specialKey[Ctrl] << ", Alt: " << specialKey[Alt] << std::endl;
 }
 
 static void menu(int item)
