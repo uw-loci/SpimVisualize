@@ -233,16 +233,20 @@ void RYSolver::createCandidateSolutions(const InteractionVolume* v)
 
 		//s.matrix = createRotationMatrix(a, v);
 
-		
+		/*
 		mat4 I = v->getTransform();
 		mat4 T = translate(v->getBBox().getCentroid());
 
 		// simplified from: I*T* rot * I-1*I
 		mat4 R = I * T * rotate(a, glm::vec3(0,1,0)) * inverse(T);
 		s.matrix = R;
+		*/
 
+		//mat4 I = v->getTransform();
+		mat4 I = translate(v->getTransformedBBox().getCentroid());
+		mat4 R = rotate(a, vec3(0, 1, 0));
 
-		//s.matrix = rotate(a, vec3(0, 1, 0));
+		s.matrix = I * R * inverse(I);
 		solutions.push_back(s);
 
 	}
@@ -331,6 +335,7 @@ void MultiDimensionalHillClimb::initialize(const InteractionVolume* v)
 
 	// ignore this
 	//currentVolume = v;
+	currentVolume = nullptr;
 	createPotentialSolutions();
 }
 
