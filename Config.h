@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include <glm/glm.hpp>
 
 #include "StackRegistration.h"
@@ -17,14 +18,26 @@ struct Config
 	// the voxel size in nm
 	glm::vec3		defaultVoxelSize;
 	glm::ivec3		resampleResolution;
-	
+
 	// how many steps should the ray tracer take
 	unsigned int	raytraceSteps;
 	// how big should each step be
 	float			raytraceDelta;
-	
+
 	// min-max thresholds for contrast settings
 	Threshold		threshold;
+
+	struct InitialStackPosition
+	{
+		std::string filename;
+		// translation
+		float x, y, z;
+		// rotation y
+		float rotY;
+	};
+
+	std::vector<InitialStackPosition>	stackPositions;
+
 
 	inline Config() { setDefaults(); }
 

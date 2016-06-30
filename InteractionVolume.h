@@ -24,7 +24,7 @@ public:
 
 
 	virtual void saveTransform(const std::string& filename) const;
-	virtual void loadTransform(const std::string& filename);
+	virtual bool loadTransform(const std::string& filename);
 	inline void applyTransform(const glm::mat4& t) { setTransform(t * transform); }
 
 	/// sets the rotation around its center in degrees

@@ -53,7 +53,7 @@ void InteractionVolume::saveTransform(const std::string& filename) const
 
 }
 
-void InteractionVolume::loadTransform(const std::string& filename)
+bool InteractionVolume::loadTransform(const std::string& filename)
 {
 	std::ifstream file(filename);
 	//assert(file.is_open());
@@ -61,7 +61,7 @@ void InteractionVolume::loadTransform(const std::string& filename)
 	if (!file.is_open())
 	{
 		std::cerr << "[SpimStack] Unable to load transformation from \"" << filename << "\"!\n";
-		return;
+		return false;
 	}
 
 	glm::mat4 M(1.f);
@@ -73,6 +73,7 @@ void InteractionVolume::loadTransform(const std::string& filename)
 	setTransform(M);
 
 	std::cout << "[SpimStack] Read transform: " << transform << " from \"" << filename << "\"\n";
+	return true;
 }
 
 void InteractionVolume::setTransform(const glm::mat4& t)

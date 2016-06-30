@@ -92,8 +92,7 @@ public:
 	void setVoxelDimensions(const glm::vec3& dimensions);
 
 	inline const std::string& getFilename() const { return filename;  }
-
-
+	
 
 	/// \name Filtering methods
 	/// \{

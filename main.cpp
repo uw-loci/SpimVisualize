@@ -986,17 +986,20 @@ int main(int argc, const char** argv)
 	catch (const std::runtime_error& e)
 	{
 		std::cerr << "[Error] " << e.what() << std::endl;
+		system("pause");
 		return 1;
 
 	}
 	catch (const std::string& e)
 	{
 		std::cerr << "[Error] " << e << std::endl;
+		system("pause"); 
 		return 2;
 	}
 	catch (...)
 	{
 		std::cerr << "[Error] Unknown error.\n";
+		system("pause"); 
 		return -1;
 	}
 
