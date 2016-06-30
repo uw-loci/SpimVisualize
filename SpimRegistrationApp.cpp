@@ -2681,6 +2681,7 @@ void SpimRegistrationApp::createEmptyFullSizedStack()
 	stack->setContent(res, 0);
 	
 
+
 	stacks.push_back(stack);
 	addInteractionVolume(stack);
 	saveVolumeTransform(stacks.size() - 1);
@@ -2718,6 +2719,7 @@ void SpimRegistrationApp::createEmptyRandomStack(const glm::ivec3& resolution, c
 	addInteractionVolume(stack);
 	saveVolumeTransform(stacks.size() - 1);
 
+	/*
 	// copy the transform of the base stack
 	stack->setTransform(stacks[0]->getTransform());
 
@@ -2733,9 +2735,9 @@ void SpimRegistrationApp::createEmptyRandomStack(const glm::ivec3& resolution, c
 	stack->setRotation(a);
 
 	std::cout << "[Resample] Created random stack with dT " << delta << " and R=" << a << std::endl;
+	*/
 
-
-	
+	updateGlobalBbox();
 	reloadVolumeShader();
 }
 
@@ -2935,14 +2937,13 @@ void SpimRegistrationApp::addMultiStackSamples()
 
 	stackSamples = sliceSamples;
 
+	if (lastStackSample % 10 == 0)
+		std::cout << "[Sample] Read back " << lastStackSample << "/" << stack->getDepth() << std::endl;
 
 	++lastStackSample;
 	if (lastStackSample == stack->getDepth())
 	{
-		stack->update();
 		endSampleStack();
-
-
 		stackSamples.clear();
 	}
 
@@ -2972,6 +2973,9 @@ void SpimRegistrationApp::startSampleStack(int n)
 void SpimRegistrationApp::endSampleStack()
 {
 
+	// update the texture here?
+
+
 
 	// save the created stack
 	
@@ -2979,6 +2983,8 @@ void SpimRegistrationApp::endSampleStack()
 	const std::string baseFile = stacks[0]->getFilename();
 	const std::string savePath = baseFile.substr(0, baseFile.find_last_of("/")+1);
 	
+	std::cout << "[Debug] Save path: " << savePath << std::endl;
+
 	std::string filename = savePath + "phantom_" + std::to_string(sampleStack);;
 	stacks[sampleStack]->save(filename + ".tiff");
 	stacks[sampleStack]->saveTransform(filename + ".tiff.reference.txt");

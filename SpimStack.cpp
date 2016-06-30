@@ -33,6 +33,9 @@
 #include <GL/glew.h>
 #endif
 
+#undef SUPPORT_8BIT
+
+
 #ifdef ENABLE_PCL
 #include <pcl/common/common.h>
 #include <pcl/point_types.h>
@@ -161,9 +164,11 @@ SpimStack* SpimStack::load(const std::string& file)
 
 
 		std::cout << "[Stack] Loaded found bitmap with depth " << bpp << std::endl;
+#ifdef SUPPORT_8BIT
 		if (bpp == 8)
 			stack = new SpimStackU8;
 		else if (bpp == 16)
+#endif
 			stack = new SpimStackU16;
 
 		stack->loadImage(file);
@@ -177,10 +182,11 @@ SpimStack* SpimStack::load(const std::string& file)
 
 		getStackInfoFromFilename(file, res, depth);
 
+#ifdef SUPPORT_8BIT
 		if (depth == 8)
 			stack = new SpimStackU8;
-
 		else if (depth == 16)
+#endif
 			stack = new SpimStackU16;
 
 
@@ -1268,6 +1274,9 @@ void SpimStack::setPlaneSamples(const std::vector<float>& values, size_t zplane)
 	for (size_t i = 0; i < planeSize; ++i)
 		this->setSample(offset + i, values[i]);
 	
+
+	//this->updateTexture();
+
 }
 
 
@@ -1592,6 +1601,8 @@ void SpimStackU16::saveBinary(const std::string& filename)
 
 void SpimStackU16::saveImage(const std::string& filename)
 {
+	cout << "[Stack] Saving stack to \"" << filename << "\" ... ";
+
 	FIMULTIBITMAP* fmb = FreeImage_OpenMultiBitmap(FIF_TIFF, filename.c_str(), TRUE, FALSE);
 	assert(fmb);
 
@@ -1610,6 +1621,8 @@ void SpimStackU16::saveImage(const std::string& filename)
 	}
 
 	FreeImage_CloseMultiBitmap(fmb);
+
+	cout << "done.\n";
 }
 
 void SpimStackU16::subsample(bool updateTextureData)
@@ -1696,6 +1709,18 @@ void SpimStackU16::updateTexture()
 
 	size_t size = width*height*depth*sizeof(unsigned short) / 1024 / 1024;
 	cout << "[Stack] Updating 3D texture (" << volumeTextureId << ") " << width << "x" << height << "x" << depth << ", estimated size: " << size << "MB ... ";
+	
+	if (!glIsTexture(volumeTextureId))
+		throw std::runtime_error("Texture invalid!");
+
+
+	/*
+	for (size_t i = 0; i < width*height*depth; i+= 1000)
+		std::cout << (int)volume[i] << " ";
+	*/
+
+
+
 	glBindTexture(GL_TEXTURE_3D, volumeTextureId);
 	glTexImage3D(GL_TEXTURE_3D, 0, GL_R16UI, width, height, depth, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, volume);
 	cout << "done.\n";
@@ -1722,20 +1747,20 @@ void SpimStackU16::setContent(const glm::ivec3& res, const void* data)
 
 	if (data)
 	{
+		cout << "[Stack] Copying existing data ... \n";
 		memcpy(volume, data, width*height*depth*sizeof(unsigned short));
-		updateTexture();
+
+		this->update();;
 	}
 	else
 	{
+		cout << "[Stack] Setting data to 0 ... \n";
 		memset(volume, 0, width*height*depth*sizeof(unsigned short));
+
+		/*
 		glBindTexture(GL_TEXTURE_3D, volumeTextureId);
 		glTexImage3D(GL_TEXTURE_3D, 0, GL_R16UI, width, height, depth, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, 0);
-	}
-	
-	if (data)
-		updateStats();
-	else
-	{
+		*/
 		maxVal = 0; 
 		minVal = 0;
 
@@ -1750,6 +1775,9 @@ void SpimStackU16::setSample(size_t index, float value)
 	assert(index < width*height*depth);
 	volume[index] = static_cast<unsigned short>(value);
 }
+
+
+#if SUPPORT_8BIT
 
 
 SpimStackU8::SpimStackU8() : SpimStack(), volume(nullptr)
@@ -1974,3 +2002,5 @@ void SpimStackU8::saveImage(const std::string& filename)
 	FreeImage_CloseMultiBitmap(fmb);
 
 }
+
+#endif

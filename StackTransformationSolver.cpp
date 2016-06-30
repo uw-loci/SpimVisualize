@@ -52,12 +52,11 @@ void IStackTransformationSolver::recordCurrentScore(Framebuffer* fbo)
 glm::mat4 IStackTransformationSolver::createRotationMatrix(float angle, const InteractionVolume* v)
 {
 	using namespace glm;
-	mat4 matrix(1.f);
-	// this rotates the volume around its center
-	matrix = translate(mat4(1.f), v->getBBox().getCentroid());
-	matrix = rotate(matrix, angle, glm::vec3(0, 1, 0));
-	matrix = translate(matrix, v->getBBox().getCentroid() * -1.f);
+	
+	mat4 I = translate(v->getTransformedBBox().getCentroid());
+	mat4 R = rotate(angle, vec3(0, 1, 0));
 
+	mat4 matrix = I * R * inverse(I);
 	return matrix;
 }
 
@@ -230,23 +229,8 @@ void RYSolver::createCandidateSolutions(const InteractionVolume* v)
 		Solution s;
 		s.id = r;
 		s.score = 0;
+		s.matrix = createRotationMatrix(a, v);
 
-		//s.matrix = createRotationMatrix(a, v);
-
-		/*
-		mat4 I = v->getTransform();
-		mat4 T = translate(v->getBBox().getCentroid());
-
-		// simplified from: I*T* rot * I-1*I
-		mat4 R = I * T * rotate(a, glm::vec3(0,1,0)) * inverse(T);
-		s.matrix = R;
-		*/
-
-		//mat4 I = v->getTransform();
-		mat4 I = translate(v->getTransformedBBox().getCentroid());
-		mat4 R = rotate(a, vec3(0, 1, 0));
-
-		s.matrix = I * R * inverse(I);
 		solutions.push_back(s);
 
 	}
@@ -296,6 +280,8 @@ void RandomRotationSolver::createCandidateSolutions(const InteractionVolume* v)
 
 void UniformScaleSolver::createCandidateSolutions(const InteractionVolume* v)
 {
+	using namespace glm;
+
 	for (int i = -20; i <= 20; ++i)
 	{
 
@@ -307,10 +293,13 @@ void UniformScaleSolver::createCandidateSolutions(const InteractionVolume* v)
 		Solution s;
 		s.id = i;
 		s.score = 0;
+				
+		mat4 I = translate(v->getTransformedBBox().getCentroid());
+		mat4 S = scale(vec3(factor));
 
-		s.matrix = translate(v->getTransform(), v->getBBox().getCentroid());
-		s.matrix = scale(s.matrix, glm::vec3(factor));
-		s.matrix = translate(s.matrix, v->getBBox().getCentroid() * -1.f);
+		s.matrix = I * S * inverse(I);
+
+
 
 
 		solutions.push_back(s);
@@ -540,7 +529,7 @@ void SimulatedAnnealingSolver::modifyCurrentSolution()
 		f *= -1.f;
 
 	// randomly choose an operation to modify the current matrix with
-	int mode = rng() % 4;
+	int mode = rng() % 3;
 	if (mode == 0)
 	{
 		mat4 T = translate(vec3(f, 0, 0));
@@ -554,11 +543,6 @@ void SimulatedAnnealingSolver::modifyCurrentSolution()
 	else if (mode == 2)
 	{
 		mat4 T = translate(vec3(0, f, 0));
-		currentSolution.matrix = T * currentSolution.matrix;
-	}
-	else if (mode == 3)
-	{
-		mat4 T = createRotationMatrix(radians(f), currentVolume);
 		currentSolution.matrix = T * currentSolution.matrix;
 	}
 
