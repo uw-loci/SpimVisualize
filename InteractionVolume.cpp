@@ -55,16 +55,6 @@ void InteractionVolume::saveTransform(const std::string& filename) const
 
 bool InteractionVolume::loadTransform(const std::string& filename)
 {
-
-
-
-
-
-
-
-
-
-
 	std::ifstream file(filename);
 
 	if (!file.is_open())

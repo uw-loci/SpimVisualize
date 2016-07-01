@@ -423,11 +423,45 @@ void SpimRegistrationApp::loadStackTransformations()
 		saveVolumeTransform(i);
 
 		SpimStack* s = stacks[i];
+		
+		// try to find the last valid transform
+		const std::string pattern = s->getFilename() + ".registration.%d.txt";
 		std::string filename = s->getFilename() + ".registration.txt";
+
+		for (int i = 1; i < 512; ++i)
+		{
+			char fname[512];
+
+			sprintf(fname, pattern.c_str(), i);
+
+			std::cout << "[Debug] Testing filename \"" << fname << "\" ... ";
+			{
+				std::ifstream f(fname);
+				if (!f.is_open())
+				{	
+					// last index was valid
+					sprintf(fname, pattern.c_str(), --i);
+					filename = std::string(fname);
+					std::cout << "not found.\n";
+										
+					// save the current index for future saves
+					saveCounter = std::max(saveCounter, (unsigned)i);
+					std::cout << "[Debug] Setting save counter to " << saveCounter << std::endl;
+					
+					break;
+				}
+				else
+					std::cout << "found.\n";
+			}
+		}
+		
+
+
+				
 		if (!s->loadTransform(filename))
 		{
 			// if we are unable to load the registered transform, try to find the setting for it in the config file
-			filename = s->getFilename();
+			std::string filename = s->getFilename();
 			filename = filename.substr(filename.find_last_of("\\")+1);
 
 
