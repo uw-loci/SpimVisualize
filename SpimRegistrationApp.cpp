@@ -45,7 +45,7 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : layout(nullptr
 	volumeRenderTarget(nullptr), rayStartTarget(nullptr), stackSamplerTarget(nullptr), pointSpriteShader(nullptr), gpuMultiStackSampler(nullptr),
 	useImageAutoContrast(false), runAlignment(false), renderTargetReadbackCurrent(false), calculateScore(false), drawHistory(false),
 	solver(nullptr), drawPhantoms(false), drawSolutionSpace(false), runAlignmentOnlyOncePlease(false),
-	controlWidget(nullptr), pointSpriteTexture(0), cameraAutoRotate(false)
+	controlWidget(nullptr), pointSpriteTexture(0), cameraAutoRotate(false), saveCounter(0)
 {
 
 	config.setDefaults();
@@ -396,20 +396,21 @@ void SpimRegistrationApp::clearStackTransformations()
 
 }
 
-void SpimRegistrationApp::saveStackTransformations() const
+void SpimRegistrationApp::saveStackTransformations()
 {
-	std::cout << "[Debug] Saving stack transformations.\n";
+	++saveCounter;
+	std::cout << "[Debug] Saving stack transformations (" << saveCounter << ").\n";
 
-	std::for_each(stacks.begin(), stacks.end(), [](const SpimStack* s)
+	std::for_each(stacks.begin(), stacks.end(), [=](const SpimStack* s)
 	{
-		std::string filename = s->getFilename() + ".registration.txt";
+		std::string filename = s->getFilename() + ".registration." + std::to_string((int)saveCounter) + ".txt";
 		s->saveTransform(filename);
 	});
 
 	
-	std::for_each(pointclouds.begin(), pointclouds.end(), [](const SimplePointcloud* p)
+	std::for_each(pointclouds.begin(), pointclouds.end(), [=](const SimplePointcloud* p)
 	{
-		std::string filename = p->getFilename() + ".registration.txt";
+		std::string filename = p->getFilename() + ".registration." + std::to_string((int)saveCounter) + ".txt";
 		p->saveTransform(filename);
 	});
 }

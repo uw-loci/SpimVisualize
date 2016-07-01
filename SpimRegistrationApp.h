@@ -176,7 +176,7 @@ public:
 	inline void setCameraMoving(bool m) { cameraMoving = m; }
 
 	
-	void saveStackTransformations() const;
+	void saveStackTransformations();
 	void loadStackTransformations();
 	void clearStackTransformations();
 	
@@ -371,6 +371,7 @@ private:
 	void saveVolumeTransform(unsigned int n);
 	void addInteractionVolume(InteractionVolume* v);
 	
+	unsigned int saveCounter;
 
 	void inspectPointclouds(const Ray& ray);
 };

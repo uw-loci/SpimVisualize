@@ -941,7 +941,8 @@ int main(int argc, const char** argv)
 		}
 		catch (const std::runtime_error& e)
 		{
-			std::cout << "Unable to load local config.";
+			std::cerr << "[Error] Unable to load local config.\n";
+			std::cerr << "[Error] " << e.what() << std::endl;
 		}
 		
 		
