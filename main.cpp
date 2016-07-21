@@ -436,7 +436,7 @@ static void idle()
 static void keyboard(unsigned char key, int x, int y)
 {
 	updateSpecialKeys();
-	//std::cout << "[Debug] " << key << " (" << (int)key << ")\n";
+	std::cout << "[Debug] " << key << " (" << (int)key << ")\n";
 	
 
 	// ctrl-s
@@ -651,7 +651,7 @@ static void keyboard(unsigned char key, int x, int y)
 
 	if (key == '-')
 		regoApp->zoomCamera(1.4f);
-	if (key == '=')
+	if (key == '=' || key == '+')
 		regoApp->zoomCamera(0.7f);
 	if (key == 'f')
 		regoApp->centerCamera();
@@ -701,6 +701,8 @@ static void motion(int x, int y)
 	mouse.coordinates.y = y;
 	
 
+	//std::cout << "x " << x << " y " << y << " dx " << dx << " dy " << dy << std::endl;
+
 	int h = glutGet(GLUT_WINDOW_HEIGHT);
 	
 	if (mouse.button[1])
@@ -715,6 +717,7 @@ static void motion(int x, int y)
 		// shift -- pan
 		else if (specialKey[Shift])
 			regoApp->panCamera(glm::vec2(dx, dy));
+
 
 		// interact with data
 		else
@@ -820,7 +823,6 @@ static void special(int key, int x, int y)
 		regoApp->moveCurrentStack(glm::vec2(-d, 0));
 
 	}
-
 
 	if (key == GLUT_KEY_RIGHT)
 	{
