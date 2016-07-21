@@ -8,6 +8,10 @@ struct Volume
 	mat4			inverseTransform;
 	mat4			transform;
 	vec3			bboxMin, bboxMax;
+	bool 			enabled;
+
+	float			minThreshold;
+	float			maxThreshold;
 };
 
 #define VOLUMES 2
@@ -16,9 +20,6 @@ struct Volume
 uniform Volume volume[VOLUMES];
 
 uniform sampler2D	rayStart;
-
-uniform float		minThreshold;
-uniform float		maxThreshold;
 
 uniform mat4		inverseMVP;
 
@@ -90,6 +91,12 @@ void main()
 
 			for (int v = 0; v < VOLUMES; ++v)
 			{
+				if (!volume[v].enabled)
+				{
+					value[v] = 0.0;
+					continue;
+				}
+
 
 				// check all volumes
 				vec3 volPosition = vec3(volume[v].inverseTransform * vec4(worldPosition, 1.0));
@@ -106,7 +113,7 @@ void main()
 		
 					value[v] = val;
 
-					if (v == activeVolume && val > minThreshold && val < maxThreshold)
+					if (v == activeVolume && val > volume[v].minThreshold && val < volume[v].maxThreshold)
 						hitActiveVolume = true;
 
 					hitAnyVolume = true;
@@ -137,8 +144,6 @@ void main()
 
 		}
 
-
-		float val = (maxValue - minThreshold) / (maxThreshold - minThreshold);
 				
 		vec3 baseColor = vec3(1.0);
 
@@ -155,7 +160,7 @@ void main()
 		vec3 aggregateColor = vec3(0.0);
 		for (int v = 0; v < VOLUMES; ++v) 
 		{
-			float val = (maxValues[v] - minThreshold) / (maxThreshold - minThreshold);
+			float val = (maxValues[v] - volume[v].minThreshold) / (volume[v].maxThreshold - volume[v].minThreshold);
 
 			aggregateColor += (color_table[min(v, 6)] * val);	
 		}

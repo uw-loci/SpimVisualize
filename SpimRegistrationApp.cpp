@@ -1426,6 +1426,7 @@ void SpimRegistrationApp::raytraceVolumes(const Viewport* vp) const
 #ifdef _WIN32
 
 		char uname[256];
+
 		sprintf_s(uname, "volume[%d].texture", i);
 		volumeRaycaster->setUniform(uname, (int)i);
 
@@ -1441,6 +1442,11 @@ void SpimRegistrationApp::raytraceVolumes(const Viewport* vp) const
 		sprintf_s(uname, "volume[%d].bboxMin", i);
 		volumeRaycaster->setUniform(uname, bbox.min);
 
+
+		sprintf_s(uname, "volume[%d].minThreshold", i);
+		volumeRaycaster->setUniform(uname, (float)config.threshold.min);
+		sprintf_s(uname, "volume[%d].maxThreshold", i);
+		volumeRaycaster->setUniform(uname, (float)config.threshold.max);
 
 		sprintf_s(uname, "volume[%d].enabled", i);
 		volumeRaycaster->setUniform(uname, stacks[i]->enabled);
@@ -1461,13 +1467,16 @@ void SpimRegistrationApp::raytraceVolumes(const Viewport* vp) const
 
 		sprintf(uname, "volume[%d].inverseTransform", (int)i);
 		volumeRaycaster->setMatrix4(uname, glm::inverse(stacks[i]->transform));
+
+		sprintf_s(uname, "volume[%d].minThreshold", (float)config.threshold.min);
+		sprintf_s(uname, "volume[%d].maxThreshold", (float)config.threshold.max);
+
+		sprintf_s(uname, "volume[%d].enabled", i);
+		volumeRaycaster->setUniform(uname, stacks[i]->enabled);
+
+
 #endif
 	}
-
-	// set the global contrast
-	volumeRaycaster->setUniform("minThreshold", (float)config.threshold.min);
-	volumeRaycaster->setUniform("maxThreshold", (float)config.threshold.max);
-
 
 	volumeRaycaster->setUniform("activeVolume", (int)currentVolume);
 
