@@ -371,7 +371,5 @@ private:
 	void saveVolumeTransform(unsigned int n);
 	void addInteractionVolume(InteractionVolume* v);
 	
-	unsigned int saveCounter;
-
 	void inspectPointclouds(const Ray& ray);
 };

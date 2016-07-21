@@ -45,7 +45,7 @@ SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : layout(nullptr
 	volumeRenderTarget(nullptr), rayStartTarget(nullptr), stackSamplerTarget(nullptr), pointSpriteShader(nullptr), gpuMultiStackSampler(nullptr),
 	useImageAutoContrast(false), runAlignment(false), renderTargetReadbackCurrent(false), calculateScore(false), drawHistory(false),
 	solver(nullptr), drawPhantoms(false), drawSolutionSpace(false), runAlignmentOnlyOncePlease(false),
-	controlWidget(nullptr), pointSpriteTexture(0), cameraAutoRotate(false), saveCounter(0)
+	controlWidget(nullptr), pointSpriteTexture(0), cameraAutoRotate(false)
 {
 
 	config.setDefaults();
@@ -399,19 +399,18 @@ void SpimRegistrationApp::clearStackTransformations()
 
 void SpimRegistrationApp::saveStackTransformations()
 {
-	++saveCounter;
-	std::cout << "[Debug] Saving stack transformations (" << saveCounter << ").\n";
+	std::cout << "[Debug] Saving stack transformations.\n";
 
 	std::for_each(stacks.begin(), stacks.end(), [=](const SpimStack* s)
 	{
-		std::string filename = s->getFilename() + ".registration." + std::to_string((int)saveCounter) + ".txt";
+		std::string filename = s->getFilename() + ".registration.txt";
 		s->saveTransform(filename);
 	});
 
 	
 	std::for_each(pointclouds.begin(), pointclouds.end(), [=](const SimplePointcloud* p)
 	{
-		std::string filename = p->getFilename() + ".registration." + std::to_string((int)saveCounter) + ".txt";
+		std::string filename = p->getFilename() + ".registration.txt";
 		p->saveTransform(filename);
 	});
 }
@@ -425,40 +424,7 @@ void SpimRegistrationApp::loadStackTransformations()
 
 		SpimStack* s = stacks[i];
 		
-		// try to find the last valid transform
-		const std::string pattern = s->getFilename() + ".registration.%d.txt";
 		std::string filename = s->getFilename() + ".registration.txt";
-
-		for (int i = 1; i < 512; ++i)
-		{
-			char fname[512];
-
-			sprintf(fname, pattern.c_str(), i);
-
-			std::cout << "[Debug] Testing filename \"" << fname << "\" ... ";
-			{
-				std::ifstream f(fname);
-				if (!f.is_open())
-				{	
-					// last index was valid
-					sprintf(fname, pattern.c_str(), --i);
-					filename = std::string(fname);
-					std::cout << "not found.\n";
-										
-					// save the current index for future saves
-					saveCounter = std::max(saveCounter, (unsigned)i);
-					std::cout << "[Debug] Setting save counter to " << saveCounter << std::endl;
-					
-					break;
-				}
-				else
-					std::cout << "found.\n";
-			}
-		}
-		
-
-
-				
 		if (!s->loadTransform(filename))
 		{
 			// if we are unable to load the registered transform, try to find the setting for it in the config file

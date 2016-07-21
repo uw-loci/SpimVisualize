@@ -436,7 +436,7 @@ static void idle()
 static void keyboard(unsigned char key, int x, int y)
 {
 	updateSpecialKeys();
-	std::cout << "[Debug] " << key << " (" << (int)key << ")\n";
+	//std::cout << "[Debug] " << key << " (" << (int)key << ")\n";
 	
 
 	// ctrl-s
