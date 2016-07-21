@@ -38,7 +38,7 @@ const unsigned int STD_SLICE_COUNT = 100;
 #define USE_POINTCLOUDS
 
 SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : layout(nullptr), shaderPath("./shaders/"),
-	histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f),
+	histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f), gridOffset(0.f),
 	cameraMoving(false), drawGrid(false), drawBboxes(false), drawSlices(false), currentVolume(-1), sliceCount(100), subsampleOnCameraMove(false),
 	pointShader(nullptr), volumeShader(nullptr), sliceShader(nullptr),
 	volumeRaycaster(nullptr), drawQuad(nullptr), volumeDifferenceShader(nullptr), drawPosition(nullptr), tonemapper(nullptr), gpuStackSampler(nullptr),
@@ -180,6 +180,7 @@ void SpimRegistrationApp::toggleRotateCamera()
 
 
 }
+
 
 void SpimRegistrationApp::draw()
 {
@@ -1200,6 +1201,9 @@ void SpimRegistrationApp::drawGroundGrid(const Viewport* vp) const
 {
 	glColor4f(0.3f, 0.3f, 0.3f, 1.f);
 
+	glPushMatrix();
+	glTranslatef(gridOffset.x, gridOffset.y, gridOffset.z);
+
 
 	if (vp->name == "Perspective" || vp->name == "Ortho Y")
 	{
@@ -1243,6 +1247,7 @@ void SpimRegistrationApp::drawGroundGrid(const Viewport* vp) const
 		glEnd();
 	}
 
+	glPopMatrix();
 }
 
 void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* shader) const
@@ -1713,7 +1718,14 @@ void SpimRegistrationApp::updateGlobalBbox()
 	globalBBox = interactionVolumes[0]->getTransformedBBox();
 	for (size_t i = 0; i < interactionVolumes.size(); ++i)
 		globalBBox.extend(interactionVolumes[i]->getTransformedBBox());
+
 }
+
+void SpimRegistrationApp::centerGrid()
+{
+	gridOffset = globalBBox.getCentroid();
+}
+
 
 void SpimRegistrationApp::update(float dt)
 {

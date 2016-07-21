@@ -61,8 +61,7 @@ public:
 	void toggleVolumeLock(int n);
 	inline void toggleCurrentVolumeLock() {toggleVolumeLock(currentVolume);}
 	void unlockAllVolumes();
-
-
+	
 	void startStackMove(const glm::ivec2& mouse);
 	void updateStackMove(const glm::ivec2& mouse);
 	void updateStackMove(const glm::ivec2& mouse, float valueStep);
@@ -93,6 +92,7 @@ public:
 
 	void applyGaussFilterToCurrentStack();
 
+	void centerGrid();
 
 	/// \name Pointclods
 	/// \{
@@ -227,6 +227,7 @@ private:
 	bool					cameraMoving;
 
 
+	glm::vec3				gridOffset;
 	bool					drawGrid;
 	bool					drawBboxes;
 	bool					drawSlices;

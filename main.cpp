@@ -451,7 +451,10 @@ static void keyboard(unsigned char key, int x, int y)
 
 	if (key == 'g')
 		regoApp->toggleGrid();
-		
+	
+	if (key == 'G')
+		regoApp->centerGrid();
+
 	if (key == 'b')
 		regoApp->toggleBboxes();
 	
@@ -980,6 +983,8 @@ int main(int argc, const char** argv)
 		
 		regoApp->centerCamera();
 		regoApp->maximizeViews();
+
+		regoApp->centerGrid();
 
 		regoApp->reloadShaders();
 
