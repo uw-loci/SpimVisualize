@@ -15,8 +15,6 @@ void Config::setDefaults()
 	raytraceSteps = 2000;
 	raytraceDelta = 1;
 
-	resampleResolution = glm::ivec3(512, 512, 64);
-
 	threshold.set(0, 255);
 
 	saveStackTransformationsOnExit = true;
@@ -82,12 +80,7 @@ void Config::load(const string& filename)
 			file >> threshold.max;
 			cout << "[Config] Threshold.max: " << threshold.max << endl;
 		}
-		if (temp == "resampleResolution")
-		{
-			file >> resampleResolution.x >> resampleResolution.y >> resampleResolution.z;
-			cout << "[Config] Resample resolution: " << resampleResolution << endl;
-		}
-
+		
 		if (temp == "stack")
 		{
 			InitialStackPosition isp;
@@ -128,11 +121,6 @@ void Config::save(const string& filename) const
 	file << "# contrast settings\n";
 	file << "minThreshold " << threshold.min << endl;
 	file << "maxThreshold " << threshold.max << endl;
-
-
-	file << "# resampling\n";
-	file << "resampleResolution " << resampleResolution.x << " " << resampleResolution.y << " " << resampleResolution.z << endl;
-
 
 	file << "# initial stack locations\n";
 	file << "# format: stack <SPIM file> <Offset X> <Offset Y> <Offset Z> <Rotation Y>\n";

@@ -17,8 +17,7 @@ struct Config
 
 	// the voxel size in nm
 	glm::vec3		defaultVoxelSize;
-	glm::ivec3		resampleResolution;
-
+	
 	// how many steps should the ray tracer take
 	unsigned int	raytraceSteps;
 	// how big should each step be

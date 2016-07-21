@@ -2750,30 +2750,24 @@ void SpimRegistrationApp::createEmptyFullSizedStack()
 	
 	// calculate resolution based on global bbox
 	const ivec3 res(ceil((globalBBox.getSpan()) / config.defaultVoxelSize));
-	std::cout << "[Resample] Creating empty stack with res of " << res << " and voxel dimensions of " << config.defaultVoxelSize<< std::endl;
 
+	std::cout << "[Resample] Creating empty stack with res of " << res << " and voxel dimensions of " << config.defaultVoxelSize<< std::endl;
+	
 	SpimStackU16* stack = new SpimStackU16;
 	stack->setVoxelDimensions(config.defaultVoxelSize);
 	stack->setContent(res, 0);
 	
 
-
 	stacks.push_back(stack);
 	addInteractionVolume(stack);
 	saveVolumeTransform(stacks.size() - 1);
-
-
+	
 	// center the stack?
 	mat4 T = translate(globalBBox.min);
 	stack->setTransform(T);
 	
 	updateGlobalBbox();
 	reloadVolumeShader();
-}
-
-void SpimRegistrationApp::createEmptyRandomStack()
-{
-	createEmptyRandomStack(config.resampleResolution, config.defaultVoxelSize);
 }
 
 void SpimRegistrationApp::createEmptyRandomStack(const glm::ivec3& resolution, const glm::vec3& voxelDimensions)

@@ -106,7 +106,6 @@ public:
 	/// \{ 
 
 
-	void createEmptyRandomStack();
 	void createEmptyRandomStack(const glm::ivec3& resolution, const glm::vec3& voxelDimensions);
 	void createEmptyFullSizedStack();
 
