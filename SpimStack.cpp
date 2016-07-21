@@ -937,38 +937,51 @@ void SpimStack::extractTransformedFeaturePoints(const Threshold& t, ReferencePoi
 }
 
 
-Threshold SpimStack::getLimits() const
+const Threshold& SpimStack::updateThreshold()
 {
-	Threshold t;
-
-	t.max = 0;
-	t.min = numeric_limits<float>::max();
-	t.mean = 0;
+	threshold.max = 0;
+	threshold.min = numeric_limits<float>::max();
+	threshold.mean = 0;
 
 	const size_t count = width*height*depth;
 
 	for (size_t i = 0; i < count; ++i)
 	{
-		const double v = getValue(i);
-		t.max = std::max(t.max, v);
-		t.min = std::min(t.min, v);
+		const float v = getValue(i);
+		threshold.max = std::max(threshold.max, v);
+		threshold.min = std::min(threshold.min, v);
 	
-		t.mean += (unsigned int)v;
+		threshold.mean += (unsigned int)v;
 	}
 
-	t.mean /= count;
+	threshold.mean /= count;
 
 	float variance = 0;
 	for (size_t i = 0; i < count; ++i)
 	{
 		float v = (float)getValue(i);
-		variance = variance + (v - t.mean)*(v - t.mean);
+		variance = variance + (v - threshold.mean)*(v - threshold.mean);
 	}
 	
 	variance /= count;
-	t.stdDeviation = ::sqrt((float)variance);
+	threshold.stdDeviation = ::sqrt((float)variance);
 
-	return std::move(t);
+	return threshold;
+}
+
+void SpimStack::autoThreshold()
+{
+	std::cout << "[Stack] Stack " << filename << " calculating auto contrast ... ";
+
+	updateThreshold();
+
+	threshold.max = threshold.mean + 3 * threshold.stdDeviation;
+	threshold.min = threshold.mean - 3 * threshold.stdDeviation;
+	
+	threshold.min = std::max(0.f, threshold.min);
+
+	std::cout << "done: [" << threshold.min << "->" << threshold.max << "], mean: " << threshold.mean << ", std dev: " << threshold.stdDeviation << std::endl;
+
 }
 
 std::vector<glm::vec3> SpimStack::calculateVolumeNormals() const
@@ -1224,15 +1237,8 @@ AABB SpimStack::getTransformedBBox() const
 void SpimStack::updateStats()
 {
 	cout << "[Stack] Updating stats ... ";
-	maxVal = 0.f;
-	minVal = std::numeric_limits<float>::max();
-	for (size_t i = 0; i < width*height*depth; ++i)
-	{
-		float val = getValue(i);
-		maxVal = std::max(maxVal, val);
-		minVal = std::min(minVal, val);
-	}
-	cout << "done; range: " << minVal << "-" << maxVal << endl;
+	updateThreshold();
+	cout << "done; range: " << threshold.min << "-" << threshold.max << endl;
 
 	cout << "[Stack] Calculating bbox ... ";
 	vec3 vol = dimensions * vec3(width, height, depth);
@@ -1477,8 +1483,10 @@ void SpimStack::applyMedianFilter(const glm::ivec3& winSize)
 
 
 
+
 SpimStackU16::SpimStackU16() : SpimStack(), volume(nullptr)
 {
+	threshold.set(0, std::numeric_limits<unsigned short>::max());
 }
 
 SpimStackU16::~SpimStackU16()
@@ -1761,8 +1769,8 @@ void SpimStackU16::setContent(const glm::ivec3& res, const void* data)
 		glBindTexture(GL_TEXTURE_3D, volumeTextureId);
 		glTexImage3D(GL_TEXTURE_3D, 0, GL_R16UI, width, height, depth, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, 0);
 		*/
-		maxVal = 0; 
-		minVal = 0;
+
+		updateThreshold();
 
 		bbox.min = vec3(0.f); // -vol * 0.5f;
 		bbox.max = dimensions * vec3(width, height, depth);
@@ -1782,6 +1790,7 @@ void SpimStackU16::setSample(size_t index, float value)
 
 SpimStackU8::SpimStackU8() : SpimStack(), volume(nullptr)
 {
+	threshold.set(0,255);
 }
 
 SpimStackU8::~SpimStackU8()

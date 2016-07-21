@@ -4,8 +4,6 @@
 #include <vector>
 #include <glm/glm.hpp>
 
-#include "StackRegistration.h"
-
 struct Config
 {
 
@@ -22,9 +20,6 @@ struct Config
 	unsigned int	raytraceSteps;
 	// how big should each step be
 	float			raytraceDelta;
-
-	// min-max thresholds for contrast settings
-	Threshold		threshold;
 
 	struct InitialStackPosition
 	{

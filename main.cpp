@@ -731,9 +731,6 @@ static void motion(int x, int y)
 			else
 				regoApp->updateStackMove(mouse.coordinates);
 
-
-			// change contrast in the editor
-			regoApp->changeContrast(glm::ivec2(x, h - y));
 			regoApp->inspectOutputImage(glm::ivec2(x, h - y));
 
 		}

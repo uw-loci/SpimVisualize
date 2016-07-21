@@ -15,8 +15,6 @@ void Config::setDefaults()
 	raytraceSteps = 2000;
 	raytraceDelta = 1;
 
-	threshold.set(0, 255);
-
 	saveStackTransformationsOnExit = true;
 }
 
@@ -70,16 +68,6 @@ void Config::load(const string& filename)
 			file >> raytraceDelta;
 			cout << "[Config] Ray trace delta: " << raytraceDelta << endl;
 		}
-		if (temp == "minThreshold")
-		{
-			file >> threshold.min;
-			cout << "[Config] Threshold.min: " << threshold.min << endl;
-		}
-		if (temp == "maxThreshold")
-		{
-			file >> threshold.max;
-			cout << "[Config] Threshold.max: " << threshold.max << endl;
-		}
 		
 		if (temp == "stack")
 		{
@@ -98,8 +86,6 @@ void Config::load(const string& filename)
 
 	}
 
-
-	threshold.set(threshold.min, threshold.max);
 }
 
 
@@ -116,12 +102,7 @@ void Config::save(const string& filename) const
 	file << "voxelSize " << defaultVoxelSize.x << " " << defaultVoxelSize.y << " " << defaultVoxelSize.z << endl;
 	file << "raytraceSteps " << raytraceSteps << endl;
 	file << "raytraceDelta " << raytraceDelta << endl;
-
-
-	file << "# contrast settings\n";
-	file << "minThreshold " << threshold.min << endl;
-	file << "maxThreshold " << threshold.max << endl;
-
+	
 	file << "# initial stack locations\n";
 	file << "# format: stack <SPIM file> <Offset X> <Offset Y> <Offset Z> <Rotation Y>\n";
 	file << "# offsets are in mm, rotation in degrees\n";

@@ -79,7 +79,6 @@ public:
 
 	void inspectOutputImage(const glm::ivec2& cursor);
 
-	void changeContrast(const glm::ivec2& cursor);
 	void calculateHistograms();
 	void increaseMaxThreshold();
 	void decreaseMaxThreshold();
@@ -281,7 +280,6 @@ private:
 
 	void updateGlobalBbox();
 
-	void drawContrastEditor(const Viewport* vp);
 	void drawScoreHistory(const TinyHistory<double>& hist) const;
 	void drawGroundGrid(const Viewport* vp) const;
 	void drawBoundingBoxes() const;

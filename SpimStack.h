@@ -6,12 +6,12 @@
 #include <glm/glm.hpp>
 
 #include "InteractionVolume.h"
+#include "Threshold.h"
 
 struct AABB;
 class Shader;
 class Framebuffer;
 class ReferencePoints;
-struct Threshold;
 struct Hourglass;
 
 // a single stack of SPIM images
@@ -81,9 +81,11 @@ public:
 
 	inline const unsigned int getTexture() const { return volumeTextureId; }
 	
-	Threshold getLimits() const;
-	std::vector<size_t> calculateHistogram(const Threshold& t) const;
 
+	std::vector<size_t> calculateHistogram(const Threshold& t) const;
+	inline Threshold& getThreshold() { return threshold;  }
+	const Threshold& updateThreshold();
+	void autoThreshold();
 
 	glm::ivec3 getStackCoords(size_t index) const;
 
@@ -127,8 +129,9 @@ protected:
 	// 2 display lists: 0->width and width->0 for quick front-to-back rendering
 	mutable unsigned int	volumeList[2];
 	
-	float					minVal, maxVal;
-	
+	// per-volume thresholds
+	Threshold				threshold;
+
 
 	virtual void updateStats();
 	virtual void updateTexture() = 0;

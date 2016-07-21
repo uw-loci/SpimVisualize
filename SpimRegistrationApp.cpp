@@ -568,8 +568,12 @@ void SpimRegistrationApp::drawTonemappedQuad()
 	tonemapper->setUniform("minVal", minVal);
 	tonemapper->setUniform("maxVal", maxVal);
 
+	std::cout << "[Warning] Global thresholds disabled in this build!\n";
+	std::cout << "[Warning] Offender: SpimRegistrationApp::drawTonemappedQuad()\n";
+	/*
 	tonemapper->setUniform("minThreshold", (float)config.threshold.min);
 	tonemapper->setUniform("maxThreshold", (float)config.threshold.max);
+	*/
 
 	glBegin(GL_QUADS);
 	glVertex2i(0, 1);
@@ -805,133 +809,70 @@ void SpimRegistrationApp::moveCurrentStack(const glm::vec2& delta)
 	updateGlobalBbox();
 }
 
-void SpimRegistrationApp::contrastEditorApplyThresholds()
-{
-	unsigned short newMin = (unsigned short)(config.threshold.min + minCursor * config.threshold.getSpread());
-	unsigned short newMax = (unsigned short)(config.threshold.min + maxCursor * config.threshold.getSpread());
-
-	config.threshold.min = newMin;
-	config.threshold.max = newMax;
-
-	minCursor = 0.f;
-	maxCursor = 1.f;
-
-	std::cout << "[Contrast] Set new global threshold to [" << newMin << "->" << newMax << "]\n";
-	histogramsNeedUpdate = true;
-}
-
-void SpimRegistrationApp::contrastEditorResetThresholds()
-{
-	
-	config.threshold.min = 0;
-	
-	// range depends on the type of first stack
-	config.threshold.max = 255;
-	if (!stacks.empty() && stacks[0]->getBytesPerVoxel() == 2)
-		config.threshold.max = std::numeric_limits<unsigned short>::max();
-
-
-	std::cout << "[Contrast] Resetting global threshold to [" << config.threshold.min << " -> " << config.threshold.max << "]\n";
-
-
-
-	minCursor = 0.f;
-	maxCursor = 1.f;
-	histogramsNeedUpdate = true;
-
-}
-
-void SpimRegistrationApp::changeContrast(const glm::ivec2& cursor)
-{
-	Viewport* vp = layout->getActiveViewport();
-	if (vp && vp->name == "Histogram")
-	{
-		// find closest contrast slider
-		
-		glm::vec2 coords = vp->getRelativeCoords(cursor);
-
-		if (coords.x < 0)
-			coords.x = 0.f;
-		if (coords.x > 1.f)
-			coords.x = 1.f;
-
-		//std::cout << "[Debug] Cursor: " << cursor << ", coords: " << coords << std::endl;
-
-		static unsigned int lastValue = 0;
-		float currentContrastCursor = coords.x;
-
-		if (abs(currentContrastCursor - minCursor) < abs(currentContrastCursor - maxCursor))
-		{
-			// min bar is closer to cursor -- move this
-			minCursor = currentContrastCursor;
-		}
-		else
-		{
-			// max bar is closer to cursor -- move this
-			maxCursor = currentContrastCursor;
-		}
-
-		
-		unsigned int value = (unsigned int)(config.threshold.min + (int)(currentContrastCursor * config.threshold.getSpread()));
-
-		if (value != lastValue)
-		{
-			lastValue = value;
-			//std::cout << "[Debug] Selected Contrast: " << value << "(" << currentContrastCursor << ")\n";
-			
-			for (size_t i = 0; i < histograms.size(); ++i)
-			{
-				unsigned int index = currentContrastCursor * histograms[i].size();
-				if (index == histograms.size())
-					index--;
-
-				std::cout << "[Histogram] Stack [" << i << "]: " << histograms[i][index] << std::endl;
-
-			}
-						
-		}
-		
-	}
-
-}
-
 void SpimRegistrationApp::increaseMaxThreshold()
 {
-	config.threshold.max += 5;
-	std::cout << "[Threshold] Max: " << (int)config.threshold.max << std::endl;
+	if (currentVolumeValid())
+	{
+		stacks[currentVolume]->getThreshold().max += 5;
+		std::cout << "[Threshold] Volume: " << currentVolume << ", Max: " << (int)stacks[currentVolume]->getThreshold().max << std::endl;
+
+	}
+	else
+	{
+		for (size_t i = 0; i < stacks.size(); ++i)
+			stacks[i]->getThreshold().max += 5;
+	}
 
 	histogramsNeedUpdate = true;
 }
 
 void SpimRegistrationApp::increaseMinThreshold()
 {
-	config.threshold.min += 5;
-	if (config.threshold.min > config.threshold.max)
-		config.threshold.min = config.threshold.max;
-	std::cout << "[Threshold] Min: " << (int)config.threshold.min << std::endl;
+	if (currentVolumeValid())
+	{
+		stacks[currentVolume]->getThreshold().min += 5;
+		std::cout << "[Threshold] Volume: " << currentVolume << ", Min: " << (int)stacks[currentVolume]->getThreshold().min << std::endl;
+
+	}
+	else
+	{
+		for (size_t i = 0; i < stacks.size(); ++i)
+			stacks[i]->getThreshold().min += 5;
+	}
 
 	histogramsNeedUpdate = true;
 }
 
 void SpimRegistrationApp::decreaseMaxThreshold()
 {
-	config.threshold.max -= 5;
-	if (config.threshold.max < config.threshold.min)
-		config.threshold.max = config.threshold.min;
+	if (currentVolumeValid())
+	{
+		stacks[currentVolume]->getThreshold().max -= 5;
+		std::cout << "[Threshold] Volume: " << currentVolume << ", Max: " << (int)stacks[currentVolume]->getThreshold().max << std::endl;
 
-	std::cout << "[Threshold] Max: " << (int)config.threshold.max << std::endl;
+	}
+	else
+	{
+		for (size_t i = 0; i < stacks.size(); ++i)
+			stacks[i]->getThreshold().max -= 5;
+	}
 
 	histogramsNeedUpdate = true;
 }
 
 void SpimRegistrationApp::decreaseMinThreshold()
 {
-	config.threshold.min -= 5;
-	if (config.threshold.min < 0)
-		config.threshold.min = 0;
+	if (currentVolumeValid())
+	{
+		stacks[currentVolume]->getThreshold().min -= 5;
+		std::cout << "[Threshold] Volume: " << currentVolume << ", Min: " << (int)stacks[currentVolume]->getThreshold().min << std::endl;
 
-	std::cout << "[Threshold] Min: " << (int)config.threshold.min << std::endl;
-
+	}
+	else
+	{
+		for (size_t i = 0; i < stacks.size(); ++i)
+			stacks[i]->getThreshold().min -= 5;
+	}
 	histogramsNeedUpdate = true;
 }
 
@@ -939,34 +880,19 @@ void SpimRegistrationApp::decreaseMinThreshold()
 void SpimRegistrationApp::autoThreshold()
 {
 	using namespace std;
-
-	config.threshold.max = 0;
-	config.threshold.min = numeric_limits<unsigned short>::max();
-	config.threshold.mean = 0;
-	config.threshold.stdDeviation = 0;
-
-	for (size_t i = 0; i < stacks.size(); ++i)
+	
+	if (currentVolumeValid())
 	{
-		Threshold t = stacks[i]->getLimits();
-		cout << "[Contrast] Stack " << i << " contrast: [" << t.min << " -> " << t.max << "], mean: " << t.mean << ", std dev: " << t.stdDeviation << std::endl;
-
-
-		config.threshold.min = min(config.threshold.min, t.min);
-		config.threshold.max = max(config.threshold.max, t.max);
-		config.threshold.mean += t.mean;
-		config.threshold.stdDeviation = max(config.threshold.stdDeviation, t.stdDeviation);
+		stacks[currentVolume]->autoThreshold();
 	}
+	else
+	{
+		for (size_t i = 0; i < stacks.size(); ++i)
+		{
+			stacks[i]->autoThreshold(); 
+		}
 
-	config.threshold.mean /= stacks.size();
-
-	config.threshold.min = (config.threshold.mean - 3 * config.threshold.stdDeviation);
-	config.threshold.min = std::max(config.threshold.min, 0.0);
-
-	config.threshold.max = (config.threshold.mean + 3 * config.threshold.stdDeviation);
-
-	cout << "[Contrast] Global contrast: [" << config.threshold.min << " -> " << config.threshold.max << "], mean: " << config.threshold.mean << ", std dev: " << config.threshold.stdDeviation << std::endl;
-
-
+	}
 
 	histogramsNeedUpdate = true;
 }
@@ -992,8 +918,11 @@ void SpimRegistrationApp::subsampleAllStacks()
 
 void SpimRegistrationApp::calculateHistograms()
 {
-	histograms.clear();
 
+	std::cerr << "[Error] SpimRegistrationApp::calculateHistograms() is currently disabled/broken.\n";
+/*
+
+	histograms.clear();
 	size_t maxVal = 0;
 
 	std::cout << "[Contrast] Calculating histograms within " << config.threshold.min << " -> " << config.threshold.max << std::endl;
@@ -1028,89 +957,12 @@ void SpimRegistrationApp::calculateHistograms()
 			histograms[i][j] /= maxVal;
 		}
 	}
-
+	*/
 
 
 	histogramsNeedUpdate = false;
 }
 
-
-void SpimRegistrationApp::drawContrastEditor(const Viewport* vp)
-{
-	if (histograms.empty() || histogramsNeedUpdate)
-		calculateHistograms();
-		
-	glColor3f(1,1,1);
-	glBegin(GL_LINE_LOOP);
-	glVertex2i(0, 0);
-	glVertex2i(1, 0);
-	glVertex2i(1, 1);
-	glVertex2i(0, 1);
-	glEnd();
-
-
-	const double leftLimit = config.threshold.min;
-	const double rightLimit = config.threshold.max;
-
-	glLineWidth(2.f);
-	glBegin(GL_LINES);
-	
-	glColor3f(1, 0, 0);
-	glVertex2f(maxCursor, 0.f);
-	glVertex2f(maxCursor, 1.f);
-
-	glColor3f(1.f, 1.f, 0.f);
-	glVertex2d(minCursor, 0);
-	glVertex2d(minCursor, 1);
-
-	glColor3f(0.1f, 0.1f, 0.1f);
-	glVertex2d(minCursor, 0);
-	glColor3f(1, 1, 1);
-	glVertex2d(maxCursor, 1);
-
-	glEnd();
-	
-	glLineWidth(1.f);
-
-
-
-
-
-	// draw histogram
-	
-	if (histograms.empty())
-		return;
-
-	float histoWidth = histograms[0].size();
-	// the single offset between histograms
-	float delta = vp->size.x / (histoWidth * (histograms.size()+1));
-
-	glBegin(GL_LINES);
-	for (size_t i = 0; i < histograms.size(); ++i)
-	{
-		glm::vec3 rc = getRandomColor((unsigned int)i);
-		glColor3fv(glm::value_ptr(rc));
-	
-		//std::cout << "[Debug] Drawing " << histograms[i].size() << " histogram bins.\n";
-			
-		for (unsigned int ix = 0; ix < histograms[i].size(); ++ix)
-		{
-			float x = (float)ix / histograms[i].size();
-
-			// offset each value slightly
-			//x += ((float)histograms.size() / (float)vp->size.x);
-			x += delta;
-
-			glVertex2f(x, 0.f);
-			glVertex2f(x, histograms[i][ix]);
-		}
-
-
-
-	}
-	glEnd();
-
-}
 
 
 void SpimRegistrationApp::drawBoundingBoxes() const
@@ -1249,10 +1101,14 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 	maxPVal = glm::min(maxPVal, glm::vec3(1.f));
 	minPVal = glm::max(minPVal, glm::vec3(-1.f));
 
+	std::cerr << "[Error] Disabled global threshold in this build!\n";
+	std::cerr << "[Error] Offender: SpimRegistrationApp::drawViewplaneSlices\n";
+	/*
 	shader->setUniform("minThreshold", (float)config.threshold.min);
 	shader->setUniform("maxThreshold", (float)config.threshold.max);
-	shader->setUniform("sliceCount", (float)sliceCount);
 	shader->setUniform("stdDev", (float)config.threshold.stdDeviation);
+	*/
+	shader->setUniform("sliceCount", (float)sliceCount);
 
 	// reorder stacks so that the current volume is always at index 0
 	std::vector<SpimStack*> reorderedStacks(stacks);
@@ -1336,9 +1192,12 @@ void SpimRegistrationApp::drawAxisAlignedSlices(const glm::mat4& mvp, const glm:
 	shader->bind();
 	shader->setUniform("mvpMatrix", mvp);
 
+	std::cerr << "[Error] Disabled global threshold in this build!\n";
+	std::cerr << "[Error] Offender: SpimRegistrationApp::drawAxisAlignedSlices\n";
+	/*
 	shader->setUniform("maxThreshold", (int)config.threshold.max);
 	shader->setUniform("minThreshold", (int)config.threshold.min);
-
+	*/
 	for (size_t i = 0; i < stacks.size(); ++i)
 	{
 		if (stacks[i]->enabled)
@@ -1374,8 +1233,12 @@ void SpimRegistrationApp::drawAxisAlignedSlices(const Viewport* vp, const Shader
 	shader->bind();
 	shader->setUniform("mvpMatrix", mvp);
 
+	std::cerr << "[Error] Disabled global threshold in this build!\n";
+	std::cerr << "[Error] Offender: SpimRegistrationApp::drawAxisAlignedSlices\n";
+	/*
 	shader->setUniform("maxThreshold", (float)config.threshold.max);
 	shader->setUniform("minThreshold", (float)config.threshold.min);
+	*/
 
 	for (size_t i = 0; i < stacks.size(); ++i)
 	{
@@ -1444,9 +1307,9 @@ void SpimRegistrationApp::raytraceVolumes(const Viewport* vp) const
 
 
 		sprintf_s(uname, "volume[%d].minThreshold", i);
-		volumeRaycaster->setUniform(uname, (float)config.threshold.min);
+		volumeRaycaster->setUniform(uname, (float)stacks[i]->getThreshold().min);
 		sprintf_s(uname, "volume[%d].maxThreshold", i);
-		volumeRaycaster->setUniform(uname, (float)config.threshold.max);
+		volumeRaycaster->setUniform(uname, (float)stacks[i]->getThreshold().max);
 
 		sprintf_s(uname, "volume[%d].enabled", i);
 		volumeRaycaster->setUniform(uname, stacks[i]->enabled);
