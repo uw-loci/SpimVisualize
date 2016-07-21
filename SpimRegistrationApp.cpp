@@ -39,7 +39,7 @@ const unsigned int STD_SLICE_COUNT = 100;
 
 SpimRegistrationApp::SpimRegistrationApp(const glm::ivec2& res) : layout(nullptr), shaderPath("./shaders/"),
 	histogramsNeedUpdate(false), minCursor(0.f), maxCursor(1.f),
-	cameraMoving(false), drawGrid(true), drawBboxes(false), drawSlices(false), currentVolume(-1), sliceCount(100), subsampleOnCameraMove(false),
+	cameraMoving(false), drawGrid(false), drawBboxes(false), drawSlices(false), currentVolume(-1), sliceCount(100), subsampleOnCameraMove(false),
 	pointShader(nullptr), volumeShader(nullptr), sliceShader(nullptr),
 	volumeRaycaster(nullptr), drawQuad(nullptr), volumeDifferenceShader(nullptr), drawPosition(nullptr), tonemapper(nullptr), gpuStackSampler(nullptr),
 	volumeRenderTarget(nullptr), rayStartTarget(nullptr), stackSamplerTarget(nullptr), pointSpriteShader(nullptr), gpuMultiStackSampler(nullptr),
