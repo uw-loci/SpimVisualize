@@ -1483,6 +1483,34 @@ void SpimStack::applyMedianFilter(const glm::ivec3& winSize)
 
 
 
+bool SpimStack::loadThreshold(const std::string& filename)
+{
+	std::ifstream file(filename);
+	if (!file.is_open())
+		return false;
+
+	file >> threshold.min;
+	file >> threshold.max;
+	file >> threshold.mean;
+	file >> threshold.stdDeviation;
+
+	cout << "[Stack] Read threshold from file \"" << filename << "\".\n";
+	cout << "[Stack] Read threshold settings: [" << threshold.min << "->" << threshold.max << "], mean: " << threshold.mean << ", std.dev: " << threshold.stdDeviation << std::endl;
+
+}
+
+void SpimStack::saveThreshold(const std::string& filename) const
+{
+	std::ofstream file(filename, std::ios::trunc);
+	
+	file << threshold.min << std::endl;;
+	file << threshold.max << std::endl;
+	file << threshold.mean << std::endl;
+	file << threshold.stdDeviation << std::endl;
+
+	cout << "[Stack] Wrote threshold settings to file \"" << filename << "\".\n";
+}
+
 
 SpimStackU16::SpimStackU16() : SpimStack(), volume(nullptr)
 {

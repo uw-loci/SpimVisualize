@@ -413,6 +413,14 @@ void SpimRegistrationApp::saveStackTransformations()
 		std::string filename = p->getFilename() + ".registration.txt";
 		p->saveTransform(filename);
 	});
+
+
+	std::cout << "[Debug] Saving stack threshold settings.\n";
+	std::for_each(stacks.begin(), stacks.end(), [=](const SpimStack* s)
+	{
+		std::string filename = s->getFilename() + ".thresholds.txt";
+		s->saveThreshold(filename);
+	});
 }
 
 void SpimRegistrationApp::loadStackTransformations()
@@ -458,6 +466,14 @@ void SpimRegistrationApp::loadStackTransformations()
 			
 		}
 
+
+		filename = s->getFilename() + ".thresholds.txt";
+		if (!s->loadThreshold(filename))
+		{
+			std::cout << "[Stacks] Unable to load thresholds for stack \"" << s->getFilename() << "\" from file, calculating auto levels ...\n";
+			s->autoThreshold();
+		}
+
 	};
 
 	for (unsigned int i = 0; i < pointclouds.size(); ++i)
@@ -466,6 +482,7 @@ void SpimRegistrationApp::loadStackTransformations()
 	}
 
 	
+
 
 	updateGlobalBbox();
 }
