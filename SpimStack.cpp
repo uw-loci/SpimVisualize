@@ -4,6 +4,7 @@
 #include "StackRegistration.h"
 #include "BeadDetection.h"
 #include "TinyStats.h"
+#include "tinyxml2.h"
 
 #include <iostream>
 #include <cstring>
@@ -1543,8 +1544,177 @@ void SpimStackU16::loadBinary(const std::string& filename, const glm::ivec3& res
 
 }
 
+
+
+
+void SpimStackU16::loadOmeTiffMetadata(const std::string& filename)
+{
+	std::ifstream file(filename, std::ios::binary);
+	if (!file.is_open())
+	{
+		cerr << "[Stack] Unable to open file \"" << filename << "\" to read metadata.\n";
+		return;
+	}
+
+
+	struct TiffHeader
+	{
+		char	magic[2];
+		short	version;
+		int		offset;
+	};
+
+	struct IfdEntry
+	{
+		short	tag;
+		short	type;
+		int		count;
+		int		value;
+	};
+	
+	TiffHeader header;
+	file.read(reinterpret_cast<char*>(&header), 8);
+
+	// this code follows closely the descriptions on https://www.openmicroscopy.org/site/support/ome-model/ome-tiff/code.html
+
+	/*
+	cout << "[Debug] Header: ";
+	for (int i = 0; i < 8; ++i)
+		cout << header[i] << "(" << (int)header[i] << ")\n";
+	*/
+	if (header.version == 42)
+	{
+		cout << "[Debug] Found tiff version " << header.version << endl;
+		unsigned int offset = 4;
+		unsigned int firstIFD = header.offset;
+		cout << "[Debug] First IFD: " << firstIFD << endl;
+
+
+		file.seekg(firstIFD);
+		
+
+
+		// read IFDs here
+		while (!file.eof())
+		{
+
+			short ifdCount = 0;
+			file.read(reinterpret_cast<char*>(&ifdCount), 2);
+
+			//cout << "[Debug] IFD entries: " << ifdCount << endl;
+
+			for (int i = 0; i < ifdCount; ++i)
+			{
+				IfdEntry entry;
+
+				file.read(reinterpret_cast<char*>(&entry), 12);
+
+				if (entry.tag == 270)
+				{				
+					// save the current file position
+					ifstream::pos_type currentPos = file.tellg();
+				
+					/*
+					// read the entry here
+					cout << "[Debug] IFD: " << entry.tag << endl;
+					cout << "[Debug] type: " << entry.type << endl;
+					cout << "[Debug] count: " << entry.count << endl;
+					cout << "[Debug] value: " << entry.value << endl;
+					*/
+					if (entry.value > 0)
+						file.seekg(entry.value); // , ios_base::cur);
+
+					string line;
+					
+					if (entry.count > 0)
+						line.reserve(entry.count);
+
+					char temp = 0;
+					do {
+						temp = file.get(); // (&temp);
+
+						line.push_back(temp);
+					} while (temp != 0);
+					
+					if (line.size() > 4)
+					{
+						cout << "[Debug] IFD: " << entry.tag << endl;
+						cout << "[Debug] type: " << entry.type << endl;
+						cout << "[Debug] count: " << entry.count << endl;
+						cout << "[Debug] value: " << entry.value << endl;
+						
+						cout << "[Debug] Read " << line.size() << " chars.\n";
+
+
+
+						tinyxml2::XMLDocument doc;
+						doc.Parse(line.c_str());
+
+						//doc.Print();
+
+						/*
+						tinyxml2::XMLPrinter printer;
+						doc.Print(&printer);
+
+						ofstream xmlfile(filename + ".ome.xml");
+						xmlfile << printer.CStr();
+						xmlfile.close();
+						*/
+
+						// read the metadata from here
+					}
+
+
+					// reset the file pointer
+					file.seekg(currentPos);
+				
+				
+				
+				}
+
+			}
+
+			int offset = 0;
+			file.read(reinterpret_cast<char*>(&offset), 4);
+			if (offset == 0)
+			{
+				// final ifd entry
+				break;
+			}
+			else
+				file.seekg(offset);
+		}
+
+
+
+
+
+
+
+
+
+
+
+	}
+	else if (header.version == 0x2b)
+	{
+		cout << "[Error] Big TIFF currently not supported.\n";
+		return;
+	}
+	else
+	{
+		cout << "[Error] Not a tiff?\n";
+		return;
+	}
+
+
+}
+
+
 void SpimStackU16::loadImage(const std::string& filename)
 {
+	loadOmeTiffMetadata(filename);
+
 	FIMULTIBITMAP* fmb = FreeImage_OpenMultiBitmap(FIF_TIFF, filename.c_str(), FALSE, TRUE);
 
 	if (!fmb)
@@ -1557,7 +1727,13 @@ void SpimStackU16::loadImage(const std::string& filename)
 	bool initialized = false;
 
 
-	
+
+
+
+
+
+
+
 
 
 	for (unsigned int z = 0; z < depth; ++z)
@@ -1571,13 +1747,13 @@ void SpimStackU16::loadImage(const std::string& filename)
 		assert(bpp == 16);
 	
 
-		// metadata parsing not working as it should :(
 		/*
+		// metadata parsing not working as it should :(
 		// if it is an .ome file there should be metadata for us to use
 		FITAG* tag = 0;
 		FIMETADATA* mdHandle = 0;
 		FREE_IMAGE_MDMODEL mdModel = FIMD_EXIF_MAIN;
-
+		
 		mdHandle = FreeImage_FindFirstMetadata(mdModel, bm, &tag);
 		if (mdHandle)
 		{
@@ -1588,10 +1764,12 @@ void SpimStackU16::loadImage(const std::string& filename)
 
 			} while (FreeImage_FindNextMetadata(mdHandle, &tag));
 
+			cout << "-----------------\n";
+
 			FreeImage_FindCloseMetadata(mdHandle);
 		}
 		*/
-
+	
 
 
 		if (!initialized)

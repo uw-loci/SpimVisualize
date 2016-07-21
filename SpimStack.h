@@ -192,6 +192,7 @@ private:
 	virtual void loadImage(const std::string& filename);
 	virtual void loadBinary(const std::string& filename, const glm::ivec3& resolution);
 	
+	void loadOmeTiffMetadata(const std::string& filename);
 
 	virtual void saveBinary(const std::string& filename);
 	virtual void saveImage(const std::string& filename);
