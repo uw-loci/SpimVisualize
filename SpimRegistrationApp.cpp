@@ -1187,11 +1187,7 @@ void SpimRegistrationApp::drawBoundingBoxes() const
 
 
 	}
-
-
-	glColor3f(0, 1, 1);
-	globalBBox.draw();
-
+	
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDepthMask(GL_TRUE);
 	glEnable(GL_DEPTH_TEST);
