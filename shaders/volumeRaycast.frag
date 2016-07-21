@@ -8,10 +8,11 @@ struct Volume
 	mat4			inverseTransform;
 	mat4			transform;
 	vec3			bboxMin, bboxMax;
-	bool 			enabled;
-
 	float			minThreshold;
 	float			maxThreshold;
+
+	bool 			enabled;
+
 };
 
 #define VOLUMES 2
@@ -97,7 +98,6 @@ void main()
 					continue;
 				}
 
-
 				// check all volumes
 				vec3 volPosition = vec3(volume[v].inverseTransform * vec4(worldPosition, 1.0));
 
@@ -161,11 +161,11 @@ void main()
 		for (int v = 0; v < VOLUMES; ++v) 
 		{
 			float val = (maxValues[v] - volume[v].minThreshold) / (volume[v].maxThreshold - volume[v].minThreshold);
-
 			aggregateColor += (color_table[min(v, 6)] * val);	
 		}
 
 		finalValue = vec4(aggregateColor, meanValue);
+		
 
 
 		if (!hitAnyVolume)
