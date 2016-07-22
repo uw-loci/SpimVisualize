@@ -114,6 +114,8 @@ public:
 	inline unsigned int getDepth() const { return depth; }
 	inline size_t getVoxelCount() const { return width*height*depth; }
 
+	glm::mat4 getOMETransform() const;
+
 protected:
 	SpimStack();
 	
@@ -124,6 +126,11 @@ protected:
 
 	std::string			filename;
 
+
+
+	// original OME metadata transformation
+	glm::vec3			omePosition;
+	float				omeRotation;
 	
 	// 3d volume texture
 	unsigned int			volumeTextureId;

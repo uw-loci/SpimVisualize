@@ -434,36 +434,8 @@ void SpimRegistrationApp::loadStackTransformations()
 		
 		std::string filename = s->getFilename() + ".registration.txt";
 		if (!s->loadTransform(filename))
-		{
-			// if we are unable to load the registered transform, try to find the setting for it in the config file
-			std::string filename = s->getFilename();
-			filename = filename.substr(filename.find_last_of("\\")+1);
-
-
-			std::cout << "[Debug] Looking for default initial placement for stack \"" << filename << "\" ... \n";
-
-			for (size_t k = 0; k < config.stackPositions.size(); ++k)
-			{
-				const Config::InitialStackPosition& sp = config.stackPositions[k];
-			
-				if (sp.filename == filename)
-				{
-					std::cout << "[Debug] Found!\n";
-
-
-					// multiply offset by 1000 to get from mm to nm
-					glm::mat4 T = glm::translate(glm::vec3(sp.x, sp.y, sp.z) * 1000.f);
-					glm::mat4 R = glm::rotate(glm::radians(sp.rotY), glm::vec3(0, 1, 0));
-
-					s->setTransform(T*R);
-					break;
-				}
-			
-			}
-
-
-
-			
+		{			
+			std::cout << "[Stacks] Unable to load registration for stack!\n";
 		}
 
 

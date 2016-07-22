@@ -20,19 +20,7 @@ struct Config
 	unsigned int	raytraceSteps;
 	// how big should each step be
 	float			raytraceDelta;
-
-	struct InitialStackPosition
-	{
-		std::string filename;
-		// translation
-		float x, y, z;
-		// rotation y
-		float rotY;
-	};
-
-	std::vector<InitialStackPosition>	stackPositions;
-
-
+	
 	inline Config() { setDefaults(); }
 
 	void setDefaults();

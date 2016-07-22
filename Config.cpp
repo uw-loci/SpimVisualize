@@ -68,22 +68,7 @@ void Config::load(const string& filename)
 			file >> raytraceDelta;
 			cout << "[Config] Ray trace delta: " << raytraceDelta << endl;
 		}
-		
-		if (temp == "stack")
-		{
-			InitialStackPosition isp;
-
-			file >> isp.filename;
-			file >> isp.x;
-			file >> isp.y;
-			file >> isp.z;
-			file >> isp.rotY;
-		
-			stackPositions.push_back(isp);
-		
-			cout << "[Config] Adding default location for stack \"" << isp.filename << "\": " << isp.x << "," << isp.y << "," << isp.z << "," << isp.rotY << "\n";
-		}
-
+	
 	}
 
 }
@@ -102,15 +87,5 @@ void Config::save(const string& filename) const
 	file << "voxelSize " << defaultVoxelSize.x << " " << defaultVoxelSize.y << " " << defaultVoxelSize.z << endl;
 	file << "raytraceSteps " << raytraceSteps << endl;
 	file << "raytraceDelta " << raytraceDelta << endl;
-	
-	file << "# initial stack locations\n";
-	file << "# format: stack <SPIM file> <Offset X> <Offset Y> <Offset Z> <Rotation Y>\n";
-	file << "# offsets are in mm, rotation in degrees\n";
-	file << "# example: spim_TL01_Angle.1.ome.tiff 0 -5 0 20\n";
-	for (size_t i = 0; i < stackPositions.size(); ++i)
-	{
-		const InitialStackPosition& p = stackPositions[i];
-		file << "stack " << p.filename << " " << p.x << " " << p.y << " " << p.z << " " << p.rotY << endl;
-	}
-
+		
 }

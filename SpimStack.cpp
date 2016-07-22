@@ -66,7 +66,8 @@ using namespace glm;
 // voxel dimensions in microns
 static const vec3 DEFAULT_DIMENSIONS(0.625, 0.625, 3);
 
-SpimStack::SpimStack() : filename(""), dimensions(DEFAULT_DIMENSIONS), width(0), height(0), depth(0), volumeTextureId(0)
+SpimStack::SpimStack() : filename(""), dimensions(DEFAULT_DIMENSIONS), width(0), height(0), depth(0), volumeTextureId(0),
+	omePosition(0.f), omeRotation(0.f)
 {
 	volumeList[0] = 0;
 	volumeList[1] = 0;
@@ -1547,15 +1548,19 @@ void SpimStackU16::loadBinary(const std::string& filename, const glm::ivec3& res
 
 
 
-void SpimStackU16::loadOmeTiffMetadata(const std::string& filename)
+void SpimStackU16::loadOmeTiffMetadata(const std::string& filepath)
 {
-	std::ifstream file(filename, std::ios::binary);
+	std::ifstream file(filepath, std::ios::binary);
 	if (!file.is_open())
 	{
-		cerr << "[Stack] Unable to open file \"" << filename << "\" to read metadata.\n";
+		cerr << "[Stack] Unable to open file \"" << filepath << "\" to read metadata.\n";
 		return;
 	}
 
+
+	glm::vec3	stackPosition(0.f);
+	float		stackRotation = 0.f;
+	glm::vec3	voxelDimensions(1.f);
 
 	struct TiffHeader
 	{
@@ -1577,6 +1582,13 @@ void SpimStackU16::loadOmeTiffMetadata(const std::string& filename)
 
 	// this code follows closely the descriptions on https://www.openmicroscopy.org/site/support/ome-model/ome-tiff/code.html
 
+
+	size_t namePos = filepath.find_last_of("\\");
+	if (namePos == string::npos)
+		namePos = filepath.find_last_of("/");
+
+	const string filename = filepath.substr(namePos+1);
+	
 	/*
 	cout << "[Debug] Header: ";
 	for (int i = 0; i < 8; ++i)
@@ -1592,6 +1604,8 @@ void SpimStackU16::loadOmeTiffMetadata(const std::string& filename)
 
 		file.seekg(firstIFD);
 		
+
+
 
 
 		// read IFDs here
@@ -1649,6 +1663,7 @@ void SpimStackU16::loadOmeTiffMetadata(const std::string& filename)
 
 						tinyxml2::XMLDocument doc;
 						doc.Parse(line.c_str());
+						doc.PrintError();
 
 						//doc.Print();
 
@@ -1662,6 +1677,81 @@ void SpimStackU16::loadOmeTiffMetadata(const std::string& filename)
 						*/
 
 						// read the metadata from here
+
+
+						// 1) find the image with the same file name
+						// 1b) look under  <TiffData FirstC="0" FirstT="0" FirstZ="0" IFD="75" PlaneCount="1">
+						// <UUID FileName = "spim_TL01_Angle0.ome.tiff">urn:uuid : 7f8787b1 - d6c0 - 4b2e-9e9a - 56b6393cad39< / UUID>
+						//	< / TiffData>
+						
+						//doc.FirstChildElement("Image")->FirstChildElement("Pixels")->FirstChildElement("TiffData")->GetText();;
+						
+
+
+						tinyxml2::XMLNode* node = doc.FirstChildElement("OME")->FirstChild();
+						while (node)
+						{
+							//cout << "[Debug] " << node->Value() << endl;
+
+
+							if (strcmp(node->Value(), "Image") == 0)
+							{
+
+								// we just need to read the first tiff data element for the correct image
+								tinyxml2::XMLNode* p = node->FirstChildElement("Pixels");
+								tinyxml2::XMLNode* t = p->FirstChildElement("TiffData");
+
+								//cout << "[Debug] " << t->Value() << endl;
+
+
+								tinyxml2::XMLNode* u = t->FirstChildElement("UUID");
+							
+								if (strcmp(u->ToElement()->Attribute("FileName"), filename.c_str()) == 0)
+								{
+	
+									// read the physical voxel coordinates
+									tinyxml2::XMLElement* pixels = p->ToElement();
+									voxelDimensions.x = atof(pixels->Attribute("PhysicalSizeX"));
+									voxelDimensions.y = atof(pixels->Attribute("PhysicalSizeY"));
+									voxelDimensions.z = atof(pixels->Attribute("PhysicalSizeZ"));
+								
+									tinyxml2::XMLElement* plane = p->FirstChildElement("Plane");
+
+									stackPosition.x = atof(plane->Attribute("PositionX"));
+									stackPosition.y = atof(plane->Attribute("PositionY"));
+									stackPosition.z = atof(plane->Attribute("PositionZ"));
+
+								
+									const string annID(plane->FirstChildElement("AnnotationRef")->Attribute("ID"));
+								
+									tinyxml2::XMLElement* ann = doc.FirstChildElement("OME")->FirstChildElement("StructuredAnnotations")->FirstChildElement("DoubleAnnotation");
+									while (ann)
+									{
+
+										/*
+										cout << "[Debug] Annotation: " << ann->Attribute("ID") << endl;
+										cout << "[Debug] Reference : " << annID << endl;
+										*/
+
+
+										if (strcmp(ann->Attribute("ID"), annID.c_str()) == 0)
+										{
+
+											stackRotation = atof(ann->FirstChildElement("Value")->GetText());
+											break;
+										}
+
+										ann = ann->NextSiblingElement();
+									}
+
+								
+								}
+							}
+
+
+							node = node->NextSibling();
+						}
+
 					}
 
 
@@ -1708,6 +1798,17 @@ void SpimStackU16::loadOmeTiffMetadata(const std::string& filename)
 	}
 
 
+	cout << "[Stack] Read OME metadata:\n";
+	cout << "[Stack] Position: " << stackPosition << endl;
+	cout << "[Stack] Rotation: " << stackRotation << endl;
+	cout << "[Stack] Voxel dimensions: " << voxelDimensions << endl;
+
+	// create transformation matrix here
+	glm::mat4 T = glm::translate(stackPosition);
+	glm::mat4 R = glm::rotate(glm::radians(stackRotation), glm::vec3(0, 1, 0));
+
+	setTransform(R*T);
+	setVoxelDimensions(voxelDimensions);
 }
 
 
