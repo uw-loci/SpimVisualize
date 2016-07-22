@@ -1562,6 +1562,9 @@ void SpimStackU16::loadOmeTiffMetadata(const std::string& filepath)
 	float		stackRotation = 0.f;
 	glm::vec3	voxelDimensions(1.f);
 
+	// the actual size of the stack in nm
+	glm::vec3	stackSize(0.f);
+
 	struct TiffHeader
 	{
 		char	magic[2];
@@ -1715,6 +1718,13 @@ void SpimStackU16::loadOmeTiffMetadata(const std::string& filepath)
 									voxelDimensions.y = atof(pixels->Attribute("PhysicalSizeY"));
 									voxelDimensions.z = atof(pixels->Attribute("PhysicalSizeZ"));
 								
+									cout << "[Debug] " << pixels->Attribute("SizeX") << "," << pixels->Attribute("SizeY") << "," << pixels->Attribute("SizeZ") << endl;
+
+									stackSize.x = atoi(pixels->Attribute("SizeX"));
+									stackSize.y = atoi(pixels->Attribute("SizeY"));
+									stackSize.z = atoi(pixels->Attribute("SizeZ"));
+									stackSize *= voxelDimensions;
+
 									tinyxml2::XMLElement* plane = p->FirstChildElement("Plane");
 
 									stackPosition.x = atof(plane->Attribute("PositionX"));
@@ -1802,12 +1812,20 @@ void SpimStackU16::loadOmeTiffMetadata(const std::string& filepath)
 	cout << "[Stack] Position: " << stackPosition << endl;
 	cout << "[Stack] Rotation: " << stackRotation << endl;
 	cout << "[Stack] Voxel dimensions: " << voxelDimensions << endl;
+	cout << "[Stack] Physical size: " << stackSize << endl;
 
 	// create transformation matrix here
 	glm::mat4 T = glm::translate(stackPosition);
-	glm::mat4 R = glm::rotate(glm::radians(stackRotation), glm::vec3(0, 1, 0));
+	
 
-	setTransform(R*T);
+
+
+	glm::mat4 I = glm::translate(stackSize * 0.5f);
+	glm::mat4 rot = glm::rotate(glm::radians(stackRotation), glm::vec3(0, 1, 0));
+
+	mat4 R = I * rot * inverse(I);
+
+	setTransform(T*R);
 	setVoxelDimensions(voxelDimensions);
 }
 
