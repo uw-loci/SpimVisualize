@@ -1820,12 +1820,15 @@ void SpimStackU16::loadOmeTiffMetadata(const std::string& filepath)
 
 
 
-	glm::mat4 I = glm::translate(stackSize * 0.5f);
+	glm::mat4 I = glm::translate(vec3(stackSize.x, 0.f, 0.f)* 0.5f);
 	glm::mat4 rot = glm::rotate(glm::radians(stackRotation), glm::vec3(0, 1, 0));
 
 	mat4 R = I * rot * inverse(I);
+	mat4 R2 = I *T * rot * inverse(I*T);
 
-	setTransform(T*R);
+	R2[3] = vec4(stackPosition, 1);
+
+	setTransform(R2);
 	setVoxelDimensions(voxelDimensions);
 }
 

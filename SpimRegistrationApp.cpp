@@ -645,6 +645,7 @@ void SpimRegistrationApp::setLayout(const std::string& name, const glm::ivec2& r
 			layout = new OrthoViewFullLayout(res, "Ortho Y");
 			prevLayouts["OrthoY"] = layout;
 			layout->centerCamera(globalBBox.getCentroid());
+			layout->maximizeView(globalBBox);
 		}
 
 	}
@@ -660,6 +661,7 @@ void SpimRegistrationApp::setLayout(const std::string& name, const glm::ivec2& r
 			layout = new OrthoViewFullLayout(res, "Ortho X");
 			prevLayouts["OrthoX"] = layout;
 			layout->centerCamera(globalBBox.getCentroid());
+			layout->maximizeView(globalBBox);
 		}
 	}
 	else if (name == "OrthoZ")
@@ -674,6 +676,7 @@ void SpimRegistrationApp::setLayout(const std::string& name, const glm::ivec2& r
 			layout = new OrthoViewFullLayout(res, "Ortho Z");
 			prevLayouts["OrthoZ"] = layout;
 			layout->centerCamera(globalBBox.getCentroid());
+			layout->maximizeView(globalBBox);
 		}
 	}
 
