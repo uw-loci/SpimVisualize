@@ -147,6 +147,11 @@ void SingleViewLayout::panActiveViewport(const vec2& delta)
 		viewport.camera->pan(delta.x * viewport.getAspect(), delta.y);
 }
 
+void SingleViewLayout::centerCamera(const glm::vec3& tgt)
+{
+	viewport.camera->target = tgt;
+}
+
 TopViewFullLayout::TopViewFullLayout(const ivec2& resolution) : SingleViewLayout(resolution)
 {
 	viewport.name = "Ortho Y";
@@ -224,9 +229,15 @@ FourViewLayout::FourViewLayout(const ivec2& size)
 	cam->near = cam->far / 100.0f;
 	cam->radius = (CAMERA_DISTANCE * 1.5f);
 	cam->target = CAMERA_TARGET;
-
+	
 	FourViewLayout::resize(size);
 
+}
+
+void FourViewLayout::centerCamera(const glm::vec3& pos)
+{
+	for (int i = 0; i < 4; ++i)
+		views[i].camera->target = pos;
 }
 
 void FourViewLayout::resize(const ivec2& size)

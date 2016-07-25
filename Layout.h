@@ -70,6 +70,8 @@ public:
 
 	virtual bool isSingleView() const = 0;
 
+	virtual void centerCamera(const glm::vec3& tgt) = 0;
+
 	/*
 	virtual void saveState(const std::string& filename) const = 0;
 	virtual void loadState(const std::string& filename) = 0;
@@ -100,6 +102,8 @@ public:
 
 	virtual bool isSingleView() const { return layouts[currentLayout]->isSingleView(); }
 
+	virtual void centerCamera(const glm::vec3& tgt) { layouts[0]->centerCamera(tgt); layouts[1]->centerCamera(tgt); }
+
 private:
 	ILayout*		layouts[2];
 	int				currentLayout;
@@ -125,6 +129,8 @@ public:
 	virtual void panActiveViewport(const glm::vec2& delta);
 	virtual void maximizeView(const AABB& bbox);
 
+	virtual void centerCamera(const glm::vec3& tgt);
+
 private:
 	Viewport		views[4];
 };
@@ -148,6 +154,8 @@ public:
 	virtual void panActiveViewport(const glm::vec2& delta);
 
 	inline bool isSingleView() const { return true; }
+
+	virtual void centerCamera(const glm::vec3& tgt);
 
 protected:
 	Viewport			viewport;
