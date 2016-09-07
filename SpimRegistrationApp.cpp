@@ -1284,14 +1284,9 @@ void SpimRegistrationApp::raytraceVolumes(const Viewport* vp) const
 		sprintf_s(uname, "volume[%d].bboxMin", i);
 		volumeRaycaster->setUniform(uname, bbox.min);
 
-		sprintf_s(uname, "volume[%d].minThreshold", (float)config.threshold.min);
-		sprintf_s(uname, "volume[%d].maxThreshold", (float)config.threshold.max);
-
 		sprintf_s(uname, "volume[%d].enabled", i);
 		volumeRaycaster->setUniform(uname, stacks[i]->enabled);
 
-
-#endif
 	}
 
 	volumeRaycaster->setUniform("activeVolume", (int)currentVolume);
