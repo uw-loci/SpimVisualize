@@ -115,15 +115,15 @@ struct TinyHistory : public TinyStats < T >
 	T calculateVariance() const
 	{
 		T variance = 0;
-		const T mean = getMean();
+		const T mean = TinyStats<T>::getMean();
 
-		for (size_t i = 0; i < count; ++i)
+		for (size_t i = 0; i < TinyStats<T>::count; ++i)
 		{
 			const T& v = history[i];
 			variance = variance + (v - mean)*(v - mean);
 		}
 
-		variance /= count;
+		variance /= TinyStats<T>::count;
 		return variance;
 	}
 

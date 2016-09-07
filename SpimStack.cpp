@@ -11,6 +11,8 @@
 #include <algorithm>
 #include <fstream>
 #include <cstdio>
+#include <string>
+#include <cmath>
 
 #include <random>
 #include <chrono>
@@ -58,6 +60,10 @@
 #include <opencv2/calib3d.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/opencv.hpp>
+#endif
+
+#ifndef _WIN32
+#define sscanf_s sscanf
 #endif
 
 using namespace std;
@@ -111,13 +117,8 @@ static void getStackInfoFromFilename(const std::string& filename, glm::ivec3& re
 
 	cout << "[Debug] " << s << endl;
 	
-#ifdef _WIN32
 	int result = sscanf_s(s.c_str(), "%dx%dx%d.%dbit", &res.x, &res.y, &res.z, &depth);
 	assert( result == 4);
-#else
-	int result = sscanf_s(s.c_str(), "%dx%dx%d.%dbit", &res.x, &res.y, &res.z, &depth);
-	assert(result == 4);
-#endif
 
 
 	cout << "[Stack] Read volume info: " << res << ", " << depth << " bits.\n";
@@ -408,11 +409,7 @@ void SpimStack::loadRegistration(const string& filename)
 
 		mat4 T(1.f);
 
-#ifdef _WIN32
 		int result = sscanf_s(buffer.c_str(), "m%*2s: %f", &glm::value_ptr(T)[i]);
-#else
-		int result = sscanf(buffer.c_str(), "m%*2s: %f", &glm::value_ptr(T)[i]);
-#endif
 
 		setTransform(T);
 
@@ -1335,9 +1332,11 @@ void SpimStack::addSaltPepperNoise(float salt, float pepper, float amount)
 
 static inline float gauss3D(float  sigma, const glm::vec3& coord)
 {
+	const double PI = cos(-1.0);
+	
 	// 3D gaussian function. see http://math.stackexchange.com/questions/434629/3-d-generalization-of-the-gaussian-point-spread-function
-	const float N = 1.0 / sqrt(8.0 * pow(sigma, 6)*pow(std::_Pi, 3));
-	const float e = pow(sigma, 3)* pow(std::_Pi * 2, 1.5);
+	const float N = 1.0 / sqrt(8.0 * pow(sigma, 6)*pow(PI, 3));
+	const float e = pow(sigma, 3)* pow(PI * 2, 1.5);
 
 	return N * exp(-dot(coord, coord) / e);
 }
@@ -2296,7 +2295,7 @@ void SpimStackU8::setContent(const glm::ivec3& resolution, const void* data)
 	width = resolution.x;
 	height = resolution.y;
 	depth = resolution.z;
-	
+
 	volume = new unsigned char[width*height*depth];
 	memcpy(volume, data, width*height*depth*sizeof(unsigned char));
 

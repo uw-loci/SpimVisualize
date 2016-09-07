@@ -33,6 +33,11 @@ const unsigned int MIN_SLICE_COUNT = 20;
 const unsigned int MAX_SLICE_COUNT = 1500;
 const unsigned int STD_SLICE_COUNT = 100;
 
+#ifndef _WIN32
+#define sprintf_s sprintf
+#define sscanf_s sscanf
+#endif 
+
 
 #define USE_RAYTRACER 
 #define USE_POINTCLOUDS
@@ -232,7 +237,6 @@ void SpimRegistrationApp::draw()
 
 
 #ifdef USE_RAYTRACER
-
 			if (!stacks.empty())
 			{
 				initializeRayTargets(vp);
@@ -1117,7 +1121,6 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 		glActiveTexture((GLenum)(GL_TEXTURE0 + i));
 		glBindTexture(GL_TEXTURE_3D, reorderedStacks[i]->getTexture());
 
-#ifdef _WIN32
 		char uname[256];
 		sprintf_s(uname, "volume[%d].texture", i);
 		shader->setUniform(uname, (int)i);
@@ -1133,24 +1136,6 @@ void SpimRegistrationApp::drawViewplaneSlices(const Viewport* vp, const Shader* 
 
 		sprintf_s(uname, "volume[%d].inverseMVP", i);
 		shader->setMatrix4(uname, glm::inverse(mvp * reorderedStacks[i]->getTransform()));
-
-#else
-		char uname[256];
-		sprintf(uname, "volume[%d].texture", (int)i);
-		shader->setUniform(uname, (int)i);
-
-		AABB bbox = reorderedStacks[i]->getBBox();
-		sprintf(uname, "volume[%d].bboxMax", (int)i);
-		shader->setUniform(uname, bbox.max);
-		sprintf(uname, "volume[%d].bboxMin", (int)i);
-		shader->setUniform(uname, bbox.min);
-
-		sprintf(uname, "volume[%d].enabled", (int)i);
-		shader->setUniform(uname, stacks[i]->enabled);
-
-		sprintf(uname, "volume[%d].inverseMVP", (int)i);
-		shader->setMatrix4(uname, glm::inverse(mvp * reorderedStacks[i]->transform));
-#endif
 	}
 
 	// draw all slices
@@ -1281,7 +1266,6 @@ void SpimRegistrationApp::raytraceVolumes(const Viewport* vp) const
 		glActiveTexture((GLenum)(GL_TEXTURE0 + i));
 		glBindTexture(GL_TEXTURE_3D, stacks[i]->getTexture());
 		
-#ifdef _WIN32
 
 		char uname[256];
 
@@ -1299,32 +1283,6 @@ void SpimRegistrationApp::raytraceVolumes(const Viewport* vp) const
 		volumeRaycaster->setUniform(uname, bbox.max);
 		sprintf_s(uname, "volume[%d].bboxMin", i);
 		volumeRaycaster->setUniform(uname, bbox.min);
-
-
-		sprintf_s(uname, "volume[%d].minThreshold", i);
-		volumeRaycaster->setUniform(uname, (float)stacks[i]->getThreshold().min);
-		sprintf_s(uname, "volume[%d].maxThreshold", i);
-		volumeRaycaster->setUniform(uname, (float)stacks[i]->getThreshold().max);
-
-		sprintf_s(uname, "volume[%d].enabled", i);
-		volumeRaycaster->setUniform(uname, stacks[i]->enabled);
-
-#else
-		char uname[256];
-		sprintf(uname, "volume[%d].texture",(int) i);
-		volumeRaycaster->setUniform(uname, (int)i);
-
-		AABB bbox = stacks[i]->getBBox();
-		sprintf(uname, "volume[%d].bboxMax", (int)i);
-		volumeRaycaster->setUniform(uname, bbox.max);
-		sprintf(uname, "volume[%d].bboxMin", (int)i);
-		volumeRaycaster->setUniform(uname, bbox.min);
-
-		sprintf(uname, "volume[%d].transform", (int)i);
-		volumeRaycaster->setMatrix4(uname, stacks[i]->transform);
-
-		sprintf(uname, "volume[%d].inverseTransform", (int)i);
-		volumeRaycaster->setMatrix4(uname, glm::inverse(stacks[i]->transform));
 
 		sprintf_s(uname, "volume[%d].minThreshold", (float)config.threshold.min);
 		sprintf_s(uname, "volume[%d].maxThreshold", (float)config.threshold.max);

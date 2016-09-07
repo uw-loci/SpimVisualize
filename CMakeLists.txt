@@ -4,6 +4,9 @@ project (SpimVisualize)
 # disable boost auto-linking
 add_definitions( -DBOOST_ALL_NO_LIB )
 
+# enable additional CMAKE Find libs
+set(CMAKE_MODULE_PATH ./tools)
+
 # enable C++11
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
